@@ -9,7 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'bikebook_model.dart';
 export 'bikebook_model.dart';
 
-/// Ride Booking Summary Screen
+/// Enhanced Uber-Style Ride Booking Screen
 class BikebookWidget extends StatefulWidget {
   const BikebookWidget({super.key});
 
@@ -20,8 +20,10 @@ class BikebookWidget extends StatefulWidget {
   State<BikebookWidget> createState() => _BikebookWidgetState();
 }
 
-class _BikebookWidgetState extends State<BikebookWidget> {
+class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProviderStateMixin {
   late BikebookModel _model;
+  late AnimationController _animationController;
+  late Animation<double> _slideAnimation;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -29,12 +31,23 @@ class _BikebookWidgetState extends State<BikebookWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => BikebookModel());
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 800),
+    );
+
+    _slideAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+
+    _animationController.forward();
   }
 
   @override
   void dispose() {
+    _animationController.dispose();
     _model.dispose();
-
     super.dispose();
   }
 
@@ -49,63 +62,17 @@ class _BikebookWidgetState extends State<BikebookWidget> {
         key: scaffoldKey,
         resizeToAvoidBottomInset: false,
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-        appBar: AppBar(
-          backgroundColor: FlutterFlowTheme.of(context).primary,
-          automaticallyImplyLeading: false,
-          leading: FlutterFlowIconButton(
-            borderColor: Colors.transparent,
-            borderRadius: 30.0,
-            borderWidth: 1.0,
-            buttonSize: 60.0,
-            icon: Icon(
-              Icons.arrow_back_rounded,
-              color: Colors.white,
-              size: 30.0,
-            ),
-            onPressed: () async {
-              context.pop();
-            },
-          ),
-          title: Text(
-            FFLocalizations.of(context).getText(
-              'kqqm8wfu' /* UGO BIKE */,
-            ),
-            style: FlutterFlowTheme.of(context).headlineMedium.override(
-                  font: GoogleFonts.interTight(
-                    fontWeight:
-                        FlutterFlowTheme.of(context).headlineMedium.fontWeight,
-                    fontStyle:
-                        FlutterFlowTheme.of(context).headlineMedium.fontStyle,
-                  ),
-                  color: Colors.white,
-                  fontSize: 22.0,
-                  letterSpacing: 0.0,
-                  fontWeight:
-                      FlutterFlowTheme.of(context).headlineMedium.fontWeight,
-                  fontStyle:
-                      FlutterFlowTheme.of(context).headlineMedium.fontStyle,
-                ),
-          ),
-          actions: [],
-          centerTitle: true,
-          elevation: 2.0,
-        ),
         body: Container(
           width: double.infinity,
           height: double.infinity,
           child: Stack(
             children: [
+              // Map Background
               Container(
                 width: double.infinity,
                 height: double.infinity,
                 decoration: BoxDecoration(
                   color: FlutterFlowTheme.of(context).secondaryBackground,
-                  image: DecorationImage(
-                    fit: BoxFit.cover,
-                    image: Image.asset(
-                      'assets/images/q8nuj4.png',
-                    ).image,
-                  ),
                 ),
                 child: FlutterFlowGoogleMap(
                   controller: _model.googleMapsController,
@@ -118,7 +85,7 @@ class _BikebookWidgetState extends State<BikebookWidget> {
                   initialZoom: 14.0,
                   allowInteraction: true,
                   allowZoom: true,
-                  showZoomControls: true,
+                  showZoomControls: false,
                   showLocation: true,
                   showCompass: false,
                   showMapToolbar: false,
@@ -127,270 +94,592 @@ class _BikebookWidgetState extends State<BikebookWidget> {
                   mapTakesGesturePreference: false,
                 ),
               ),
-              Align(
-                alignment: AlignmentDirectional(0.0, -0.3),
+
+              // Custom Top Bar with Glassmorphism
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
                 child: Container(
-                  width: 40.0,
-                  height: 40.0,
-                  decoration: BoxDecoration(
-                    color: FlutterFlowTheme.of(context).secondaryBackground,
-                    shape: BoxShape.circle,
+                  padding: EdgeInsets.only(
+                    top: MediaQuery.of(context).padding.top + 8,
+                    bottom: 12,
+                    left: 16,
+                    right: 16,
                   ),
-                  child: Align(
-                    alignment: AlignmentDirectional(0.0, 0.0),
-                    child: Icon(
-                      Icons.navigation,
-                      color: FlutterFlowTheme.of(context).accent1,
-                      size: 24.0,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.3),
+                        Colors.transparent,
+                      ],
                     ),
                   ),
-                ),
-              ),
-              Align(
-                alignment: AlignmentDirectional(-0.6, 0.4),
-                child: Container(
-                  width: 30.0,
-                  height: 30.0,
-                  decoration: BoxDecoration(
-                    color: FlutterFlowTheme.of(context).secondaryBackground,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: FlutterFlowTheme.of(context).accent1,
-                      width: 2.0,
-                    ),
-                  ),
-                  child: Align(
-                    alignment: AlignmentDirectional(0.0, 0.0),
-                    child: Icon(
-                      Icons.location_on,
-                      color: FlutterFlowTheme.of(context).accent1,
-                      size: 16.0,
-                    ),
-                  ),
-                ),
-              ),
-              Align(
-                alignment: AlignmentDirectional(0.0, 0.65),
-                child: Container(
-                  width: double.infinity,
-                  height: 4.0,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF3D8033),
-                  ),
-                ),
-              ),
-              Align(
-                alignment: AlignmentDirectional(0.0, 0.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Padding(
-                      padding:
-                          EdgeInsetsDirectional.fromSTEB(12.0, 0.0, 12.0, 0.0),
-                      child: Container(
-                        width: double.infinity,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
                         decoration: BoxDecoration(
-                          color:
-                              FlutterFlowTheme.of(context).secondaryBackground,
-                          borderRadius: BorderRadius.circular(12.0),
-                          border: Border.all(
-                            color: Color(0xFFD9D9D9),
-                            width: 1.0,
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.arrow_back, color: Colors.black),
+                          onPressed: () => context.pop(),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          'UGO BIKE',
+                          style: GoogleFonts.interTight(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF3D8033),
                           ),
                         ),
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.max,
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: IconButton(
+                          icon: Icon(Icons.menu, color: Colors.black),
+                          onPressed: () {},
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Animated Route Line
+              Positioned(
+                top: MediaQuery.of(context).size.height * 0.35,
+                left: MediaQuery.of(context).size.width * 0.2,
+                right: MediaQuery.of(context).size.width * 0.2,
+                child: Container(
+                  height: 3,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Color(0xFF3D8033),
+                        Color(0xFF5CB847),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF3D8033).withOpacity(0.4),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Pickup Location Marker
+              Positioned(
+                top: MediaQuery.of(context).size.height * 0.32,
+                left: MediaQuery.of(context).size.width * 0.15,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.circle,
+                    color: Color(0xFF3D8033),
+                    size: 16,
+                  ),
+                ),
+              ),
+
+              // Drop Location Marker
+              Positioned(
+                top: MediaQuery.of(context).size.height * 0.32,
+                right: MediaQuery.of(context).size.width * 0.15,
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Color(0xFF3D8033),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF3D8033).withOpacity(0.4),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.location_on,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+
+              // Bike Icon (moving along route)
+              Positioned(
+                top: MediaQuery.of(context).size.height * 0.31,
+                left: MediaQuery.of(context).size.width * 0.45,
+                child: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Color(0xFFFF7B10),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFFFF7B10).withOpacity(0.5),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.two_wheeler,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+
+              // Bottom Sheet with Booking Details
+              AnimatedBuilder(
+                animation: _slideAnimation,
+                builder: (context, child) {
+                  return Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Transform.translate(
+                      offset: Offset(0, MediaQuery.of(context).size.height * 0.5 * _slideAnimation.value),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 20,
+                        offset: Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Drag Handle
+                      Container(
+                        margin: EdgeInsets.only(top: 12),
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Color(0xFFE0E0E0),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+
+                      // Status Header
+                      Container(
+                        padding: EdgeInsets.all(20),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Color(0xFF3D8033).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.check_circle,
+                                color: Color(0xFF3D8033),
+                                size: 24,
+                              ),
+                            ),
+                            SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    width: 60.0,
-                                    height: 60.0,
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFFF5F5F5),
-                                      borderRadius: BorderRadius.circular(8.0),
-                                    ),
-                                    child: Padding(
-                                      padding: EdgeInsets.all(10.0),
-                                      child: ClipRRect(
-                                        borderRadius:
-                                            BorderRadius.circular(8.0),
-                                        child: Image.asset(
-                                          'assets/images/Group_2967.png',
-                                          width: 20.0,
-                                          height: 20.0,
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
+                                  Text(
+                                    'Ride Confirmed',
+                                    style: GoogleFonts.interTight(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.black87,
                                     ),
                                   ),
-                                  Column(
-                                    mainAxisSize: MainAxisSize.max,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        FFLocalizations.of(context).getText(
-                                          'angmdohs' /* Moto */,
-                                        ),
-                                        style: FlutterFlowTheme.of(context)
-                                            .titleMedium
-                                            .override(
-                                              font: GoogleFonts.interTight(
-                                                fontWeight: FontWeight.w600,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium
-                                                        .fontStyle,
-                                              ),
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .accent1,
-                                              fontSize: 16.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.w600,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .titleMedium
-                                                      .fontStyle,
-                                            ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Your rider is on the way',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: Color(0xFF757575),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Divider
+                      Divider(height: 1, color: Color(0xFFE0E0E0)),
+
+                      // Ride Details Card
+                      Container(
+                        margin: EdgeInsets.all(16),
+                        padding: EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF3D8033).withOpacity(0.05),
+                              Color(0xFF5CB847).withOpacity(0.05),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Color(0xFF3D8033).withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            // Vehicle Type & Price
+                            Row(
+                              children: [
+                                Container(
+                                  width: 70,
+                                  height: 70,
+                                  padding: EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 8,
+                                        offset: Offset(0, 2),
                                       ),
-                                      if (() {
-                                        if (MediaQuery.sizeOf(context).width <
-                                            kBreakpointSmall) {
-                                          return true;
-                                        } else if (MediaQuery.sizeOf(context)
-                                                .width <
-                                            kBreakpointMedium) {
-                                          return true;
-                                        } else if (MediaQuery.sizeOf(context)
-                                                .width <
-                                            kBreakpointLarge) {
-                                          return true;
-                                        } else {
-                                          return true;
-                                        }
-                                      }())
-                                        AutoSizeText(
-                                          FFLocalizations.of(context).getText(
-                                            'qgovjqli' /* Pick up : dilsukhnagar drop lo... */,
-                                          ),
-                                          textAlign: TextAlign.start,
-                                          minFontSize: 12.0,
-                                          style: FlutterFlowTheme.of(context)
-                                              .bodySmall
-                                              .override(
-                                                font: GoogleFonts.inter(
-                                                  fontWeight: FontWeight.normal,
-                                                  fontStyle:
-                                                      FlutterFlowTheme.of(
-                                                              context)
-                                                          .bodySmall
-                                                          .fontStyle,
-                                                ),
-                                                color: Color(0xFF7F7B7B),
-                                                fontSize: 12.0,
-                                                letterSpacing: 0.0,
-                                                fontWeight: FontWeight.normal,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .bodySmall
-                                                        .fontStyle,
-                                              ),
-                                        ),
                                     ],
                                   ),
-                                ].divide(SizedBox(width: 12.0)),
-                              ),
-                              Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(
-                                    12.0, 8.0, 12.0, 8.0),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Color(0xFFE1E1E1),
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  child: Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text(
-                                      FFLocalizations.of(context).getText(
-                                        'vd3706rt' /* ₹34.22 */,
-                                      ),
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodySmall
-                                          .override(
-                                            font: GoogleFonts.inter(
-                                              fontWeight: FontWeight.w600,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodySmall
-                                                      .fontStyle,
-                                            ),
-                                            color: FlutterFlowTheme.of(context)
-                                                .accent1,
-                                            fontSize: 12.0,
-                                            letterSpacing: 0.0,
-                                            fontWeight: FontWeight.w600,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .bodySmall
-                                                    .fontStyle,
-                                          ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.asset(
+                                      'assets/images/Group_2967.png',
+                                      fit: BoxFit.contain,
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsetsDirectional.fromSTEB(
-                          12.0, 16.0, 12.0, 16.0),
-                      child: FFButtonWidget(
-                        onPressed: () {
-                          print('Button pressed ...');
-                        },
-                        text: FFLocalizations.of(context).getText(
-                          'j1rgj21x' /* Cancel */,
-                        ),
-                        options: FFButtonOptions(
-                          width: double.infinity,
-                          height: 56.0,
-                          padding: EdgeInsets.all(8.0),
-                          iconPadding: EdgeInsetsDirectional.fromSTEB(
-                              0.0, 0.0, 0.0, 0.0),
-                          color: Color(0xFFFF7B10),
-                          textStyle:
-                              FlutterFlowTheme.of(context).titleMedium.override(
-                                    font: GoogleFonts.interTight(
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .titleMedium
-                                          .fontStyle,
-                                    ),
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryBackground,
-                                    fontSize: 24.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .titleMedium
-                                        .fontStyle,
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Moto',
+                                            style: GoogleFonts.interTight(
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF3D8033),
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Color(0xFF3D8033),
+                                              borderRadius: BorderRadius.circular(20),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Color(0xFF3D8033).withOpacity(0.3),
+                                                  blurRadius: 8,
+                                                  offset: Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Text(
+                                              '₹34.22',
+                                              style: GoogleFonts.interTight(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.access_time,
+                                            size: 16,
+                                            color: Color(0xFF757575),
+                                          ),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            '5 mins away',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 13,
+                                              color: Color(0xFF757575),
+                                            ),
+                                          ),
+                                          SizedBox(width: 16),
+                                          Icon(
+                                            Icons.route,
+                                            size: 16,
+                                            color: Color(0xFF757575),
+                                          ),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            '3.2 km',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 13,
+                                              color: Color(0xFF757575),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-                          elevation: 0.0,
-                          borderRadius: BorderRadius.circular(0.0),
+                                ),
+                              ],
+                            ),
+
+                            SizedBox(height: 20),
+
+                            // Route Details
+                            Container(
+                              padding: EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: Color(0xFF3D8033),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Pickup',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                color: Color(0xFF9E9E9E),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            SizedBox(height: 2),
+                                            Text(
+                                              'Dilsukhnagar',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 15,
+                                                color: Colors.black87,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  Container(
+                                    margin: EdgeInsets.only(left: 3, top: 4, bottom: 4),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 2,
+                                          height: 20,
+                                          decoration: BoxDecoration(
+                                            color: Color(0xFFE0E0E0),
+                                            borderRadius: BorderRadius.circular(1),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.location_on,
+                                        size: 16,
+                                        color: Color(0xFFFF7B10),
+                                      ),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Drop-off',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                color: Color(0xFF9E9E9E),
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            SizedBox(height: 2),
+                                            Text(
+                                              'Kothapet',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 15,
+                                                color: Colors.black87,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+
+                      // Action Buttons
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(16, 0, 16, 24),
+                        child: Column(
+                          children: [
+                            // Contact Driver Button
+                            Container(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton(
+                                onPressed: () {},
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Color(0xFF3D8033),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: BorderSide(
+                                      color: Color(0xFF3D8033),
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.phone, size: 20),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Contact Driver',
+                                      style: GoogleFonts.interTight(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            SizedBox(height: 12),
+
+                            // Cancel Ride Button
+                            Container(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  print('Cancel ride pressed');
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Color(0xFFFF7B10),
+                                  foregroundColor: Colors.white,
+                                  elevation: 4,
+                                  shadowColor: Color(0xFFFF7B10).withOpacity(0.3),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Cancel Ride',
+                                  style: GoogleFonts.interTight(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

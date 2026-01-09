@@ -1155,7 +1155,7 @@ void _showQRResponseDialog(Map<String, dynamic> qrData) {
                                         borderRadius:
                                             BorderRadius.circular(12),
                                         child: Image.network(
-                                          'http://www.ugotaxi.com/${getJsonField(dataItem, r'''$.vehicle_image''')}',
+                                          'https://ugotaxi.icacorp.org/${getJsonField(dataItem, r'''$.vehicle_image''')}',
                                           width: 80,
                                           height: 80,
                                           fit: BoxFit.contain,

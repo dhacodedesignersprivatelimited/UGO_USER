@@ -886,7 +886,7 @@ final kTranslationsMap = <Map<String, Map<String, String>>>[
       'te': 'రద్దు చేయి',
     },
     '077w129n': {
-      'en': 'UGO-AUTO',
+      'en': 'UGO',
       'hi': 'यूगो-ऑटो',
       'te': 'యుజిఓ-ఆటో',
     },

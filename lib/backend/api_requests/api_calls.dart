@@ -19,7 +19,7 @@ class CreateUserCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'createUser',
-      apiUrl: 'http://www.ugotaxi.com/api/users/post',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/users/post',
       callType: ApiCallType.POST,
       headers: {},
       params: {
@@ -54,7 +54,7 @@ class LoginCall {
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'login',
-      apiUrl: 'http://www.ugotaxi.com/api/users/login',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/users/login',
       callType: ApiCallType.POST,
       headers: {},
       params: {},
@@ -84,7 +84,7 @@ class GetVehicleDetailsCall {
   static Future<ApiCallResponse> call() async {
     return ApiManager.instance.makeApiCall(
       callName: 'GetVehicleDetails',
-      apiUrl: 'http://www.ugotaxi.com/api/admins/api/admins/vehicles',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/admins/api/admins/vehicles',
       callType: ApiCallType.GET,
       headers: {},
       params: {},
@@ -196,7 +196,7 @@ class CreateRideCall {
     return ApiManager.instance.makeApiCall(
     
       callName: 'createRide',
-      apiUrl: 'http://www.ugotaxi.com/api/rides/post',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/rides/post',
       callType: ApiCallType.POST,
       headers: {
         'Authorization': 'Bearer ${token}',
@@ -234,7 +234,7 @@ class SaveAddressCall {
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'SaveAddress',
-      apiUrl: 'http://www.ugotaxi.com/api/saved-addresses/post',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/saved-addresses/post',
       callType: ApiCallType.POST,
       headers: {
         'Authorization': 'Bearer ${token}',

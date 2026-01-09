@@ -313,7 +313,7 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                                           ClipRRect(
                                             borderRadius: BorderRadius.circular(8),
                                             child: Image.network(
-                                              'http://www.ugotaxi.com/$displayVehicleImage',
+                                              'https://ugotaxi.icacorp.org/$displayVehicleImage',
                                               width: 70,
                                               height: 70,
                                               fit: BoxFit.contain,
