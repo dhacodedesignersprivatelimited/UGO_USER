@@ -170,13 +170,16 @@ class GetVehicleDetailsCall {
 class GetRideStatus {
   static Future<ApiCallResponse> call({
     required int userId,
+    String? token,
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'GetRideStatus',
       apiUrl:
           'https://ugotaxi.icacorp.org/api/rides/users/$userId/pending-rides',
       callType: ApiCallType.GET,
-      headers: {},
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
       params: {},
       returnBody: true,
       cache: false,

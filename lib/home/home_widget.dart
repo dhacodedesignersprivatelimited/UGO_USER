@@ -28,7 +28,6 @@ class _HomeWidgetState extends State<HomeWidget> {
   bool isScanning = false;
 
   @override
-  @override
   void initState() {
     super.initState();
     _model = createModel(context, () => HomeModel());
@@ -39,19 +38,33 @@ class _HomeWidgetState extends State<HomeWidget> {
   }
 
   Future<void> _checkRideStatus() async {
+    final token = FFAppState().accessToken;
     print('Checking ride status for userId: ${FFAppState().userid}');
+    
+    if (token.isEmpty) {
+      print('❌ No access token found in AppState');
+      return;
+    }
+
     try {
       final response = await GetRideStatus.call(
         userId: FFAppState().userid,
+        token: token,
       );
 
-
       _model.apiResult85c = response;
+      
+      if (!response.succeeded) {
+        print('❌ GetRideStatus failed: ${response.jsonBody}');
+        return;
+      }
+
       final rideId = getJsonField(
         _model.apiResult85c?.jsonBody,
-        r'''$.data.rides.id''',
-      ).toString();
-      print('Ride ID from status check: $rideId');
+        r'''$.data.rides[:].id''',
+      );
+      
+      print('Ride ID(s) from status check: $rideId');
       final rideCount = GetRideStatus.count(response.jsonBody);
       print("Ride count: $rideCount");
 
@@ -61,16 +74,14 @@ class _HomeWidgetState extends State<HomeWidget> {
       } else {
         // ✅ Active ride exists → resume booking screen
         FFAppState().bookingInProgress = true;
+        
+        final actualRideId = rideId is List && rideId.isNotEmpty ? rideId.first : rideId;
 
-        if (mounted) {
-          context.goNamed(PlanYourRideWidget.routeName);
+        if (mounted && actualRideId != null) {
           context.pushNamed(
             AutoBookWidget.routeName,
             queryParameters: {
-              'rideId': rideId,
-              'vehicleType': FFAppState().vehicleselect,
-              'pickupLocation': FFAppState().pickuplocation,
-              'dropLocation': FFAppState().droplocation,
+              'rideId': actualRideId.toString(),
             },
           );
         }
@@ -616,8 +627,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                                 'en8fyguh',
                               ),
                               style: FlutterFlowTheme.of(context)
-                                  .headlineSmall
-                                  .override(
+                                  .headlineSmall.override(
                                     font: GoogleFonts.interTight(
                                       fontWeight: FontWeight.w500,
                                       fontStyle: FlutterFlowTheme.of(context)
