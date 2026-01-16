@@ -167,6 +167,99 @@ class GetVehicleDetailsCall {
           .toList();
 }
 
+class GetRideStatus {
+  static Future<ApiCallResponse> call({
+    required int userId,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetRideStatus',
+      apiUrl:
+          'https://ugotaxi.icacorp.org/api/rides/users/$userId/pending-rides',
+      callType: ApiCallType.GET,
+      headers: {},
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  /// ✅ Extract count (MOST IMPORTANT)
+  static int? count(dynamic response) => castToType<int>(
+        getJsonField(
+          response,
+          r'''$.data.count''',
+        ),
+      );
+
+  /// ✅ Extract rides list
+  static List? rides(dynamic response) => getJsonField(
+        response,
+        r'''$.data.rides''',
+        true,
+      ) as List?;
+
+  /// ✅ Ride status (accepted / pending)
+  static List<String>? rideStatus(dynamic response) {
+  final list = getJsonField(
+    response,
+    r'''$.data.rides[:].ride_status''',
+    true,
+  ) as List?;
+
+  return list
+      ?.where((e) => e != null)
+      .map((e) => e.toString())
+      .toList();
+}
+
+  /// ✅ Pickup address
+//  static List<double>? pickupLat(dynamic response) {
+//   final list = getJsonField(
+//     response,
+//     r'''$.data.rides[:].pickup_latitude''',
+//     true,
+//   ) as List?;
+
+//   return list
+//       ?.where((e) => e != null)
+//       .map((e) => double.parse(e.toString()))
+//       .toList();
+// }
+
+  /// ✅ Drop address
+  static List<String?>? dropAddress(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.rides[:].drop_location_address''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .toList();
+
+  /// ✅ Pickup LatLng
+  static List<double>? pickupLat(dynamic response) {
+  final list = getJsonField(
+    response,
+    r'''$.data.rides[:].pickup_latitude''',
+    true,
+  ) as List?;
+
+  return list
+      ?.where((e) => e != null)
+      .map((e) => double.parse(e.toString()))
+      .toList();
+}
+
+
+
+  static List<double>? pickupLng(dynamic response) => (getJsonField(
+        response,
+        r'''$.data.rides[:].pickup_longitude''',
+        true,
+      ) as List?)
+          ?.map((x) => double.parse(x.toString()))
+          .toList();
+}
 class CreateRideCall {
   static Future<ApiCallResponse> call({
     int? userId,

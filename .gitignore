@@ -1,0 +1,48 @@
+# =========================
+# Flutter / Dart
+# =========================
+.dart_tool/
+build/
+.pub/
+.pub-cache/
+.packages
+
+# =========================
+# FlutterFlow
+# =========================
+flutter_flow/
+custom_code/
+custom_widgets/
+
+# =========================
+# Android
+# =========================
+android/.gradle/
+android/local.properties
+android/key.properties
+
+# =========================
+# iOS
+# =========================
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+
+# =========================
+# Web
+# =========================
+web/.dart_tool/
+web/build/
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.iml
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db

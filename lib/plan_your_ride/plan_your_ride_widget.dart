@@ -13,7 +13,8 @@ import 'dart:convert';
 import 'plan_your_ride_model.dart';
 export 'plan_your_ride_model.dart';
 
-const String GOOGLE_MAPS_API_KEY = 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y'; // Replace with your API key
+const String GOOGLE_MAPS_API_KEY =
+    'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y'; // Replace with your API key
 
 class PlanYourRideWidget extends StatefulWidget {
   const PlanYourRideWidget({super.key});
@@ -28,17 +29,17 @@ class PlanYourRideWidget extends StatefulWidget {
 class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   late PlanYourRideModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  
+
   GoogleMapController? mapController;
   Set<Marker> markers = {};
   LatLng? pickupLocation;
   LatLng? dropLocation;
-  
+
   List<PlacePrediction> pickupPredictions = [];
   List<PlacePrediction> dropPredictions = [];
   bool showPickupDropdown = false;
   bool showDropDropdown = false;
-  
+
   // Hyderabad coordinates
   static final LatLng hyderabadCenter = LatLng(17.3850, 78.4867);
   LatLng currentLocation = hyderabadCenter;
@@ -50,16 +51,52 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     _initializeLocation();
   }
 
+  Future<void> _setCurrentLocationAsPickup() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      LatLng latLng = LatLng(position.latitude, position.longitude);
+
+      // Add marker
+      _addPickupMarker(latLng);
+      setState(() {
+        pickupPredictions = [];
+        showPickupDropdown = false;
+      });
+
+      // Reverse geocode to get address + update state
+      await _reverseGeocode(latLng, true);
+
+      // Move camera
+      if (mapController != null) {
+        mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(latLng, 16),
+        );
+      }
+
+      _showSnackBar('Current location set as pickup');
+    } catch (e) {
+      _showSnackBar('Unable to fetch current location', isError: true);
+      print('Current location error: $e');
+    }
+  }
+
   Future<void> _initializeLocation() async {
     try {
       // Get current device location
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      
+
       setState(() {
         currentLocation = LatLng(position.latitude, position.longitude);
         _addPickupMarker(currentLocation);
+        setState(() {
+          pickupPredictions = [];
+          showPickupDropdown = false;
+        });
       });
     } catch (e) {
       print('Location error: $e');
@@ -76,7 +113,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
           markerId: MarkerId('pickup'),
           position: location,
           infoWindow: InfoWindow(title: 'Pickup Location'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           draggable: true,
           onDragEnd: (newLocation) {
             setState(() {
@@ -160,7 +198,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       // Get predictions from Google Places API
       final url =
           'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$GOOGLE_MAPS_API_KEY&components=country:in&location=17.3850,78.4867&radius=50000';
-      
+
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -198,7 +236,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       // Get place details (lat/lng)
       final url =
           'https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.placeId}&key=$GOOGLE_MAPS_API_KEY';
-      
+
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -221,7 +259,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
               FFAppState().pickupLatitude = lat;
               FFAppState().pickupLongitude = lng;
             });
-            
+
             // Center map on pickup
             if (mapController != null) {
               mapController!.animateCamera(
@@ -238,7 +276,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
               FFAppState().dropLatitude = lat;
               FFAppState().dropLongitude = lng;
             });
-            
+
             // Center map on drop
             if (mapController != null) {
               mapController!.animateCamera(
@@ -325,15 +363,16 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   void _confirmRide() {
     if (FFAppState().pickuplocation.isEmpty ||
         FFAppState().droplocation.isEmpty) {
-      _showSnackBar('Please select both pickup and drop locations', isError: true);
+      _showSnackBar('Please select both pickup and drop locations',
+          isError: true);
       return;
     }
 
     _showSnackBar('Locations confirmed! Finding rides...');
-    
+
     Future.delayed(Duration(milliseconds: 800), () {
-       context.pushNamed(
-      AvaliableOptionsWidget.routeName);// Replace with your route
+      context.pushNamed(
+          AvaliableOptionsWidget.routeName); // Replace with your route
     });
   }
 
@@ -417,7 +456,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                                   _searchPlaces(value, true);
                                 },
                               ),
-                              if (pickupPredictions.isNotEmpty && showPickupDropdown)
+                              if (pickupPredictions.isNotEmpty &&
+                                  showPickupDropdown)
                                 Container(
                                   margin: EdgeInsets.only(top: 8),
                                   decoration: BoxDecoration(
@@ -431,7 +471,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                                     shrinkWrap: true,
                                     itemCount: pickupPredictions.length,
                                     itemBuilder: (context, index) {
-                                      final prediction = pickupPredictions[index];
+                                      final prediction =
+                                          pickupPredictions[index];
                                       return InkWell(
                                         onTap: () {
                                           _selectPlace(prediction, true);
@@ -442,7 +483,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                                             horizontal: 0,
                                           ),
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 prediction.mainText,
@@ -451,7 +493,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
-                                              if (prediction.secondaryText.isNotEmpty)
+                                              if (prediction
+                                                  .secondaryText.isNotEmpty)
                                                 Text(
                                                   prediction.secondaryText,
                                                   style: TextStyle(
@@ -459,7 +502,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                                                     color: Colors.grey,
                                                   ),
                                                 ),
-                                              if (index < pickupPredictions.length - 1)
+                                              if (index <
+                                                  pickupPredictions.length - 1)
                                                 Divider(height: 8),
                                             ],
                                           ),
@@ -482,6 +526,14 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                               });
                             },
                           ),
+                        IconButton(
+                          onPressed: _setCurrentLocationAsPickup,
+                          icon: Icon(
+                            Icons.my_location,
+                            size: 18,
+                            color: Color(0xFF2DB854),
+                          ),
+                        ),
                       ],
                     ),
 
@@ -519,7 +571,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                                   _searchPlaces(value, false);
                                 },
                               ),
-                              if (dropPredictions.isNotEmpty && showDropDropdown)
+                              if (dropPredictions.isNotEmpty &&
+                                  showDropDropdown)
                                 Container(
                                   margin: EdgeInsets.only(top: 8),
                                   decoration: BoxDecoration(
@@ -544,7 +597,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                                             horizontal: 0,
                                           ),
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 prediction.mainText,
@@ -553,7 +607,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
-                                              if (prediction.secondaryText.isNotEmpty)
+                                              if (prediction
+                                                  .secondaryText.isNotEmpty)
                                                 Text(
                                                   prediction.secondaryText,
                                                   style: TextStyle(
@@ -561,7 +616,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                                                     color: Colors.grey,
                                                   ),
                                                 ),
-                                              if (index < dropPredictions.length - 1)
+                                              if (index <
+                                                  dropPredictions.length - 1)
                                                 Divider(height: 8),
                                             ],
                                           ),
@@ -713,11 +769,11 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                 iconPadding: EdgeInsets.all(0.0),
                 color: Color(0xFFFF7B10),
                 textStyle: FlutterFlowTheme.of(context).titleSmall.override(
-                  font: GoogleFonts.inter(),
-                  color: Colors.white,
-                  fontSize: 16.0,
-                  fontWeight: FontWeight.w600,
-                ),
+                      font: GoogleFonts.inter(),
+                      color: Colors.white,
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.w600,
+                    ),
                 elevation: 3.0,
                 borderRadius: BorderRadius.circular(12.0),
               ),

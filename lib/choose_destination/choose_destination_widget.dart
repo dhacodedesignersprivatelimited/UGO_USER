@@ -27,6 +27,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => ChooseDestinationModel());
+    print('Choose Destination Widget Loaded');
   }
 
   @override
@@ -130,6 +131,11 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                                         .bodyMedium
                                         .fontStyle,
                                   ),
+                        ),
+                        Icon(
+                          Icons.my_location,
+                          color: Color.fromARGB(255, 58, 50, 50),
+                          size: 24.0,
                         ),
                       ].divide(SizedBox(width: 12.0)),
                     ),

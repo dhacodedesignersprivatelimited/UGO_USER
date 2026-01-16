@@ -141,7 +141,12 @@ class FFAppState extends ChangeNotifier {
     _safeInit(() {
       _userid = prefs.getInt('ff_userid') ?? _userid;
     });
+    _safeInit(() {
+      _bookingInProgress = prefs.getBool('ff_bookingInProgress') ?? _bookingInProgress;
+    });
   }
+
+
 
   void update(VoidCallback callback) {
     callback();
@@ -225,6 +230,14 @@ class FFAppState extends ChangeNotifier {
     _accessToken = value;
     prefs.setString('ff_accessToken', value);
     print('accessToken updated: $value');
+  }
+
+  bool _bookingInProgress = false;
+  bool get bookingInProgress => _bookingInProgress;
+  set bookingInProgress(bool value) {
+    _bookingInProgress = value;
+    prefs.setBool('ff_bookingInProgress', value);
+    print('bookingInProgress updated: $value');
   }
 
   int _userid = 0;

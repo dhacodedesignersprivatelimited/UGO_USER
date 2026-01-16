@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'home_model.dart';
 export 'home_model.dart';
+import '/backend/api_requests/api_calls.dart';
 
 /// Taxi Booking App Interface
 class HomeWidget extends StatefulWidget {
@@ -27,9 +28,56 @@ class _HomeWidgetState extends State<HomeWidget> {
   bool isScanning = false;
 
   @override
+  @override
   void initState() {
     super.initState();
     _model = createModel(context, () => HomeModel());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkRideStatus();
+    });
+  }
+
+  Future<void> _checkRideStatus() async {
+    print('Checking ride status for userId: ${FFAppState().userid}');
+    try {
+      final response = await GetRideStatus.call(
+        userId: FFAppState().userid,
+      );
+
+
+      _model.apiResult85c = response;
+      final rideId = getJsonField(
+        _model.apiResult85c?.jsonBody,
+        r'''$.data.rides.id''',
+      ).toString();
+      print('Ride ID from status check: $rideId');
+      final rideCount = GetRideStatus.count(response.jsonBody);
+      print("Ride count: $rideCount");
+
+      if (rideCount == null || rideCount == 0) {
+        // ✅ No active ride → stay on Home
+        FFAppState().bookingInProgress = false;
+      } else {
+        // ✅ Active ride exists → resume booking screen
+        FFAppState().bookingInProgress = true;
+
+        if (mounted) {
+          context.goNamed(PlanYourRideWidget.routeName);
+          context.pushNamed(
+            AutoBookWidget.routeName,
+            queryParameters: {
+              'rideId': rideId,
+              'vehicleType': FFAppState().vehicleselect,
+              'pickupLocation': FFAppState().pickuplocation,
+              'dropLocation': FFAppState().droplocation,
+            },
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Ride status check failed: $e');
+    }
   }
 
   @override
@@ -141,7 +189,8 @@ class _HomeWidgetState extends State<HomeWidget> {
                             icon: Icons.directions_car,
                             iconColor: Colors.green,
                             label: 'Vehicle Number',
-                            value: qrData['vehicle_number']?.toString() ?? 'N/A',
+                            value:
+                                qrData['vehicle_number']?.toString() ?? 'N/A',
                           ),
                         if (qrData.containsKey('vehicle_number'))
                           SizedBox(height: 12),
@@ -154,8 +203,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                             label: 'Rating',
                             value: '${qrData['rating']} ⭐',
                           ),
-                        if (qrData.containsKey('rating'))
-                          SizedBox(height: 12),
+                        if (qrData.containsKey('rating')) SizedBox(height: 12),
 
                         // Phone (if available)
                         if (qrData.containsKey('phone_number'))
