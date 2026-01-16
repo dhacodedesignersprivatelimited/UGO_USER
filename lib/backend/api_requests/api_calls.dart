@@ -212,20 +212,6 @@ class GetRideStatus {
       .toList();
 }
 
-  /// ✅ Pickup address
-//  static List<double>? pickupLat(dynamic response) {
-//   final list = getJsonField(
-//     response,
-//     r'''$.data.rides[:].pickup_latitude''',
-//     true,
-//   ) as List?;
-
-//   return list
-//       ?.where((e) => e != null)
-//       .map((e) => double.parse(e.toString()))
-//       .toList();
-// }
-
   /// ✅ Drop address
   static List<String?>? dropAddress(dynamic response) => (getJsonField(
         response,
@@ -260,6 +246,26 @@ class GetRideStatus {
           ?.map((x) => double.parse(x.toString()))
           .toList();
 }
+
+class GetRideDetailsCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getRideDetails',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/rides/$rideId',
+      callType: ApiCallType.GET,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+}
+
 class CreateRideCall {
   static Future<ApiCallResponse> call({
     int? userId,
@@ -306,6 +312,45 @@ class CreateRideCall {
       alwaysAllowBody: false,
     );
   }
+}
+
+class GetDriverDetailsCall {
+  static Future<ApiCallResponse> call({
+    required dynamic driverId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getDriverDetails',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/drivers/$driverId',
+      callType: ApiCallType.GET,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static dynamic driverData(dynamic response) => getJsonField(
+        response,
+        r'''$.data''',
+      );
+  
+  static String? driverName(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.name''',
+      ));
+
+  static String? vehicleNumber(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.vehicle.number''',
+      ));
+
+  static String? vehicleModel(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.vehicle.model''',
+      ));
 }
 
 class SaveAddressCall {
