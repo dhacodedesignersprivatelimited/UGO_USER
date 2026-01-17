@@ -14,7 +14,7 @@ class CreateUserCall {
     String? firstName = '',
     String? lastName = '',
     String? email = '',
-    FFUploadedFile? profileImage, 
+    FFUploadedFile? profileImage,
     String? fcmToken,
   }) async {
     return ApiManager.instance.makeApiCall(
@@ -50,7 +50,6 @@ class LoginCall {
 {
   "mobile_number": "${mobile}",
   "fcm_token": "${fcmToken}"
-
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'login',
@@ -75,9 +74,9 @@ class LoginCall {
         r'''$.data.accessToken''',
       ));
   static int? userid(dynamic response) => castToType<int>(getJsonField(
-        response,
-        r'''$.data.user.id''',
-      ));
+    response,
+    r'''$.data.user.id''',
+  ));
 }
 
 class GetVehicleDetailsCall {
@@ -98,73 +97,73 @@ class GetVehicleDetailsCall {
   }
 
   static List? data(dynamic response) => getJsonField(
-        response,
-        r'''$.data''',
-        true,
-      ) as List?;
+    response,
+    r'''$.data''',
+    true,
+  ) as List?;
   static List<String>? vehiclename(dynamic response) => (getJsonField(
-        response,
-        r'''$.data[:].vehicle_name''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<String>(x))
-          .withoutNulls
-          .toList();
+    response,
+    r'''$.data[:].vehicle_name''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<String>(x))
+      .withoutNulls
+      .toList();
   static List<String>? vehicletype(dynamic response) => (getJsonField(
-        response,
-        r'''$.data[:].vehicle_type''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<String>(x))
-          .withoutNulls
-          .toList();
+    response,
+    r'''$.data[:].vehicle_type''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<String>(x))
+      .withoutNulls
+      .toList();
   static List<double>? price(dynamic response) => (getJsonField(
-        response,
-        r'''$.data[:].kilometer_per_price''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<double>(x))
-          .withoutNulls
-          .toList();
+    response,
+    r'''$.data[:].kilometer_per_price''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<double>(x))
+      .withoutNulls
+      .toList();
   static List<int>? seating(dynamic response) => (getJsonField(
-        response,
-        r'''$.data[:].seating_capacity''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<int>(x))
-          .withoutNulls
-          .toList();
+    response,
+    r'''$.data[:].seating_capacity''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<int>(x))
+      .withoutNulls
+      .toList();
   static List<int>? luggage(dynamic response) => (getJsonField(
-        response,
-        r'''$.data[:].luggage_capacity''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<int>(x))
-          .withoutNulls
-          .toList();
+    response,
+    r'''$.data[:].luggage_capacity''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<int>(x))
+      .withoutNulls
+      .toList();
   static List<String>? vehicleimage(dynamic response) => (getJsonField(
-        response,
-        r'''$.data[:].vehicle_image''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<String>(x))
-          .withoutNulls
-          .toList();
+    response,
+    r'''$.data[:].vehicle_image''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<String>(x))
+      .withoutNulls
+      .toList();
   static List<String>? vehicleurl(dynamic response) => (getJsonField(
-        response,
-        r'''$.data[:].vehicle_image_url''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<String>(x))
-          .withoutNulls
-          .toList();
+    response,
+    r'''$.data[:].vehicle_image_url''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<String>(x))
+      .withoutNulls
+      .toList();
 }
 
 class GetRideStatus {
@@ -175,7 +174,7 @@ class GetRideStatus {
     return ApiManager.instance.makeApiCall(
       callName: 'GetRideStatus',
       apiUrl:
-          'https://ugotaxi.icacorp.org/api/rides/users/$userId/pending-rides',
+      'https://ugotaxi.icacorp.org/api/rides/users/$userId/pending-rides',
       callType: ApiCallType.GET,
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -186,68 +185,61 @@ class GetRideStatus {
     );
   }
 
-  /// ✅ Extract count (MOST IMPORTANT)
   static int? count(dynamic response) => castToType<int>(
-        getJsonField(
-          response,
-          r'''$.data.count''',
-        ),
-      );
+    getJsonField(
+      response,
+      r'''$.data.count''',
+    ),
+  );
 
-  /// ✅ Extract rides list
   static List? rides(dynamic response) => getJsonField(
-        response,
-        r'''$.data.rides''',
-        true,
-      ) as List?;
+    response,
+    r'''$.data.rides''',
+    true,
+  ) as List?;
 
-  /// ✅ Ride status (accepted / pending)
   static List<String>? rideStatus(dynamic response) {
-  final list = getJsonField(
-    response,
-    r'''$.data.rides[:].ride_status''',
-    true,
-  ) as List?;
+    final list = getJsonField(
+      response,
+      r'''$.data.rides[:].ride_status''',
+      true,
+    ) as List?;
 
-  return list
-      ?.where((e) => e != null)
-      .map((e) => e.toString())
-      .toList();
-}
+    return list
+        ?.where((e) => e != null)
+        .map((e) => e.toString())
+        .toList();
+  }
 
-  /// ✅ Drop address
   static List<String?>? dropAddress(dynamic response) => (getJsonField(
-        response,
-        r'''$.data.rides[:].drop_location_address''',
-        true,
-      ) as List?)
-          ?.withoutNulls
-          .map((x) => castToType<String>(x))
-          .toList();
-
-  /// ✅ Pickup LatLng
-  static List<double>? pickupLat(dynamic response) {
-  final list = getJsonField(
     response,
-    r'''$.data.rides[:].pickup_latitude''',
+    r'''$.data.rides[:].drop_location_address''',
     true,
-  ) as List?;
-
-  return list
-      ?.where((e) => e != null)
-      .map((e) => double.parse(e.toString()))
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<String>(x))
       .toList();
-}
 
+  static List<double>? pickupLat(dynamic response) {
+    final list = getJsonField(
+      response,
+      r'''$.data.rides[:].pickup_latitude''',
+      true,
+    ) as List?;
 
+    return list
+        ?.where((e) => e != null)
+        .map((e) => double.parse(e.toString()))
+        .toList();
+  }
 
   static List<double>? pickupLng(dynamic response) => (getJsonField(
-        response,
-        r'''$.data.rides[:].pickup_longitude''',
-        true,
-      ) as List?)
-          ?.map((x) => double.parse(x.toString()))
-          .toList();
+    response,
+    r'''$.data.rides[:].pickup_longitude''',
+    true,
+  ) as List?)
+      ?.map((x) => double.parse(x.toString()))
+      .toList();
 }
 
 class GetRideDetailsCall {
@@ -280,7 +272,7 @@ class CreateRideCall {
     double? pickuplon,
     double? droplat,
     double? droplon,
-    
+
   }) async {
     print('Bearer ${token}');
     final ffApiRequestBody = '''
@@ -296,13 +288,13 @@ class CreateRideCall {
   
 }''';
     return ApiManager.instance.makeApiCall(
-    
+
       callName: 'createRide',
       apiUrl: 'https://ugotaxi.icacorp.org/api/rides/post',
       callType: ApiCallType.POST,
       headers: {
         'Authorization': 'Bearer ${token}',
-      
+
       },
       params: {},
       body: ffApiRequestBody,
@@ -336,24 +328,24 @@ class GetDriverDetailsCall {
   }
 
   static dynamic driverData(dynamic response) => getJsonField(
-        response,
-        r'''$.data''',
-      );
-  
+    response,
+    r'''$.data''',
+  );
+
   static String? driverName(dynamic response) => castToType<String>(getJsonField(
-        response,
-        r'''$.data.name''',
-      ));
+    response,
+    r'''$.data.name''',
+  ));
 
   static String? vehicleNumber(dynamic response) => castToType<String>(getJsonField(
-        response,
-        r'''$.data.vehicle.number''',
-      ));
+    response,
+    r'''$.data.vehicle.number''',
+  ));
 
   static String? vehicleModel(dynamic response) => castToType<String>(getJsonField(
-        response,
-        r'''$.data.vehicle.model''',
-      ));
+    response,
+    r'''$.data.vehicle.model''',
+  ));
 }
 
 class GetNearbyDriversCall {
@@ -420,29 +412,72 @@ class SaveAddressCall {
 
   // Parse response data
   static int? addressId(dynamic response) => castToType<int>(getJsonField(
-        response,
-        r'''$.data.id''',
-      ));
-  
+    response,
+    r'''$.data.id''',
+  ));
+
   static String? message(dynamic response) => castToType<String>(getJsonField(
-        response,
-        r'''$.message''',
-      ));
-  
+    response,
+    r'''$.message''',
+  ));
+
   static bool? success(dynamic response) => castToType<bool>(getJsonField(
-        response,
-        r'''$.success''',
-      ));
-  
+    response,
+    r'''$.success''',
+  ));
+
   static String? addressType(dynamic response) => castToType<String>(getJsonField(
-        response,
-        r'''$.data.address_type''',
-      ));
-  
+    response,
+    r'''$.data.address_type''',
+  ));
+
   static bool? isDefault(dynamic response) => castToType<bool>(getJsonField(
-        response,
-        r'''$.data.is_default''',
-      ));
+    response,
+    r'''$.data.is_default''',
+  ));
+}
+
+// ✅ FIXED CANCEL RIDE CALL
+class CancelRide {
+  static Future<ApiCallResponse> call({
+    required int rideId,           // ✅ Made required
+    String? cancellationReason,    // ✅ Renamed for consistency
+    String? token = '',
+    String? cancelledBy = 'user',  // ✅ Defaulted to 'user'
+  }) async {
+    final ffApiRequestBody = '''
+{
+  "ride_id": ${rideId},
+  "cancellation_reason": "${escapeStringForJson(cancellationReason ?? '')}",
+  "cancelled_by": "${escapeStringForJson(cancelledBy ?? 'user')}"
+}'''; // ✅ FIXED: Added missing commas & proper JSON structure
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'cancelRide',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/rides/rides/cancel',
+      callType: ApiCallType.PATCH,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json', // ✅ Added content type
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+    );
+  }
+
+  // ✅ Added Response Helper Methods
+  static bool? success(dynamic response) => castToType<bool>(
+    getJsonField(response, r'''$.success'''),
+  );
+
+  static String? message(dynamic response) => castToType<String>(
+    getJsonField(response, r'''$.message'''),
+  );
 }
 
 class ApiPagingParams {
