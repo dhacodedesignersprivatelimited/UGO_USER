@@ -356,6 +356,31 @@ class GetDriverDetailsCall {
       ));
 }
 
+class GetNearbyDriversCall {
+  static Future<ApiCallResponse> call({
+    double? lat,
+    double? lon,
+    double? radius = 5.0, // km
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getNearbyDrivers',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/drivers/nearby',
+      callType: ApiCallType.GET,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+      params: {
+        'latitude': lat,
+        'longitude': lon,
+        'radius': radius,
+      },
+      returnBody: true,
+      cache: false,
+    );
+  }
+}
+
 class SaveAddressCall {
   static Future<ApiCallResponse> call({
     int? userId,

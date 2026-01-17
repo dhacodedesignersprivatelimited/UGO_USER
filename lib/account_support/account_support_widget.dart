@@ -1,3 +1,4 @@
+import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -6,43 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'account_support_model.dart';
 export 'account_support_model.dart';
 
-/// Create a page named Account.
-///
-/// AppBar: back arrow, title “Account”, background orange #FF7A00,
-/// title/icons white. Elevation 0.
-/// Body: white background; a ListView of help items with separators. Each row
-/// is 64px tall, has 16px horizontal padding, and contains:
-/// – Leading icon: “list” (or similar) 22–24px, color #222 at 70% opacity.
-/// – Title text: 16sp, medium, color #111.
-/// – Trailing chevron (right arrow) 20–22px, color #BDBDBD.
-/// – Bottom divider 1px, color #EEEEEE.
-/// Rows (in order):
-///
-/// Can’t sign in or request a trip
-///
-/// Account settings
-///
-/// Payment methods
-///
-/// Gift cards and vouchers
-///
-/// Promos and partnerships
-///
-/// Uber Cash
-///
-/// Receipts and invoices
-///
-/// Other payment support
-///
-/// Duplicate or unknown charges
-///
-/// Rider insurance
-///
-/// I lost my phone in Uber (use a “phone” icon instead of list for this row)
-/// Interactions: For each row, add On Tap → Navigate to a placeholder page
-/// with the same title (create the pages if missing).
-/// Styling: iOS-like spacing; keep the list clean (no card shadows). Respect
-/// dark mode—flip text/icon colors appropriately.
 class AccountSupportWidget extends StatefulWidget {
   const AccountSupportWidget({super.key});
 
@@ -55,8 +19,61 @@ class AccountSupportWidget extends StatefulWidget {
 
 class _AccountSupportWidgetState extends State<AccountSupportWidget> {
   late AccountSupportModel _model;
-
   final scaffoldKey = GlobalKey<ScaffoldState>();
+
+  // Mock dynamic data structure like Uber
+  final List<Map<String, dynamic>> supportCategories = [
+    {
+      'title': 'Can\'t sign in or request a trip',
+      'icon': Icons.login_rounded,
+      'id': 'auth_issues',
+    },
+    {
+      'title': 'Account settings',
+      'icon': Icons.settings_outlined,
+      'id': 'account_settings',
+    },
+    {
+      'title': 'Payment methods',
+      'icon': Icons.payment_rounded,
+      'id': 'payment_methods',
+    },
+    {
+      'title': 'Gift cards and vouchers',
+      'icon': Icons.card_giftcard_rounded,
+      'id': 'vouchers',
+    },
+    {
+      'title': 'Promos and partnerships',
+      'icon': Icons.local_offer_outlined,
+      'id': 'promos',
+    },
+    {
+      'title': 'Uber Cash',
+      'icon': Icons.account_balance_wallet_outlined,
+      'id': 'cash',
+    },
+    {
+      'title': 'Receipts and invoices',
+      'icon': Icons.receipt_long_rounded,
+      'id': 'receipts',
+    },
+    {
+      'title': 'Duplicate or unknown charges',
+      'icon': Icons.report_problem_outlined,
+      'id': 'charges',
+    },
+    {
+      'title': 'Rider insurance',
+      'icon': Icons.verified_user_outlined,
+      'id': 'insurance',
+    },
+    {
+      'title': 'I lost my phone',
+      'icon': Icons.phone_android_rounded,
+      'id': 'lost_phone',
+    },
+  ];
 
   @override
   void initState() {
@@ -67,773 +84,154 @@ class _AccountSupportWidgetState extends State<AccountSupportWidget> {
   @override
   void dispose() {
     _model.dispose();
-
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-        FocusManager.instance.primaryFocus?.unfocus();
-      },
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         key: scaffoldKey,
         backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: FlutterFlowTheme.of(context).primary,
+          backgroundColor: Colors.white,
+          elevation: 0,
           automaticallyImplyLeading: false,
-          leading: FlutterFlowIconButton(
-            borderColor: Colors.transparent,
-            borderRadius: 30.0,
-            borderWidth: 1.0,
-            buttonSize: 60.0,
-            icon: Icon(
-              Icons.arrow_back_rounded,
-              color: Colors.white,
-              size: 30.0,
-            ),
-            onPressed: () async {
-              context.pop();
-            },
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black, size: 24),
+            onPressed: () => context.pop(),
           ),
           title: Text(
-            FFLocalizations.of(context).getText(
-              'ysdtmrd0' /* Account */,
+            'Account',
+            style: GoogleFonts.inter(
+              color: Colors.black,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
             ),
-            style: FlutterFlowTheme.of(context).headlineMedium.override(
-                  font: GoogleFonts.interTight(
-                    fontWeight: FontWeight.w500,
-                    fontStyle:
-                        FlutterFlowTheme.of(context).headlineMedium.fontStyle,
-                  ),
-                  color: Colors.white,
-                  fontSize: 18.0,
-                  letterSpacing: 0.0,
-                  fontWeight: FontWeight.w500,
-                  fontStyle:
-                      FlutterFlowTheme.of(context).headlineMedium.fontStyle,
-                ),
           ),
-          actions: [],
-          centerTitle: true,
-          elevation: 2.0,
+          centerTitle: false,
         ),
         body: SafeArea(
-          top: true,
-          child: ListView(
-            padding: EdgeInsets.zero,
-            scrollDirection: Axis.vertical,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Dynamic Header like Uber
               Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.list,
-                                color: Color(0xB3222222),
-                                size: 22.0,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'tfzrtoij' /* Can't sign in or request a tri... */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF111111),
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 12.0)),
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFBDBDBD),
-                          size: 20.0,
-                        ),
-                      ],
-                    ),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                child: Text(
+                  'How can we help with your account?',
+                  style: GoogleFonts.inter(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    color: Colors.black,
                   ),
                 ),
               ),
-              Divider(
-                height: 1.0,
-                thickness: 1.0,
-                color: Color(0xFFEEEEEE),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
+              
+              // Dynamic List
+              Expanded(
+                child: ListView.separated(
+                  itemCount: supportCategories.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  separatorBuilder: (context, index) => const Divider(
+                    height: 1,
+                    indent: 56,
+                    color: Color(0xFFEEEEEE),
                   ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.list,
-                                color: Color(0xB3222222),
-                                size: 22.0,
+                  itemBuilder: (context, index) {
+                    final item = supportCategories[index];
+                    return InkWell(
+                      onTap: () {
+                        debugPrint('Support tapped: ${item['id']}');
+                        // Implementation for specific support route
+                      },
+                      child: Container(
+                        height: 72,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                shape: BoxShape.circle,
                               ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'biryh5h6' /* Account settings */,
+                              child: Icon(
+                                item['icon'] as IconData,
+                                color: Colors.black87,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                item['title'] as String,
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black,
                                 ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF111111),
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
                               ),
-                            ].divide(SizedBox(width: 12.0)),
-                          ),
+                            ),
+                            const Icon(
+                              Icons.chevron_right,
+                              color: Color(0xFFBDBDBD),
+                              size: 20,
+                            ),
+                          ],
                         ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFBDBDBD),
-                          size: 20.0,
-                        ),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
               ),
-              Divider(
-                height: 1.0,
-                thickness: 1.0,
-                color: Color(0xFFEEEEEE),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.list,
-                                color: Color(0xB3222222),
-                                size: 22.0,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'zobguivi' /* Payment methods */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF111111),
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 12.0)),
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFBDBDBD),
-                          size: 20.0,
-                        ),
-                      ],
-                    ),
-                  ),
+              
+              // Quick Contact Footer
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  border: const Border(top: BorderSide(color: Color(0xFFEEEEEE))),
                 ),
-              ),
-              Divider(
-                height: 1.0,
-                thickness: 1.0,
-                color: Color(0xFFEEEEEE),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.list,
-                                color: Color(0xB3222222),
-                                size: 22.0,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'y2rtjpsw' /* Gift cards and vouchers */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF111111),
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 12.0)),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Still need help?',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFBDBDBD),
-                          size: 20.0,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Divider(
-                height: 1.0,
-                thickness: 1.0,
-                color: Color(0xFFEEEEEE),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.list,
-                                color: Color(0xB3222222),
-                                size: 22.0,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  '7dkzfeve' /* Promos and partnerships */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF111111),
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 12.0)),
+                          Text(
+                            'Our support team is available 24/7',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFBDBDBD),
-                          size: 20.0,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              Divider(
-                height: 1.0,
-                thickness: 1.0,
-                color: Color(0xFFEEEEEE),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.list,
-                                color: Color(0xB3222222),
-                                size: 22.0,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'ipz98pti' /* Uber Cash */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF111111),
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 12.0)),
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFBDBDBD),
-                          size: 20.0,
-                        ),
-                      ],
+                    ElevatedButton(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      child: Text(
+                        'Contact Us',
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
                     ),
-                  ),
-                ),
-              ),
-              Divider(
-                height: 1.0,
-                thickness: 1.0,
-                color: Color(0xFFEEEEEE),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.list,
-                                color: Color(0xB3222222),
-                                size: 22.0,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'eujhm8po' /* Receipts and invoices */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF111111),
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 12.0)),
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFBDBDBD),
-                          size: 20.0,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Divider(
-                height: 1.0,
-                thickness: 1.0,
-                color: Color(0xFFEEEEEE),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.list,
-                                color: Color(0xB3222222),
-                                size: 22.0,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'm1vu6je7' /* Other payment support */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF111111),
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 12.0)),
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFBDBDBD),
-                          size: 20.0,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Divider(
-                height: 1.0,
-                thickness: 1.0,
-                color: Color(0xFFEEEEEE),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.list,
-                                color: Color(0xB3222222),
-                                size: 22.0,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  '9c264lwa' /* Duplicate or unknown charges */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF111111),
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 12.0)),
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFBDBDBD),
-                          size: 20.0,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Divider(
-                height: 1.0,
-                thickness: 1.0,
-                color: Color(0xFFEEEEEE),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.list,
-                                color: Color(0xB3222222),
-                                size: 22.0,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  '6ezjtt01' /* Rider insurance */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF111111),
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 12.0)),
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFBDBDBD),
-                          size: 20.0,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Divider(
-                height: 1.0,
-                thickness: 1.0,
-                color: Color(0xFFEEEEEE),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                child: Container(
-                  width: double.infinity,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.phone,
-                                color: Color(0xB3222222),
-                                size: 22.0,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'hy81sb07' /* I lost my phone in Uber */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w500,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: Color(0xFF111111),
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 12.0)),
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Color(0xFFBDBDBD),
-                          size: 20.0,
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
               ),
             ],
