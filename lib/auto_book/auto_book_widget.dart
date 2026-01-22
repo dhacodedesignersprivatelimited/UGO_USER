@@ -32,7 +32,10 @@ class AutoBookWidget extends StatefulWidget {
   State<AutoBookWidget> createState() => _AutoBookWidgetState();
 }
 
-class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStateMixin {
+class _AutoBookWidgetState extends State<AutoBookWidget>
+    with TickerProviderStateMixin {
+      String? _rideOtp;
+
   late AutoBookModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -46,11 +49,14 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  
 
   Timer? _searchTimer;
+  
   int _searchSeconds = 0;
 
-  String _rideStatus = 'searching'; // searching, accepted, arriving, picked_up, completed, cancelled
+  String _rideStatus =
+      'searching'; // searching, accepted, arriving, picked_up, completed, cancelled
   String _etaMinutes = '4';
 
   // ✅ Ride Status Constants
@@ -127,6 +133,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
 
       socket.onConnect((_) {
         debugPrint("✅ SOCKET CONNECTED");
+
         socket.emit("watch_entity", {"type": "ride", "id": rideId});
       });
 
@@ -144,32 +151,51 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
   }
 
   void _processRideUpdate(dynamic data) {
+    
     try {
       final updatedRide = Map<String, dynamic>.from(data);
       if (!mounted) return;
+      print("🔄 Processing ride update socket: ${updatedRide}");
 
       setState(() {
-        ridesCache = [updatedRide];
-        final status = updatedRide['status'] ?? updatedRide['ride_status'];
+  if (ridesCache.isNotEmpty) {
+    ridesCache[0] = {
+      ...ridesCache[0],   // keep API data
+      ...updatedRide,     // overwrite changed fields only
+    };
+  } else {
+    ridesCache = [updatedRide];
+  }
 
-        // Status transitions
-        if (status == STATUS_CANCELLED) {
-          _rideStatus = STATUS_CANCELLED;
-          _searchTimer?.cancel();
-        } else if ([STATUS_ACCEPTED, STATUS_ARRIVING, 'driver_assigned'].contains(status)) {
-          _rideStatus = STATUS_ACCEPTED;
-          _searchTimer?.cancel();
-        } else if (status == STATUS_PICKED_UP) {
-          _rideStatus = STATUS_PICKED_UP;
-        } else if (status == STATUS_COMPLETED) {
-          _rideStatus = STATUS_COMPLETED;
-        }
-      });
+  final rawStatus = updatedRide['ride_status'] ?? updatedRide['status'];
+  final status = rawStatus?.toString().toLowerCase();
+
+  if (updatedRide['otp'] != null) {
+    _rideOtp = updatedRide['otp'].toString();
+  }
+
+  if (status == 'cancelled') {
+    _rideStatus = STATUS_CANCELLED;
+    _searchTimer?.cancel();
+  } else if (['accepted', 'arriving', 'driver_assigned'].contains(status)) {
+    _rideStatus = STATUS_ACCEPTED;
+    _searchTimer?.cancel();
+  } else if (status == 'started' || status == 'picked_up') {
+    _rideStatus = STATUS_PICKED_UP;
+  } else if (status == 'completed') {
+    _rideStatus = STATUS_COMPLETED;
+  }
+});
 
       final driverId = updatedRide['driver_id'];
       if (driverId != null && driverDetails == null && !isLoadingDriver) {
         final status = updatedRide['status'] ?? updatedRide['ride_status'];
-        if ([STATUS_ACCEPTED, STATUS_ARRIVING, 'driver_assigned', STATUS_PICKED_UP].contains(status)) {
+        if ([
+          STATUS_ACCEPTED,
+          STATUS_ARRIVING,
+          'driver_assigned',
+          STATUS_PICKED_UP
+        ].contains(status)) {
           _fetchDriverDetails(driverId);
         }
       }
@@ -203,7 +229,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
             var data = body['data'] ?? body;
             driverDetails = Map<String, dynamic>.from(data);
             isLoadingDriver = false;
-            if (_rideStatus == STATUS_ACCEPTED || _rideStatus == STATUS_SEARCHING) {
+            if (_rideStatus == STATUS_ACCEPTED ||
+                _rideStatus == STATUS_SEARCHING) {
               _rideStatus = STATUS_ARRIVING;
             }
           });
@@ -306,7 +333,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
               child: FlutterFlowGoogleMap(
                 controller: _model.googleMapsController,
                 onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
-                initialLocation: _model.googleMapsCenter ??= const LatLng(13.106061, -59.613158),
+                initialLocation: _model.googleMapsCenter ??=
+                    const LatLng(13.106061, -59.613158),
                 markerColor: GoogleMarkerColor.violet,
                 mapType: MapType.normal,
                 initialZoom: 14.0,
@@ -341,28 +369,44 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
                       decoration: const BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black12, offset: Offset(0, 4))],
+                        boxShadow: [
+                          BoxShadow(
+                              blurRadius: 10,
+                              color: Colors.black12,
+                              offset: Offset(0, 4))
+                        ],
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.black, size: 24),
+                        icon: const Icon(Icons.arrow_back,
+                            color: Colors.black, size: 24),
                         onPressed: () => context.pop(),
                       ),
                     ),
                     if (_rideStatus != STATUS_SEARCHING)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
-                          boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black12, offset: Offset(0, 4))],
+                          boxShadow: [
+                            BoxShadow(
+                                blurRadius: 10,
+                                color: Colors.black12,
+                                offset: Offset(0, 4))
+                          ],
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.shield, color: Colors.blue, size: 18),
+                            const Icon(Icons.shield,
+                                color: Colors.blue, size: 18),
                             const SizedBox(width: 8),
                             Text(
                               'Safety',
-                              style: GoogleFonts.inter(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 14),
+                              style: GoogleFonts.inter(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14),
                             ),
                           ],
                         ),
@@ -391,15 +435,16 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
       duration: const Duration(milliseconds: 300),
       transitionBuilder: (Widget child, Animation<double> animation) {
         return SlideTransition(
-          position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(animation),
+          position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+              .animate(animation),
           child: child,
         );
       },
       child: (_rideStatus == STATUS_SEARCHING)
           ? _buildUberSearchingCard()
           : (_rideStatus == STATUS_CANCELLED)
-          ? _buildCancelledCard()
-          : _buildUberDriverDetailsCard(),
+              ? _buildCancelledCard()
+              : _buildUberDriverDetailsCard(),
     );
   }
 
@@ -410,20 +455,35 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
       width: double.infinity,
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, -4))],
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black26, blurRadius: 20, offset: Offset(0, -4))
+        ],
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+          Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 32),
           const Icon(Icons.cancel, size: 64, color: Colors.red),
           const SizedBox(height: 24),
-          Text('Ride Cancelled', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black)),
+          Text('Ride Cancelled',
+              style: GoogleFonts.inter(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black)),
           const SizedBox(height: 8),
-          Text('Your ride request has been cancelled', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600])),
+          Text('Your ride request has been cancelled',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600])),
           const SizedBox(height: 32),
           SizedBox(
             width: double.infinity,
@@ -434,9 +494,12 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
                 backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text('Back to Home', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Text('Back to Home',
+                  style: GoogleFonts.inter(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -450,14 +513,23 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
       width: double.infinity,
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, -4))],
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black26, blurRadius: 20, offset: Offset(0, -4))
+        ],
       ),
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+          Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -465,30 +537,48 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Finding your ride', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+                    Text('Finding your ride',
+                        style: GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5)),
                     const SizedBox(height: 4),
-                    Text('This may take a moment...', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600])),
+                    Text('This may take a moment...',
+                        style: GoogleFonts.inter(
+                            fontSize: 14, color: Colors.grey[600])),
                   ],
                 ),
               ),
               ScaleTransition(
                 scale: _pulseAnimation,
                 child: Container(
-                  width: 50, height: 50,
-                  decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-                  child: const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white), strokeWidth: 2)),
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                      color: Colors.black, shape: BoxShape.circle),
+                  child: const Center(
+                      child: CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                          strokeWidth: 2)),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          LinearProgressIndicator(backgroundColor: Colors.grey[200], valueColor: const AlwaysStoppedAnimation<Color>(Colors.black)),
+          LinearProgressIndicator(
+              backgroundColor: Colors.grey[200],
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.black)),
           const SizedBox(height: 24),
           Row(
             children: [
               const Icon(Icons.timer_outlined, size: 20, color: Colors.grey),
               const SizedBox(width: 8),
-              Text('Searching for ${_formatSearchTime(_searchSeconds)}', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[700])),
+              Text('Searching for ${_formatSearchTime(_searchSeconds)}',
+                  style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[700])),
             ],
           ),
           const SizedBox(height: 24),
@@ -498,14 +588,24 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
             child: ElevatedButton(
               onPressed: _isCancelling ? null : () => _showCancelDialog(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isCancelling ? Colors.grey[300] : Colors.grey[100],
+                backgroundColor:
+                    _isCancelling ? Colors.grey[300] : Colors.grey[100],
                 foregroundColor: Colors.black,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
               child: _isCancelling
-                  ? SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[600]!)))
-                  : Text('Cancel Request', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ? SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.grey[600]!)))
+                  : Text('Cancel Request',
+                      style: GoogleFonts.inter(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -517,14 +617,19 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
     if (isLoadingDriver || (ridesCache.isEmpty && driverDetails == null)) {
       return Container(
         key: const ValueKey('loading_driver_card'),
-        height: 250, width: double.infinity,
-        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24))),
+        height: 250,
+        width: double.infinity,
+        decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(24), topRight: Radius.circular(24))),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const CircularProgressIndicator(color: Colors.black),
             const SizedBox(height: 16),
-            Text('Connecting to driver...', style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+            Text('Connecting to driver...',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
           ],
         ),
       );
@@ -541,24 +646,90 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
       width: double.infinity,
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
-        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20, offset: Offset(0, -4))],
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black26, blurRadius: 20, offset: Offset(0, -4))
+        ],
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+          Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2))),
           const SizedBox(height: 16),
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              _rideStatus == STATUS_PICKED_UP ? 'Heading to destination' : 'Driver is arriving in $_etaMinutes mins',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.black),
-            ),
+  width: double.infinity,
+  padding: const EdgeInsets.symmetric(vertical: 8),
+  child: Column(
+    children: [
+      Text(
+        _rideStatus == STATUS_PICKED_UP
+            ? 'Heading to destination'
+            : 'Driver is arriving in $_etaMinutes mins',
+        textAlign: TextAlign.center,
+        style: GoogleFonts.inter(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: Colors.black,
+        ),
+      ),
+
+      // ✅ OTP CARD (Uber Style)
+      if (_rideOtp != null &&
+          _rideStatus != STATUS_PICKED_UP) ...[
+        const SizedBox(height: 12),
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.green.shade50,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.green.shade300),
           ),
+          child: Column(
+            children: [
+              Text(
+                'OTP',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.green.shade700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _rideOtp!,
+                style: GoogleFonts.inter(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 4,
+                  color: Colors.green.shade800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Share this OTP with the driver',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ],
+  ),
+),
+
           const Divider(),
           const SizedBox(height: 12),
           Row(
@@ -568,24 +739,39 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(vehicleNumber, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w900)),
-                    Text(vehicleModel, style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500)),
+                    Text(vehicleNumber,
+                        style: GoogleFonts.inter(
+                            fontSize: 20, fontWeight: FontWeight.w900)),
+                    Text(vehicleModel,
+                        style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(4)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(4)),
                           child: Row(
                             children: [
-                              const Icon(Icons.star, size: 14, color: Colors.black),
+                              const Icon(Icons.star,
+                                  size: 14, color: Colors.black),
                               const SizedBox(width: 4),
-                              Text(driverRating, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold)),
+                              Text(driverRating,
+                                  style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(driverName, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text(driverName,
+                            style: GoogleFonts.inter(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ],
@@ -594,15 +780,22 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
               Column(
                 children: [
                   Container(
-                    width: 64, height: 64,
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.grey[200]!, width: 2),
-                      image: (driverImage != null && driverImage.toString().isNotEmpty)
-                          ? DecorationImage(image: NetworkImage(driverImage), fit: BoxFit.cover)
+                      image: (driverImage != null &&
+                              driverImage.toString().isNotEmpty)
+                          ? DecorationImage(
+                              image: NetworkImage(driverImage),
+                              fit: BoxFit.cover)
                           : null,
                     ),
-                    child: (driverImage == null || driverImage.toString().isEmpty) ? const Icon(Icons.person, size: 32) : null,
+                    child:
+                        (driverImage == null || driverImage.toString().isEmpty)
+                            ? const Icon(Icons.person, size: 32)
+                            : null,
                   ),
                   const SizedBox(height: 8),
                   const Icon(Icons.info_outline, size: 20, color: Colors.grey),
@@ -616,14 +809,18 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
               Expanded(
                 child: Container(
                   height: 52,
-                  decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(26)),
+                  decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(26)),
                   child: TextField(
                     readOnly: true,
                     onTap: () => debugPrint('Open Chat'),
                     decoration: InputDecoration(
                       hintText: 'Any message for $driverName?',
-                      hintStyle: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
-                      prefixIcon: const Icon(Icons.chat_bubble_outline, size: 18),
+                      hintStyle: GoogleFonts.inter(
+                          fontSize: 14, color: Colors.grey[600]),
+                      prefixIcon:
+                          const Icon(Icons.chat_bubble_outline, size: 18),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 16),
                     ),
@@ -632,9 +829,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
               ),
               const SizedBox(width: 12),
               Container(
-                width: 52, height: 52,
-                decoration: BoxDecoration(color: Colors.grey[100], shape: BoxShape.circle),
-                child: IconButton(onPressed: () => debugPrint('Call Driver'), icon: const Icon(Icons.call, size: 22)),
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                    color: Colors.grey[100], shape: BoxShape.circle),
+                child: IconButton(
+                    onPressed: () => debugPrint('Call Driver'),
+                    icon: const Icon(Icons.call, size: 22)),
               ),
             ],
           ),
@@ -643,7 +844,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
             children: [
               Expanded(child: _buildActionButton(Icons.share, 'Share Trip')),
               const SizedBox(width: 12),
-              Expanded(child: _buildActionButton(Icons.close, 'Cancel', isCancel: true)),
+              Expanded(
+                  child: _buildActionButton(Icons.close, 'Cancel',
+                      isCancel: true)),
             ],
           ),
         ],
@@ -651,18 +854,27 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, {bool isCancel = false}) {
+  Widget _buildActionButton(IconData icon, String label,
+      {bool isCancel = false}) {
     return GestureDetector(
-      onTap: isCancel ? () => _showCancelDialog() : () => debugPrint('$label tapped'),
+      onTap: isCancel
+          ? () => _showCancelDialog()
+          : () => debugPrint('$label tapped'),
       child: Container(
         height: 48,
-        decoration: BoxDecoration(border: Border.all(color: isCancel ? Colors.red : Colors.grey[200]!), borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+            border:
+                Border.all(color: isCancel ? Colors.red : Colors.grey[200]!),
+            borderRadius: BorderRadius.circular(12)),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 18, color: isCancel ? Colors.red : Colors.black),
             const SizedBox(width: 8),
-            Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: isCancel ? Colors.red : Colors.black)),
+            Text(label,
+                style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: isCancel ? Colors.red : Colors.black)),
           ],
         ),
       ),
@@ -672,7 +884,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
   String _formatSearchTime(int seconds) {
     final minutes = seconds ~/ 60;
     final remainingSeconds = seconds % 60;
-    if (minutes > 0) return '$minutes:${remainingSeconds.toString().padLeft(2, '0')} min';
+    if (minutes > 0)
+      return '$minutes:${remainingSeconds.toString().padLeft(2, '0')} min';
     return '$seconds sec';
   }
 
@@ -682,8 +895,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
       barrierDismissible: !_isCancelling,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Cancel ride?', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-          content: Text('Are you sure you want to cancel your ride request?', style: GoogleFonts.inter()),
+          title: Text('Cancel ride?',
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+          content: Text('Are you sure you want to cancel your ride request?',
+              style: GoogleFonts.inter()),
           actions: [
             TextButton(
               onPressed: _isCancelling ? null : () => Navigator.pop(context),
@@ -693,12 +908,20 @@ class _AutoBookWidgetState extends State<AutoBookWidget> with TickerProviderStat
               onPressed: _isCancelling
                   ? null
                   : () {
-                Navigator.pop(context);
-                _cancelRide('Customer cancelled');
-              },
+                      Navigator.pop(context);
+                      _cancelRide('Customer cancelled');
+                    },
               child: _isCancelling
-                  ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.red)))
-                  : Text('Yes, Cancel', style: GoogleFonts.inter(color: Colors.red, fontWeight: FontWeight.bold)),
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.red)))
+                  : Text('Yes, Cancel',
+                      style: GoogleFonts.inter(
+                          color: Colors.red, fontWeight: FontWeight.bold)),
             ),
           ],
         );
