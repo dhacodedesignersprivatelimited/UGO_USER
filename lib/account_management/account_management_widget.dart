@@ -1,13 +1,13 @@
 import '/flutter_flow/flutter_flow_icon_button.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
+import '/backend/api_requests/api_calls.dart'; // ✅ user details API
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'account_management_model.dart';
 export 'account_management_model.dart';
 
-/// 🚀 Modern Responsive Account Management (FIXED & CRASH-FREE)
 class AccountManagementWidget extends StatefulWidget {
   const AccountManagementWidget({super.key});
 
@@ -23,10 +23,73 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
   late AccountManagementModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // ✅ User UI State
+  bool _isLoadingUser = true;
+  String _userDisplayName = 'Guest User';
+  String _profileImageUrl = '';
+
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => AccountManagementModel());
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final userId = FFAppState().userid;
+      final token = FFAppState().accessToken;
+
+      // Not logged in
+      if (userId == 0 || token.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _userDisplayName = 'Guest User';
+          _profileImageUrl = '';
+          _isLoadingUser = false;
+        });
+        return;
+      }
+
+      final res = await GetUserDetailsCall.call(userId: userId, token: token);
+
+      if (!mounted) return;
+
+      if (res.succeeded) {
+        final first =
+        (GetUserDetailsCall.firstName(res.jsonBody) ?? '').trim();
+        final last =
+        (GetUserDetailsCall.lastName(res.jsonBody) ?? '').trim();
+        final rawImg =
+        (GetUserDetailsCall.profileImage(res.jsonBody) ?? '').trim();
+
+        final name = [first, last].where((e) => e.isNotEmpty).join(' ');
+        final imgUrl = rawImg.isNotEmpty
+            ? (rawImg.startsWith('http')
+            ? rawImg
+            : 'https://ugotaxi.icacorp.org/$rawImg')
+            : '';
+
+        setState(() {
+          _userDisplayName = name.isNotEmpty ? name : 'User';
+          _profileImageUrl = imgUrl;
+          _isLoadingUser = false;
+        });
+      } else {
+        setState(() {
+          _userDisplayName = 'User';
+          _profileImageUrl = '';
+          _isLoadingUser = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _userDisplayName = 'User';
+        _profileImageUrl = '';
+        _isLoadingUser = false;
+      });
+    }
   }
 
   @override
@@ -55,11 +118,11 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
               borderRadius: 30.0,
               borderWidth: 1.0,
               buttonSize: 44.0,
-              fillColor: Colors.white.withOpacity(0.2), // ✅ Corrected background
+              fillColor: Colors.white.withOpacity(0.2),
               icon: const Icon(
                 Icons.arrow_back_rounded,
                 color: Colors.white,
-                size: 24.0, // ✅ Correctly passed Icon widget
+                size: 24.0,
               ),
               onPressed: () async {
                 context.pop();
@@ -74,7 +137,6 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
               fontWeight: FontWeight.w700,
             ),
           ),
-          actions: [],
           centerTitle: true,
           elevation: 0,
           shadowColor: Colors.transparent,
@@ -90,20 +152,11 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
                 padding: EdgeInsets.fromLTRB(padding, 32, padding, 20),
                 child: Column(
                   children: [
-                    // 1. Profile Section
                     _buildProfileSection(isNarrow),
-
                     SizedBox(height: isNarrow ? 32 : 48),
-
-                    // 2. Quick Actions Grid
                     _buildQuickActionsGrid(isNarrow),
-
                     SizedBox(height: isNarrow ? 32 : 48),
-
-                    // 3. Settings List
                     _buildSettingsList(isNarrow),
-
-                    // 4. Bottom Spacer
                     SizedBox(height: isNarrow ? 80 : 120),
                   ],
                 ),
@@ -116,14 +169,16 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
   }
 
   Widget _buildProfileSection(bool isNarrow) {
+    final avatarSize = isNarrow ? 90.0 : 110.0;
+
     return Column(
       children: [
-        // Profile Image
+        // ✅ Profile Image (API)
         GestureDetector(
           onTap: () => context.pushNamed(ProfileSettingWidget.routeName),
           child: Container(
-            width: isNarrow ? 90 : 110,
-            height: isNarrow ? 90 : 110,
+            width: avatarSize,
+            height: avatarSize,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [Colors.white, Colors.white.withOpacity(0.8)],
@@ -142,31 +197,66 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(50),
-              child: Image.asset(
-                'assets/images/profile_placeholder.png', // ✅ Replace with actual profile
+              borderRadius: BorderRadius.circular(999),
+              child: _isLoadingUser
+                  ? Center(
+                child: SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      const Color(0xFFFF7B10),
+                    ),
+                  ),
+                ),
+              )
+                  : (_profileImageUrl.isNotEmpty
+                  ? Image.network(
+                _profileImageUrl,
                 fit: BoxFit.cover,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  );
+                },
                 errorBuilder: (context, error, stackTrace) => Icon(
                   Icons.person,
                   color: const Color(0xFFFF7B10),
                   size: isNarrow ? 45 : 55,
                 ),
-              ),
+              )
+                  : Icon(
+                Icons.person,
+                color: const Color(0xFFFF7B10),
+                size: isNarrow ? 45 : 55,
+              )),
             ),
           ),
         ),
 
         SizedBox(height: isNarrow ? 16 : 20),
 
-        // Company Name
-        Text(
-          FFLocalizations.of(context).getText('xr4zc3rw' /* GO CODE DESIGNERS */),
+        // ✅ User Name (API)
+        _isLoadingUser
+            ? SizedBox(
+          width: 140,
+          child: LinearProgressIndicator(
+            minHeight: 3,
+            backgroundColor: Colors.grey[200],
+            valueColor: const AlwaysStoppedAnimation<Color>(
+              Color(0xFFFF7B10),
+            ),
+          ),
+        )
+            : Text(
+          _userDisplayName,
           textAlign: TextAlign.center,
           style: GoogleFonts.poppins(
-            fontSize: isNarrow ? 14 : 16,
-            fontWeight: FontWeight.w600,
+            fontSize: isNarrow ? 16 : 18,
+            fontWeight: FontWeight.w700,
             color: Colors.black87,
-            letterSpacing: 1,
           ),
         ),
       ],
@@ -201,7 +291,7 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
           icon: Icons.history_rounded,
           label: FFLocalizations.of(context).getText('p32bt3aj' /* History */),
           color: const Color(0xFFFF9800),
-          onTap: () => context.pushNamed(BookinghistoryWidget.routeName),
+          onTap: () => context.pushNamed(HistoryWidget.routeName),
         ),
       ],
     );
@@ -233,7 +323,7 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
               size: 24,
             ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text(
             label,
             textAlign: TextAlign.center,
@@ -252,12 +342,23 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
   }
 
   Widget _buildSettingsList(bool isNarrow) {
-    // Defines menu items structure
     final listItems = [
-      {'icon': Icons.settings_rounded, 'label': 'Settings', 'route': SettingsPageWidget.routeName},
-      {'icon': Icons.language_rounded, 'label': 'Languages', 'route': LanguageWidget.routeName},
-      {'icon': Icons.message_rounded, 'label': 'Messages', 'route': MessagesWidget.routeName},
-      {'icon': Icons.gavel_rounded, 'label': 'Legal', 'route': null}, // Route null for placeholder
+      {
+        'icon': Icons.settings_rounded,
+        'label': 'Settings',
+        'route': SettingsPageWidget.routeName
+      },
+      {
+        'icon': Icons.language_rounded,
+        'label': 'Languages',
+        'route': LanguageWidget.routeName
+      },
+      {
+        'icon': Icons.message_rounded,
+        'label': 'Messages',
+        'route': MessagesWidget.routeName
+      },
+      {'icon': Icons.gavel_rounded, 'label': 'Legal', 'route': null},
     ];
 
     return Container(
@@ -280,9 +381,7 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
           return Column(
             children: [
               InkWell(
-                onTap: route != null
-                    ? () => context.pushNamed(route)
-                    : null,
+                onTap: route != null ? () => context.pushNamed(route) : null,
                 borderRadius: BorderRadius.vertical(
                   bottom: index == listItems.length - 1
                       ? const Radius.circular(20)
@@ -308,7 +407,7 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
                           size: 22,
                         ),
                       ),
-                      SizedBox(width: 16),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: Text(
                           item['label'] as String,

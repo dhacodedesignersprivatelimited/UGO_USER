@@ -10,7 +10,6 @@ export '/notification_allow/notification_allow_widget.dart'
 export '/location/location_widget.dart' show LocationWidget;
 export '/serviceoptions/serviceoptions_widget.dart' show ServiceoptionsWidget;
 export '/home/home_widget.dart' show HomeWidget;
-export '/bookinghistory/bookinghistory_widget.dart' show BookinghistoryWidget;
 export '/account_management/account_management_widget.dart'
     show AccountManagementWidget;
 export '/support/support_widget.dart' show SupportWidget;

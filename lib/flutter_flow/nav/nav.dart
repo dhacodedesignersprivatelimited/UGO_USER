@@ -172,11 +172,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: HomeWidget.routePath,
           builder: (context, params) => HomeWidget(),
         ),
-        FFRoute(
-          name: BookinghistoryWidget.routeName,
-          path: BookinghistoryWidget.routePath,
-          builder: (context, params) => BookinghistoryWidget(),
-        ),
+
         FFRoute(
           name: AccountManagementWidget.routeName,
           path: AccountManagementWidget.routePath,
