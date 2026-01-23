@@ -536,7 +536,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                                         'rideId': 'qr_${DateTime.now().millisecondsSinceEpoch}',
                                         'driverId': qrData['driver_id'].toString(),
                                         'driverName': qrData['driver_name'] ?? 'Driver',
-                                        'vehicleNumber': qrData['vehicle_number'] ?? 'N/A',
+                                        'license_plate': qrData['vehicle_number'] ?? 'N/A',
                                         'rating': (qrData['rating'] ?? '4.5').toString(),
                                         'pickupLocation': pickupLocation,
                                         'dropLocation': dropLocation,

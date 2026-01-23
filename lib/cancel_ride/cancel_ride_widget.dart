@@ -1,4 +1,4 @@
-import '/backend/api_requests/api_calls.dart';
+import '/backend/api_requests/api_calls.dart'; // ✅ Your fixed CancelRide API
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -6,7 +6,6 @@ import '/flutter_flow/flutter_flow_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' show cos, sqrt, asin;
 import 'cancel_ride_model.dart';
 export 'cancel_ride_model.dart';
 
@@ -24,7 +23,7 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
   late CancelRideModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final ScrollController _scrollController = ScrollController();
-  double _scrollProgress = 0.0;
+  bool _isCancelling = false; // ✅ Loading state
 
   // Variables to store parsed data
   String? rideId;
@@ -42,13 +41,13 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => CancelRideModel());
-    
+
     _scrollController.addListener(() {
       setState(() {
         if (_scrollController.hasClients) {
           final maxScroll = _scrollController.position.maxScrollExtent;
           final currentScroll = _scrollController.position.pixels;
-          _scrollProgress = maxScroll > 0 ? (currentScroll / maxScroll).clamp(0.0, 1.0) : 0.0;
+          // Update scroll progress for UI
         }
       });
     });
@@ -57,10 +56,10 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+
     // Parse query parameters
     final params = GoRouter.of(context).routeInformationProvider.value.uri.queryParameters;
-    
+
     rideId = params['rideId'];
     vehicleType = params['vehicleType'];
     pickupLocation = params['pickupLocation'];
@@ -68,24 +67,16 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
     vehicleImage = params['vehicleImage'];
     seatingCapacity = params['seatingCapacity'];
     luggageCapacity = params['luggageCapacity'];
-    
+
     // Parse numeric values
-    if (params['estimatedFare'] != null) {
-      estimatedFare = double.tryParse(params['estimatedFare']!);
-    }
-    if (params['estimatedDistance'] != null) {
-      estimatedDistance = double.tryParse(params['estimatedDistance']!);
-    }
-    if (params['pricePerKm'] != null) {
-      pricePerKm = double.tryParse(params['pricePerKm']!);
-    }
-    
-    print('=== Parsed Parameters ===');
+    estimatedFare = double.tryParse(params['estimatedFare'] ?? '0');
+    estimatedDistance = double.tryParse(params['estimatedDistance'] ?? '0');
+    pricePerKm = double.tryParse(params['pricePerKm'] ?? '0');
+
+    print('=== CancelRide Parsed Parameters ===');
+    print('Ride ID: $rideId');
     print('Vehicle Type: $vehicleType');
-    print('Estimated Fare: $estimatedFare');
-    print('Vehicle Image: $vehicleImage');
-    print('Seating: $seatingCapacity');
-    print('Luggage: $luggageCapacity');
+    print('Fare: ₹$estimatedFare');
   }
 
   @override
@@ -95,444 +86,421 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
     super.dispose();
   }
 
+  // ✅ FIXED: Real CancelRide API Integration
+  Future<void> _cancelRide() async {
+    if (_isCancelling || rideId == null) return;
+
+    setState(() => _isCancelling = true);
+
+    try {
+      final token = FFAppState().accessToken; // ✅ Get from FFAppState
+
+      print('🚫 Cancelling ride $rideId with token: ${token.substring(0, 20)}...');
+
+      final response = await CancelRide.call(
+        rideId: int.parse(rideId!), // ✅ Parse string to int
+        cancellationReason: 'Customer cancelled before driver arrived',
+        token: token,
+        cancelledBy: 'user',
+      );
+
+      print('✅ CancelRide Response: ${response.succeeded}');
+
+      if (mounted) {
+        if (response.succeeded) {
+          // ✅ Success - Navigate back 2 screens (home)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(CancelRide.message(response) ?? 'Ride cancelled successfully!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+
+          // Pop twice to go back to home
+          Future.delayed(Duration(milliseconds: 1500), () {
+            if (mounted) {
+              context.pop(); // Cancel screen
+              context.pop(); // AutoBook screen
+            }
+          });
+        } else {
+          // ✅ Error handling
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to cancel ride. Please try again.'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('❌ CancelRide Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCancelling = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
 
-    // Use parsed parameters or fall back to FFAppState
-    final displayVehicleType = vehicleType ?? FFAppState().vehicleselect;
-    final displayPickupLocation = pickupLocation ?? FFAppState().pickuplocation;
-    final displayDropLocation = dropLocation ?? FFAppState().droplocation;
-    final displayEstimatedFare = estimatedFare;
+    // Use parsed parameters or fallbacks
+    final displayVehicleType = vehicleType ?? FFAppState().vehicleselect ?? 'Auto';
+    final displayPickupLocation = pickupLocation ?? FFAppState().pickuplocation ?? 'Pickup';
+    final displayDropLocation = dropLocation ?? FFAppState().droplocation ?? 'Drop';
+    final displayEstimatedFare = estimatedFare ?? 0.0;
     final displayVehicleImage = vehicleImage;
 
     return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-        FocusManager.instance.primaryFocus?.unfocus();
-      },
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-        body: SafeArea(
-          top: false,
-          child: Stack(
-            children: [
-              // Map Background (Full Screen)
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    image: DecorationImage(
-                      fit: BoxFit.cover,
-                      image: Image.asset('assets/images/89ssz8.png').image,
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Pickup Location Marker
-                      Positioned(
-                        left: 40,
-                        top: 150,
-                        child: Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Icon(Icons.circle, color: Colors.green, size: 20),
-                        ),
-                      ),
-                      // Drop Location Marker
-                      Positioned(
-                        right: 40,
-                        bottom: 250,
-                        child: Container(
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Icon(Icons.location_on, color: Colors.red, size: 24),
-                        ),
-                      ),
-                    ],
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            // ✅ Map Background (Full Screen)
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    fit: BoxFit.cover,
+                    image: AssetImage('assets/images/map_background.png'), // ✅ Update path
                   ),
                 ),
-              ),
-
-              // Bottom Sheet with Vehicle Details
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  height: MediaQuery.of(context).size.height * 0.42,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 10,
-                        offset: Offset(0, -2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Drag Handle
-                      Container(
-                        margin: EdgeInsets.only(top: 12),
-                        width: 40,
-                        height: 4,
+                child: Stack(
+                  children: [
+                    // Pickup Marker (Green)
+                    Positioned(
+                      left: 40,
+                      top: 150,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Color(0xFFE1E1E1),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-
-                      // Scrollable Content
-                      Expanded(
-                        child: Row(
-                          children: [
-                            // Scroll Progress Bar
-                            Container(
-                              width: 4,
-                              margin: EdgeInsets.only(left: 16, top: 16, bottom: 16),
-                              child: Column(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Color(0xFFE1E1E1),
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
-                                      child: Align(
-                                        alignment: Alignment.topCenter,
-                                        child: FractionallySizedBox(
-                                          heightFactor: _scrollProgress,
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: Color(0xFFFF7B10),
-                                              borderRadius: BorderRadius.circular(2),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // Content
-                            Expanded(
-                              child: ListView(
-                                controller: _scrollController,
-                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                                children: [
-                                  // Pickup Location Card (Compact)
-                                  Container(
-                                    padding: EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFFF8F8F8),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: Color(0xFFE1E1E1)),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.circle, color: Colors.green, size: 10),
-                                        SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            displayPickupLocation.isNotEmpty ? displayPickupLocation : 'Pickup Location',
-                                            style: TextStyle(fontSize: 12, color: Color(0xFF756F6F)),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  SizedBox(height: 8),
-
-                                  // Drop Location Card (Compact)
-                                  Container(
-                                    padding: EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFFF8F8F8),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: Color(0xFFE1E1E1)),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.location_on, color: Colors.red, size: 12),
-                                        SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            displayDropLocation.isNotEmpty ? displayDropLocation : 'Drop Location',
-                                            style: TextStyle(fontSize: 12, color: Color(0xFF756F6F)),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  SizedBox(height: 16),
-
-                                  // Vehicle Card
-                                  Container(
-                                    padding: EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Color(0xFFE1E1E1), width: 1.5),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        // Vehicle Image
-                                        if (displayVehicleImage != null && displayVehicleImage.isNotEmpty)
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(8),
-                                            child: Image.network(
-                                              'https://ugotaxi.icacorp.org/$displayVehicleImage',
-                                              width: 70,
-                                              height: 70,
-                                              fit: BoxFit.contain,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Container(
-                                                  width: 70,
-                                                  height: 70,
-                                                  decoration: BoxDecoration(
-                                                    color: Color(0xFFF5F5F5),
-                                                    borderRadius: BorderRadius.circular(8),
-                                                  ),
-                                                  child: Icon(Icons.directions_car, size: 35, color: Colors.grey),
-                                                );
-                                              },
-                                            ),
-                                          )
-                                        else
-                                          Container(
-                                            width: 70,
-                                            height: 70,
-                                            decoration: BoxDecoration(
-                                              color: Color(0xFFF5F5F5),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Icon(Icons.directions_car, size: 35, color: Colors.grey),
-                                          ),
-                                        
-                                        SizedBox(width: 12),
-
-                                        // Vehicle Details
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              // Vehicle Type and Price
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(
-                                                          displayVehicleType.isNotEmpty ? displayVehicleType : 'Vehicle',
-                                                          style: TextStyle(
-                                                            fontSize: 16,
-                                                            fontWeight: FontWeight.w600,
-                                                          ),
-                                                        ),
-                                                        SizedBox(height: 2),
-                                                        Row(
-                                                          children: [
-                                                            Text(
-                                                              'Pick up : ',
-                                                              style: TextStyle(fontSize: 11, color: Color(0xFF756F6F)),
-                                                            ),
-                                                            Expanded(
-                                                              child: Text(
-                                                                displayPickupLocation.isNotEmpty 
-                                                                    ? displayPickupLocation.split(',').first 
-                                                                    : 'Dilsukhnagar',
-                                                                style: TextStyle(fontSize: 11, color: Color(0xFF756F6F)),
-                                                                maxLines: 1,
-                                                                overflow: TextOverflow.ellipsis,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        Row(
-                                                          children: [
-                                                            Text(
-                                                              'Drop location : ',
-                                                              style: TextStyle(fontSize: 11, color: Color(0xFF756F6F)),
-                                                            ),
-                                                            Expanded(
-                                                              child: Text(
-                                                                displayDropLocation.isNotEmpty 
-                                                                    ? displayDropLocation.split(',').first 
-                                                                    : 'Ameerpet',
-                                                                style: TextStyle(fontSize: 11, color: Color(0xFF756F6F)),
-                                                                maxLines: 1,
-                                                                overflow: TextOverflow.ellipsis,
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  SizedBox(width: 8),
-                                                  // Price Badge
-                                                  if (displayEstimatedFare != null && displayEstimatedFare > 0)
-                                                    Text(
-                                                      '₹${displayEstimatedFare.toStringAsFixed(2)}',
-                                                      style: TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Colors.black,
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  SizedBox(height: 16),
-
-                                  // Cancel Button
-                                  FFButtonWidget(
-                                    onPressed: () async {
-                                      showDialog(
-                                        context: context,
-                                        barrierDismissible: false,
-                                        builder: (_) => Center(child: CircularProgressIndicator()),
-                                      );
-
-                                      // TODO: Add your cancel ride API call here
-                                      await Future.delayed(Duration(seconds: 1));
-                                      Navigator.pop(context);
-
-                                      // Show success dialog
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          title: Row(
-                                            children: [
-                                              Icon(Icons.check_circle, color: Colors.green, size: 28),
-                                              SizedBox(width: 8),
-                                              Text('Ride Cancelled'),
-                                            ],
-                                          ),
-                                          content: Text('Your ride has been cancelled successfully.'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () {
-                                                Navigator.pop(context);
-                                                context.pop();
-                                                context.pop();
-                                              },
-                                              child: Text(
-                                                'OK',
-                                                style: TextStyle(
-                                                  color: Color(0xFFFF7B10),
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                    text: 'Cancel',
-                                    options: FFButtonOptions(
-                                      width: double.infinity,
-                                      height: 56.0,
-                                      color: Color(0xFFFF7B10),
-                                      textStyle: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 18,
-                                      ),
-                                      elevation: 0.0,
-                                      borderRadius: BorderRadius.circular(8.0),
-                                    ),
-                                  ),
-
-                                  SizedBox(height: 16),
-                                ],
-                              ),
-                            ),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
                           ],
                         ),
+                        child: const Icon(Icons.circle, color: Colors.green, size: 20),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Top Back Button (Positioned on Map)
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 16,
-                left: 16,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: FlutterFlowIconButton(
-                    borderRadius: 30.0,
-                    buttonSize: 50.0,
-                    fillColor: Colors.white,
-                    icon: Icon(
-                      Icons.arrow_back,
-                      color: Color(0xFFFF7B10),
-                      size: 24.0,
                     ),
-                    onPressed: () async {
-                      context.pop();
-                    },
-                  ),
+                    // Drop Marker (Red)
+                    Positioned(
+                      right: 40,
+                      bottom: 250,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
+                          ],
+                        ),
+                        child: const Icon(Icons.location_on, color: Colors.red, size: 24),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // ✅ RAPIDO-STYLE Bottom Sheet
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.45,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -5)),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Drag Handle
+                    Container(
+                      margin: const EdgeInsets.only(top: 16),
+                      width: 48,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Color(0xFFE0E0E0),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+
+                    // Scrollable Content
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                        children: [
+                          // Pickup Location (Rapido Compact Style)
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFF8F9FA),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Color(0xFFE9ECEF)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.circle, color: Colors.white, size: 12),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Pickup',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        displayPickupLocation.split(',').first,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // Drop Location
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFF8F9FA),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Color(0xFFE9ECEF)),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.location_on, color: Colors.white, size: 12),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Drop',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        displayDropLocation.split(',').first,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // ✅ Vehicle Card (Rapido Style)
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Color(0xFFE9ECEF), width: 1),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                // Vehicle Image
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    width: 80,
+                                    height: 80,
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFFF8F9FA),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: displayVehicleImage != null && displayVehicleImage!.isNotEmpty
+                                        ? Image.network(
+                                      'https://ugotaxi.icacorp.org/$displayVehicleImage',
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          Icon(Icons.directions_car, size: 40, color: Colors.grey),
+                                    )
+                                        : Icon(Icons.directions_car, size: 40, color: Colors.grey),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+
+                                // Vehicle Details + Price
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        displayVehicleType,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '₹${pricePerKm?.toStringAsFixed(0) ?? '0'} / km',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      if (estimatedFare != null && estimatedFare! > 0) ...[
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Color(0xFFFFD700), // Rapido Yellow
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            '₹${estimatedFare!.toStringAsFixed(0)}',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 28),
+
+                          // ✅ Cancel Button (Rapido Orange)
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: _isCancelling ? null : _cancelRide, // ✅ Real API Call
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _isCancelling
+                                    ? Colors.grey[300]
+                                    : const Color(0xFFFF7B10), // Rapido Orange
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: _isCancelling
+                                  ? SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                                  : Text(
+                                'Cancel Ride',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Back Button (Floating on Map)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 20,
+              left: 20,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 4)),
+                  ],
+                ),
+                child: FlutterFlowIconButton(
+                  borderRadius: 30,
+                  buttonSize: 56,
+                  icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFFFF7B10), size: 20),
+                  onPressed: () => context.pop(),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

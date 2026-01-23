@@ -309,43 +309,245 @@ class CreateRideCall {
   }
 }
 
+// ---------------------------------------------------------------------------
+// ✅ DriverIdfetchCall CLASS DEFINITION (Added this missing class)
+// ---------------------------------------------------------------------------
+class DriverIdfetchCall {
+  static Future<ApiCallResponse> call({
+    String? token = '',
+    int? id,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'driverIdfetch',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/drivers/${id}',
+      callType: ApiCallType.GET,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+      },
+      params: {},
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static bool? isonline(dynamic response) => castToType<bool>(getJsonField(
+    response,
+    r'''$.data.is_online''',
+  ));
+  static String? kycstatus(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.kyc_status''',
+  ));
+  static dynamic driverData(dynamic response) => getJsonField(
+    response,
+    r'''$.data''',
+  );
+  static String? referralCode(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.referral_code''',
+  ));
+
+  /// Get profile image URL
+  static String? profileImage(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.profile_image''',
+  ));
+
+  /// Get license image URL
+  static String? licenseImage(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.license_image''',
+  ));
+
+  /// Get aadhaar image URL
+  static String? aadhaarImage(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.aadhaar_image''',
+  ));
+
+  /// Get PAN image URL
+  static String? panImage(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.pan_image''',
+  ));
+
+  /// Get vehicle image URL
+  static String? vehicleImage(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.vehicle_image''',
+  ));
+
+  /// Get RC image URL
+  static String? rcImage(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.rc_image''',
+  ));
+
+  /// Get driver first name
+  static String? firstName(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.first_name''',
+  ));
+
+  /// Get driver last name
+  static String? lastName(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.last_name''',
+  ));
+
+  /// Get driver email
+  static String? email(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.email''',
+  ));
+
+  /// Get driver mobile number
+  static String? mobileNumber(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.mobile_number''',
+  ));
+
+  /// Get wallet balance
+  static String? walletBalance(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.wallet_balance''',
+  ));
+
+  /// Get driver rating
+  static String? driverRating(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.driver_rating''',
+  ));
+
+  /// Get total rides completed
+  static int? totalRidesCompleted(dynamic response) => castToType<int>(getJsonField(
+    response,
+    r'''$.data.total_rides_completed''',
+  ));
+
+  /// Get total earnings
+  static String? totalEarnings(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.total_earnings''',
+  ));
+
+  /// Check if driver is active
+  static bool? isActive(dynamic response) => castToType<bool>(getJsonField(
+    response,
+    r'''$.data.is_active''',
+  ));
+
+  /// Get account status
+  static String? accountStatus(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.data.account_status''',
+  ));
+}
+
+// ---------------------------------------------------------------------------
+// ✅ GetDriverDetailsCall WRAPPER (Now correctly references DriverIdfetchCall)
+// ---------------------------------------------------------------------------
 class GetDriverDetailsCall {
   static Future<ApiCallResponse> call({
     required dynamic driverId,
     String? token = '',
   }) async {
-    return ApiManager.instance.makeApiCall(
-      callName: 'getDriverDetails',
-      apiUrl: 'https://ugotaxi.icacorp.org/api/drivers/$driverId',
-      callType: ApiCallType.GET,
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
-      params: {},
-      returnBody: true,
-      cache: false,
+    return DriverIdfetchCall.call(
+      id: driverId is int ? driverId : int.tryParse(driverId.toString()),
+      token: token,
     );
   }
 
-  static dynamic driverData(dynamic response) => getJsonField(
-    response,
-    r'''$.data''',
-  );
+  // ✅ DRIVER PERSONAL INFO (from DriverIdfetchCall - nested under $.data)
+  static String? name(dynamic response) {
+    final firstName = DriverIdfetchCall.firstName(response) ?? '';
+    final lastName = DriverIdfetchCall.lastName(response) ?? '';
 
-  static String? driverName(dynamic response) => castToType<String>(getJsonField(
-    response,
-    r'''$.data.name''',
-  ));
+    if (firstName.isNotEmpty && lastName.isNotEmpty) {
+      return '$firstName $lastName';
+    } else if (firstName.isNotEmpty) {
+      return firstName;
+    } else if (lastName.isNotEmpty) {
+      return lastName;
+    }
+    return 'Captain';
+  }
 
-  static String? vehicleNumber(dynamic response) => castToType<String>(getJsonField(
-    response,
-    r'''$.data.vehicle.number''',
-  ));
+  static String? rating(dynamic response) =>
+      DriverIdfetchCall.driverRating(response) ?? '4.8';
 
-  static String? vehicleModel(dynamic response) => castToType<String>(getJsonField(
-    response,
-    r'''$.data.vehicle.model''',
-  ));
+  static int? totalRides(dynamic response) =>
+      DriverIdfetchCall.totalRidesCompleted(response) ?? 0;
+
+  static String? profileImage(dynamic response) {
+    final imagePath = DriverIdfetchCall.profileImage(response);
+    if (imagePath != null && imagePath.isNotEmpty) {
+      return imagePath.startsWith('http')
+          ? imagePath
+          : 'https://ugotaxi.icacorp.org/$imagePath';
+    }
+    return null;
+  }
+
+  // ✅ VEHICLE INFO (from ride response - flat structure)
+  // These are from the ride's vehicle object you showed in Postman
+  static String? vehicleModel(dynamic response) {
+    // Check root level first (your Postman response)
+    var model = castToType<String>(getJsonField(response, r'''$.vehicle_model'''));
+    if (model != null) return model;
+
+    // Check data wrapper (DriverIdfetchCall response)
+    model = castToType<String>(getJsonField(response, r'''$.data.vehicle_model'''));
+    if (model != null) return model;
+
+    return 'Auto'; // ✅ Fallback
+  }
+
+  static String? vehicleNumber(dynamic response) {
+    // Try license_plate first
+    var number = castToType<String>(getJsonField(response, r'''$.license_plate'''));
+    if (number != null) return number;
+
+    // Try registration_number
+    number = castToType<String>(getJsonField(response, r'''$.registration_number'''));
+    if (number != null) return number;
+
+    // Check data wrapper
+    number = castToType<String>(getJsonField(response, r'''$.data.license_plate'''));
+    if (number != null) return number;
+
+    return 'AP-00-XX-0000'; // ✅ Fallback
+  }
+
+  static String? vehicleType(dynamic response) {
+    var type = castToType<String>(getJsonField(response, r'''$.vehicle_type'''));
+    type ??= castToType<String>(getJsonField(response, r'''$.vehicle_name'''));
+    return type ?? 'Auto';
+  }
+
+  static String? vehicleStatus(dynamic response) =>
+      castToType<String>(getJsonField(response, r'''$.vehicle_status''')) ??
+          'pending_verification';
+
+  // ✅ ADDITIONAL HELPFUL METHODS
+  static bool? isOnline(dynamic response) =>
+      DriverIdfetchCall.isonline(response);
+
+  static String? kycStatus(dynamic response) =>
+      DriverIdfetchCall.kycstatus(response);
+
+  static bool? isActive(dynamic response) =>
+      DriverIdfetchCall.isActive(response);
+
+  static String? walletBalance(dynamic response) =>
+      DriverIdfetchCall.walletBalance(response);
+
+  static String? accountStatus(dynamic response) =>
+      DriverIdfetchCall.accountStatus(response);
 }
 
 class GetNearbyDriversCall {
