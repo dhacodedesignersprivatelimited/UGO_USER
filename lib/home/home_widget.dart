@@ -11,7 +11,7 @@ import 'home_model.dart';
 export 'home_model.dart';
 import '/backend/api_requests/api_calls.dart';
 
-/// Taxi Booking App Interface
+/// Taxi Booking App Interface - Enhanced UI
 class HomeWidget extends StatefulWidget {
   const HomeWidget({super.key});
 
@@ -22,15 +22,34 @@ class HomeWidget extends StatefulWidget {
   State<HomeWidget> createState() => _HomeWidgetState();
 }
 
-class _HomeWidgetState extends State<HomeWidget> {
+class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateMixin {
   late HomeModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
   bool isScanning = false;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  // Color Constants for vibrant look
+  static const Color primaryOrange = Color(0xFFFF7B10);
+  static const Color deepOrange = Color(0xFFE65100);
+  static const Color lightOrange = Color(0xFFFFAB40);
+  static const Color cardBackground = Color(0xFFFFFBF5);
+  static const Color shadowColor = Color(0x1AFF7B10);
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => HomeModel());
+
+    // Pulse animation for QR button
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkRideStatus();
@@ -39,12 +58,7 @@ class _HomeWidgetState extends State<HomeWidget> {
 
   Future<void> _checkRideStatus() async {
     final token = FFAppState().accessToken;
-    print('Checking ride status for userId: ${FFAppState().userid}');
-    
-    if (token.isEmpty) {
-      print('❌ No access token found in AppState');
-      return;
-    }
+    if (token.isEmpty) return;
 
     try {
       final response = await GetRideStatus.call(
@@ -53,36 +67,24 @@ class _HomeWidgetState extends State<HomeWidget> {
       );
 
       _model.apiResult85c = response;
-      
-      if (!response.succeeded) {
-        print('❌ GetRideStatus failed: ${response.jsonBody}');
-        return;
-      }
+      if (!response.succeeded) return;
 
       final rideId = getJsonField(
         _model.apiResult85c?.jsonBody,
         r'''$.data.rides[:].id''',
       );
-      
-      print('Ride ID(s) from status check: $rideId');
+
       final rideCount = GetRideStatus.count(response.jsonBody);
-      print("Ride count: $rideCount");
 
       if (rideCount == null || rideCount == 0) {
-        // ✅ No active ride → stay on Home
         FFAppState().bookingInProgress = false;
       } else {
-        // ✅ Active ride exists → resume booking screen
         FFAppState().bookingInProgress = true;
-        
         final actualRideId = rideId is List && rideId.isNotEmpty ? rideId.first : rideId;
-
         if (mounted && actualRideId != null) {
           context.pushNamed(
             AutoBookWidget.routeName,
-            queryParameters: {
-              'rideId': actualRideId.toString(),
-            },
+            queryParameters: {'rideId': actualRideId.toString()},
           );
         }
       }
@@ -93,255 +95,228 @@ class _HomeWidgetState extends State<HomeWidget> {
 
   @override
   void dispose() {
+    _pulseController.dispose();
     _model.dispose();
     super.dispose();
   }
 
+  // ==================== QR DIALOG (ENHANCED) ====================
   void _showQRResponseDialog(Map<String, dynamic> qrData) {
-    showDialog(
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    showGeneralDialog(
       context: context,
       barrierDismissible: true,
-      builder: (BuildContext context) {
-        return Dialog(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header with icon
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Color(0xFFFF7B10),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        topRight: Radius.circular(20),
-                      ),
-                    ),
-                    padding: EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 70,
-                          height: 70,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.check_circle_outline,
-                            color: Color(0xFFFF7B10),
-                            size: 40,
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          'QR Code Scanned',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Driver Details Loaded',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Content section
-                  Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Driver ID Card
-                        _buildInfoCard(
-                          icon: Icons.person,
-                          iconColor: Color(0xFFFF7B10),
-                          label: 'Driver ID',
-                          value: qrData['driver_id']?.toString() ?? 'N/A',
-                        ),
-                        SizedBox(height: 12),
-
-                        // Driver Name (if available)
-                        if (qrData.containsKey('driver_name'))
-                          _buildInfoCard(
-                            icon: Icons.badge,
-                            iconColor: Colors.blue,
-                            label: 'Driver Name',
-                            value: qrData['driver_name']?.toString() ?? 'N/A',
-                          ),
-                        if (qrData.containsKey('driver_name'))
-                          SizedBox(height: 12),
-
-                        // Vehicle Info (if available)
-                        if (qrData.containsKey('vehicle_number'))
-                          _buildInfoCard(
-                            icon: Icons.directions_car,
-                            iconColor: Colors.green,
-                            label: 'Vehicle Number',
-                            value:
-                                qrData['vehicle_number']?.toString() ?? 'N/A',
-                          ),
-                        if (qrData.containsKey('vehicle_number'))
-                          SizedBox(height: 12),
-
-                        // Rating (if available)
-                        if (qrData.containsKey('rating'))
-                          _buildInfoCard(
-                            icon: Icons.star,
-                            iconColor: Colors.amber,
-                            label: 'Rating',
-                            value: '${qrData['rating']} ⭐',
-                          ),
-                        if (qrData.containsKey('rating')) SizedBox(height: 12),
-
-                        // Phone (if available)
-                        if (qrData.containsKey('phone_number'))
-                          _buildInfoCard(
-                            icon: Icons.phone,
-                            iconColor: Colors.purple,
-                            label: 'Phone',
-                            value: qrData['phone_number']?.toString() ?? 'N/A',
-                          ),
-
-                        SizedBox(height: 20),
-
-                        // Raw QR Data (expandable)
-                        Container(
-                          padding: EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Color(0xFFE0E0E0),
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Complete QR Data:',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Color(0xFFE0E0E0),
-                                  ),
-                                ),
-                                child: Text(
-                                  jsonEncode(qrData).replaceAll(',', ',\n'),
-                                  style: GoogleFonts.robotoMono(
-                                    fontSize: 10,
-                                    color: Colors.black54,
-                                  ),
-                                  maxLines: 6,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Action Buttons
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(vertical: 14),
-                              side: BorderSide(
-                                color: Color(0xFFFF7B10),
-                                width: 1.5,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Cancel',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFFF7B10),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              Navigator.pop(context);
-                              // Navigate to driver details with driver ID
-                              await Future.delayed(Duration(milliseconds: 300));
-                              if (mounted) {
-                                context.pushNamed(
-                                  DriverDetailsWidget.routeName,
-                                  queryParameters: {
-                                    'driverId': qrData['driver_id'].toString(),
-                                  },
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFFFF7B10),
-                              padding: EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: Text(
-                              'Proceed',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+      barrierLabel: 'QR Dialog',
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 300),
+      transitionBuilder: (context, a1, a2, child) {
+        return ScaleTransition(
+          scale: CurvedAnimation(parent: a1, curve: Curves.easeOutBack),
+          child: FadeTransition(opacity: a1, child: child),
+        );
+      },
+      pageBuilder: (context, _, __) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: screenWidth * 0.9,
+              constraints: const BoxConstraints(maxWidth: 400),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryOrange.withOpacity(0.3),
+                    blurRadius: 30,
+                    offset: const Offset(0, 15),
                   ),
                 ],
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Gradient Header
+                    Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [primaryOrange, deepOrange],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 15,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.check_circle_rounded,
+                              color: primaryOrange,
+                              size: 50,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Driver Verified ✓',
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'QR Code Scanned Successfully',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Content
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          _buildInfoCard(
+                            icon: Icons.person_rounded,
+                            iconColor: primaryOrange,
+                            label: 'Driver ID',
+                            value: qrData['driver_id']?.toString() ?? 'N/A',
+                          ),
+                          if (qrData.containsKey('driver_name')) ...[
+                            const SizedBox(height: 12),
+                            _buildInfoCard(
+                              icon: Icons.badge_rounded,
+                              iconColor: const Color(0xFF2196F3),
+                              label: 'Driver Name',
+                              value: qrData['driver_name']?.toString() ?? 'N/A',
+                            ),
+                          ],
+                          if (qrData.containsKey('vehicle_number')) ...[
+                            const SizedBox(height: 12),
+                            _buildInfoCard(
+                              icon: Icons.directions_car_rounded,
+                              iconColor: const Color(0xFF4CAF50),
+                              label: 'Vehicle Number',
+                              value: qrData['vehicle_number']?.toString() ?? 'N/A',
+                            ),
+                          ],
+                          if (qrData.containsKey('rating')) ...[
+                            const SizedBox(height: 12),
+                            _buildInfoCard(
+                              icon: Icons.star_rounded,
+                              iconColor: const Color(0xFFFFC107),
+                              label: 'Rating',
+                              value: '${qrData['rating']} ⭐',
+                            ),
+                          ],
+                          if (qrData.containsKey('phone_number')) ...[
+                            const SizedBox(height: 12),
+                            _buildInfoCard(
+                              icon: Icons.phone_rounded,
+                              iconColor: const Color(0xFF9C27B0),
+                              label: 'Phone',
+                              value: qrData['phone_number']?.toString() ?? 'N/A',
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    // Action Buttons
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: const BorderSide(color: primaryOrange, width: 2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: Text(
+                                'Cancel',
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: primaryOrange,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                Navigator.pop(context);
+                                await Future.delayed(const Duration(milliseconds: 300));
+                                if (mounted) {
+                                  context.pushNamed(
+                                    DriverDetailsWidget.routeName,
+                                    queryParameters: {
+                                      'driverId': qrData['driver_id'].toString(),
+                                    },
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primaryOrange,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                elevation: 4,
+                                shadowColor: primaryOrange.withOpacity(0.4),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Proceed',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -357,30 +332,35 @@ class _HomeWidgetState extends State<HomeWidget> {
     required String value,
   }) {
     return Container(
-      padding: EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Color(0xFFF9F9F9),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Color(0xFFE8E8E8),
-        ),
+        color: cardBackground,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: iconColor.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: iconColor.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              gradient: LinearGradient(
+                colors: [iconColor.withOpacity(0.15), iconColor.withOpacity(0.05)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 20,
-            ),
+            child: Icon(icon, color: iconColor, size: 24),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -390,14 +370,15 @@ class _HomeWidgetState extends State<HomeWidget> {
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF999999),
+                    color: Colors.grey[500],
+                    letterSpacing: 0.5,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   value,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
                   ),
@@ -426,26 +407,22 @@ class _HomeWidgetState extends State<HomeWidget> {
       await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted) return;
 
-      // User cancelled scan
       if (scanResult == '-1') {
         setState(() => isScanning = false);
         return;
       }
 
       try {
-        // Decode QR data
         final decodedData = jsonDecode(scanResult);
         _model.scantobook = scanResult;
-
-        // Show response dialog with formatted data
         _showQRResponseDialog(decodedData);
       } catch (e) {
-        // If JSON parsing fails, show raw scan result
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('QR Scanned: $scanResult'),
-            backgroundColor: Color(0xFFFF7B10),
-            duration: Duration(seconds: 3),
+            backgroundColor: primaryOrange,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
       }
@@ -454,6 +431,7 @@ class _HomeWidgetState extends State<HomeWidget> {
         SnackBar(
           content: Text('Scan failed: ${e.toString()}'),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
@@ -461,26 +439,23 @@ class _HomeWidgetState extends State<HomeWidget> {
     }
   }
 
+  // ==================== MAIN BUILD ====================
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 360;
+    final horizontalPadding = screenWidth * 0.05;
+
     return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-        FocusManager.instance.primaryFocus?.unfocus();
-      },
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
+        backgroundColor: Colors.grey[50],
         drawer: Drawer(
           elevation: 16.0,
           child: InkWell(
-            splashColor: Colors.transparent,
-            focusColor: Colors.transparent,
-            hoverColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-            onTap: () async {
-              context.pushNamed(ServiceoptionsWidget.routeName);
-            },
+            onTap: () => context.pushNamed(ServiceoptionsWidget.routeName),
             child: wrapWithModel(
               model: _model.menuModel,
               updateCallback: () => safeSetState(() {}),
@@ -488,529 +463,475 @@ class _HomeWidgetState extends State<HomeWidget> {
             ),
           ),
         ),
-        appBar: AppBar(
-          backgroundColor: Color(0xFFFF7B10),
-          automaticallyImplyLeading: false,
-          leading: FlutterFlowIconButton(
-            borderColor: Colors.transparent,
-            borderRadius: 30.0,
-            borderWidth: 1.0,
-            buttonSize: 60.0,
-            icon: Icon(
-              Icons.menu_sharp,
-              color: Colors.white,
-              size: 30.0,
-            ),
-            onPressed: () async {
-              scaffoldKey.currentState!.openDrawer();
-            },
-          ),
-          title: Stack(
-            children: [
-              Align(
-                alignment: AlignmentDirectional(-0.15, 0.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(0.0),
-                  child: Image.asset(
-                    'assets/images/k45cu8.png',
-                    width: 90.0,
-                    fit: BoxFit.fill,
-                    alignment: Alignment(0.0, 0.0),
+        body: CustomScrollView(
+
+          slivers: [
+            // ==================== CUSTOM APP BAR ====================
+            SliverAppBar(
+              expandedHeight: screenHeight * 0.38,
+              floating: false,
+              pinned: true,
+              backgroundColor: primaryOrange,
+              leading: IconButton(
+                icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 30),
+                onPressed: () => scaffoldKey.currentState?.openDrawer(),
+              ),
+              title: Image.asset(
+                'assets/images/k45cu8.png',
+                width: isSmallScreen ? 70 : 90,
+                fit: BoxFit.contain,
+              ),
+              centerTitle: true,
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: IconButton(
+                    icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 30),
+                    onPressed: () {
+                      // Handle notifications
+                    },
                   ),
                 ),
-              ),
-            ],
-          ),
-          actions: [],
-          centerTitle: true,
-          elevation: 0.0,
-        ),
-        body: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              Container(
-                width: double.infinity,
-                height: 310.0,
-                decoration: BoxDecoration(
-                  color: Color(0xFFFF7B10),
-                ),
-                child: Padding(
-                  padding:
-                      EdgeInsetsDirectional.fromSTEB(20.0, 0.0, 20.0, 20.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                            20.0, 0.0, 20.0, 0.0),
-                        child: InkWell(
-                          splashColor: Colors.transparent,
-                          focusColor: Colors.transparent,
-                          hoverColor: Colors.transparent,
-                          highlightColor: Colors.transparent,
-                          onTap: () async {
-                            context.pushNamed(PlanYourRideWidget.routeName);
-                          },
-                          child: Container(
-                            width: double.infinity,
-                            height: 50.0,
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context)
-                                  .secondaryBackground,
-                              borderRadius: BorderRadius.circular(25.0),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsets.all(12.0),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.max,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  InkWell(
-                                    splashColor: Colors.transparent,
-                                    focusColor: Colors.transparent,
-                                    hoverColor: Colors.transparent,
-                                    highlightColor: Colors.transparent,
-                                    onTap: () async {
-                                      context.pushNamed(
-                                          ChooseDestinationWidget.routeName);
-                                    },
-                                    child: Icon(
-                                      Icons.search,
-                                      color:
-                                          FlutterFlowTheme.of(context).accent1,
-                                      size: 24.0,
-                                    ),
-                                  ),
-                                  Text(
-                                    FFLocalizations.of(context).getText(
-                                      'h1w2v3fi',
-                                    ),
-                                    style: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .override(
-                                          font: GoogleFonts.inter(
-                                            fontWeight: FontWeight.normal,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .bodyMedium
-                                                    .fontStyle,
-                                          ),
-                                          color: Colors.black,
-                                          fontSize: 14.0,
-                                          letterSpacing: 0.0,
-                                          fontWeight: FontWeight.normal,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .bodyMedium
-                                                  .fontStyle,
-                                        ),
-                                  ),
-                                ].divide(SizedBox(width: 15.0)),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                            20.0, 0.0, 20.0, 0.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(
-                              FFLocalizations.of(context).getText(
-                                'en8fyguh',
-                              ),
-                              style: FlutterFlowTheme.of(context)
-                                  .headlineSmall.override(
-                                    font: GoogleFonts.interTight(
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .headlineSmall
-                                          .fontStyle,
-                                    ),
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryBackground,
-                                    fontSize: 20.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.w500,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .headlineSmall
-                                        .fontStyle,
-                                  ),
-                            ),
-                            InkWell(
-                              splashColor: Colors.transparent,
-                              focusColor: Colors.transparent,
-                              hoverColor: Colors.transparent,
-                              highlightColor: Colors.transparent,
-                              onTap: () async {
-                                context.pushNamed(
-                                    AvaliableOptionsWidget.routeName);
-                              },
-                              child: Text(
-                                FFLocalizations.of(context).getText(
-                                  '76yoeddl',
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.normal,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
-                                      ),
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryBackground,
-                                      fontSize: 14.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.max,
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryOrange, deepOrange],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  child: SafeArea(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(horizontalPadding, 70, horizontalPadding, 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Container(
-                            width: 60.0,
-                            height: MediaQuery.sizeOf(context).height * 0.06,
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context)
-                                  .secondaryBackground,
-                              borderRadius: BorderRadius.circular(15.0),
-                            ),
-                            child: Align(
-                              alignment: AlignmentDirectional(0.0, 0.0),
-                              child: InkWell(
-                                splashColor: Colors.transparent,
-                                focusColor: Colors.transparent,
-                                hoverColor: Colors.transparent,
-                                highlightColor: Colors.transparent,
-                                onTap: () async {
-                                  context.pushNamed(
-                                      ChooseDestinationWidget.routeName);
-                                },
-                                child: Icon(
-                                  Icons.location_on,
-                                  color: Color(0xFFFF0000),
-                                  size: 30.0,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding:
-                                EdgeInsetsDirectional.fromSTEB(15, 0, 0, 0),
-                            child: InkWell(
-                              splashColor: Colors.transparent,
-                              focusColor: Colors.transparent,
-                              hoverColor: Colors.transparent,
-                              highlightColor: Colors.transparent,
-                              onTap: isScanning ? null : _handleQRScan,
-                              child: Container(
-                                width: MediaQuery.sizeOf(context).width * 0.65,
-                                height:
-                                    MediaQuery.sizeOf(context).height * 0.06,
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(context)
-                                      .secondaryBackground,
-                                  borderRadius: BorderRadius.circular(15),
-                                  border: isScanning
-                                      ? Border.all(
-                                          color: Color(0xFFFF7B10),
-                                          width: 2,
-                                        )
-                                      : null,
-                                ),
-                                child: Padding(
-                                  padding: EdgeInsets.all(12),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.max,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        width: 30,
-                                        height: 30,
-                                        decoration: BoxDecoration(
-                                          color: Color(0xFFFF7B10),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Align(
-                                          alignment: AlignmentDirectional(0, 0),
-                                          child: isScanning
-                                              ? SizedBox(
-                                                  width: 16,
-                                                  height: 16,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation<
-                                                            Color>(
-                                                      Colors.white,
-                                                    ),
-                                                  ),
-                                                )
-                                              : Icon(
-                                                  Icons.qr_code_scanner,
-                                                  color: FlutterFlowTheme.of(
-                                                          context)
-                                                      .secondaryBackground,
-                                                  size: 16,
-                                                ),
-                                        ),
-                                      ),
-                                      Text(
-                                        isScanning
-                                            ? 'Scanning...'
-                                            : FFLocalizations.of(context)
-                                                .getText('dtkvc9rl'),
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .override(
-                                              font: GoogleFonts.inter(
-                                                fontWeight: FontWeight.normal,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .bodyMedium
-                                                        .fontStyle,
-                                              ),
-                                              color: Colors.black,
-                                              fontSize: 12,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.normal,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .fontStyle,
-                                            ),
-                                      ),
-                                    ].divide(SizedBox(width: 15)),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ].divide(SizedBox(width: 15)),
-                      ),
-                    ].divide(SizedBox(height: 20.0)),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(20.0, 20.0, 20.0, 0.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.max,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      FFLocalizations.of(context).getText(
-                        'jbh9xjpf',
-                      ),
-                      style:
-                          FlutterFlowTheme.of(context).headlineSmall.override(
-                                font: GoogleFonts.interTight(
-                                  fontWeight: FontWeight.normal,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .headlineSmall
-                                      .fontStyle,
-                                ),
-                                color: FlutterFlowTheme.of(context).accent1,
-                                fontSize: 20.0,
-                                letterSpacing: 0.0,
-                                fontWeight: FontWeight.normal,
-                                fontStyle: FlutterFlowTheme.of(context)
-                                    .headlineSmall
-                                    .fontStyle,
-                              ),
-                    ),
-                    Padding(
-                      padding:
-                          EdgeInsetsDirectional.fromSTEB(20.0, 0.0, 20.0, 0.0),
-                      child: Container(
-                        width: double.infinity,
-                        height: 180.0,
-                        decoration: BoxDecoration(
-                          image: DecorationImage(
-                            fit: BoxFit.cover,
-                            image: Image.asset(
-                              'assets/images/skdkzv.png',
-                            ).image,
-                          ),
-                          borderRadius: BorderRadius.circular(15.0),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(5.0),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.max,
-                                children: [
-                                  Text(
-                                    FFLocalizations.of(context).getText(
-                                      '96ev15d0',
-                                    ),
-                                    style: FlutterFlowTheme.of(context)
-                                        .titleMedium
-                                        .override(
-                                          font: GoogleFonts.interTight(
-                                            fontWeight: FontWeight.normal,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .titleMedium
-                                                    .fontStyle,
-                                          ),
-                                          color: FlutterFlowTheme.of(context)
-                                              .accent1,
-                                          fontSize: 16.0,
-                                          letterSpacing: 0.0,
-                                          fontWeight: FontWeight.normal,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .titleMedium
-                                                  .fontStyle,
-                                        ),
-                                  ),
-                                  Icon(
-                                    Icons.arrow_forward,
-                                    color: Color(0xFF4F4F4F),
-                                    size: 13.0,
-                                  ),
-                                ]
-                                    .divide(SizedBox(width: 4.0))
-                                    .around(SizedBox(width: 4.0)),
-                              ),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(5.0),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.max,
-                                children: [
-                                  Padding(
-                                    padding: EdgeInsets.all(5.0),
-                                    child: Text(
-                                      FFLocalizations.of(context).getText(
-                                        '39myr84r',
-                                      ),
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .override(
-                                            font: GoogleFonts.inter(
-                                              fontWeight: FontWeight.normal,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodyMedium
-                                                      .fontStyle,
-                                            ),
-                                            color: Color(0xFF686363),
-                                            fontSize: 14.0,
-                                            letterSpacing: 0.0,
-                                            fontWeight: FontWeight.normal,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .bodyMedium
-                                                    .fontStyle,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ].divide(SizedBox(height: 8.0)),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding:
-                          EdgeInsetsDirectional.fromSTEB(20.0, 0.0, 20.0, 0.0),
-                      child: Container(
-                        width: double.infinity,
-                        height: 80.0,
-                        decoration: BoxDecoration(
-                          color:
-                              FlutterFlowTheme.of(context).secondaryBackground,
-                          borderRadius: BorderRadius.circular(15.0),
-                          border: Border.all(
-                            color: Color(0xFFFF7B10),
-                            width: 2.0,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsets.all(12.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
+                          // Search Bar
+                          _buildSearchBar(context, isSmallScreen),
+                          SizedBox(height: screenHeight * 0.02),
+
+                          // "Get a Ride" Header
+                          Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                FFLocalizations.of(context).getText(
-                                  'imvzfpcd',
+                                FFLocalizations.of(context).getText('en8fyguh'),
+                                style: GoogleFonts.poppins(
+                                  fontSize: isSmallScreen ? 18 : 22,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
                                 ),
-                                style: FlutterFlowTheme.of(context)
-                                    .headlineSmall
-                                    .override(
-                                      font: GoogleFonts.interTight(
-                                        fontWeight: FontWeight.normal,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .headlineSmall
-                                            .fontStyle,
-                                      ),
-                                      color: Colors.black,
-                                      fontSize: 15.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .headlineSmall
-                                          .fontStyle,
-                                    ),
                               ),
-                              if (responsiveVisibility(
-                                context: context,
-                                phone: false,
-                              ))
-                                Container(
-                                  width: 44.0,
-                                  height: 44.0,
-                                  decoration: BoxDecoration(
-                                    color: Color(0xFFFF7B10),
-                                    borderRadius: BorderRadius.circular(22.0),
-                                  ),
-                                  child: Align(
-                                    alignment: AlignmentDirectional(0.0, 0.0),
-                                    child: Icon(
-                                      Icons.flash_on,
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryBackground,
-                                      size: 24.0,
+                              TextButton(
+                                onPressed: () => context.pushNamed(AvaliableOptionsWidget.routeName),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      FFLocalizations.of(context).getText('76yoeddl'),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: Colors.white.withOpacity(0.9),
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 4),
+                                    Icon(Icons.arrow_forward_ios_rounded,
+                                        size: 12, color: Colors.white.withOpacity(0.9)),
+                                  ],
                                 ),
+                              ),
                             ],
                           ),
-                        ),
+                          SizedBox(height: screenHeight * 0.015),
+
+                          // Action Buttons Row
+                          _buildActionButtonsRow(context, screenWidth, isSmallScreen),
+                        ],
                       ),
                     ),
-                  ].divide(SizedBox(height: 20.0)),
+                  ),
+                ),
+              ),
+            ),
+
+            // ==================== BODY CONTENT ====================
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(horizontalPadding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+
+                    // Section Header
+                    Text(
+                      FFLocalizations.of(context).getText('jbh9xjpf'),
+                      style: GoogleFonts.poppins(
+                        fontSize: isSmallScreen ? 18 : 20,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Promotional Banner
+                    _buildPromoBanner(context, screenWidth),
+                    const SizedBox(height: 20),
+
+                    // Quick Action Card
+                    _buildQuickActionCard(context),
+                    const SizedBox(height: 30),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==================== REUSABLE WIDGETS ====================
+
+  Widget _buildSearchBar(BuildContext context, bool isSmallScreen) {
+    return InkWell(
+      onTap: () => context.pushNamed(PlanYourRideWidget.routeName),
+      borderRadius: BorderRadius.circular(30),
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 16 : 20,
+          vertical: isSmallScreen ? 14 : 16,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: primaryOrange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.search_rounded, color: primaryOrange, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                FFLocalizations.of(context).getText('h1w2v3fi'),
+                style: GoogleFonts.inter(
+                  fontSize: isSmallScreen ? 14 : 15,
+                  color: Colors.grey[500],
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: lightOrange.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Now',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: deepOrange,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtonsRow(BuildContext context, double screenWidth, bool isSmallScreen) {
+    return Row(
+      children: [
+        // Location Button
+        _buildActionButton(
+          icon: Icons.location_on_rounded,
+          iconColor: const Color(0xFFFF0000),
+          onTap: () => context.pushNamed(ChooseDestinationWidget.routeName),
+          width: isSmallScreen ? 55 : 65,
+        ),
+        const SizedBox(width: 12),
+
+        // QR Scan Button (Expanded)
+        Expanded(
+          child: ScaleTransition(
+            scale: isScanning ? const AlwaysStoppedAnimation(1.0) : _pulseAnimation,
+            child: InkWell(
+              onTap: isScanning ? null : _handleQRScan,
+              borderRadius: BorderRadius.circular(16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 14 : 18,
+                  vertical: isSmallScreen ? 14 : 16,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: isScanning
+                      ? Border.all(color: lightOrange, width: 2)
+                      : null,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: isSmallScreen ? 32 : 38,
+                      height: isSmallScreen ? 32 : 38,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [primaryOrange, deepOrange],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: isScanning
+                          ? const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                          : const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        isScanning
+                            ? 'Scanning...'
+                            : FFLocalizations.of(context).getText('dtkvc9rl'),
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 13 : 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required Color iconColor,
+    required VoidCallback onTap,
+    required double width,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: width,
+        height: width,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: iconColor, size: width * 0.45),
+      ),
+    );
+  }
+
+  Widget _buildPromoBanner(BuildContext context, double screenWidth) {
+    return InkWell(
+      onTap: () {
+        // Navigate to offers or plan ride
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: double.infinity,
+        height: screenWidth * 0.45,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: primaryOrange.withOpacity(0.2),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                'assets/images/skdkzv.png',
+                fit: BoxFit.cover,
+              ),
+              // Gradient Overlay
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
+              ),
+              // Text Content
+              Positioned(
+                left: 20,
+                bottom: 20,
+                right: 20,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          FFLocalizations.of(context).getText('96ev15d0'),
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      FFLocalizations.of(context).getText('39myr84r'),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionCard(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        // Handle quick booking
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [cardBackground, Colors.white],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: primaryOrange.withOpacity(0.3), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: primaryOrange.withOpacity(0.1),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [primaryOrange, deepOrange],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: primaryOrange.withOpacity(0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.flash_on_rounded, color: Colors.white, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    FFLocalizations.of(context).getText('imvzfpcd'),
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Get a ride in minutes',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: primaryOrange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.arrow_forward_ios_rounded, color: primaryOrange, size: 16),
+            ),
+          ],
         ),
       ),
     );

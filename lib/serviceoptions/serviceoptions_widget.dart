@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'serviceoptions_model.dart';
 export 'serviceoptions_model.dart';
 
-/// Ride Booking Options
+/// 🚀 Modern Responsive Service Options
 class ServiceoptionsWidget extends StatefulWidget {
   const ServiceoptionsWidget({super.key});
 
@@ -20,7 +20,6 @@ class ServiceoptionsWidget extends StatefulWidget {
 
 class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
   late ServiceoptionsModel _model;
-
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -32,7 +31,6 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
   @override
   void dispose() {
     _model.dispose();
-
     super.dispose();
   }
 
@@ -45,18 +43,21 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
       },
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: Color(0xFFF8F9FA),
+        backgroundColor: const Color(0xFFF8FAFC),
         appBar: AppBar(
-          backgroundColor: Color(0xFFFF7B10),
+          backgroundColor: const Color(0xFFFF7B10),
           automaticallyImplyLeading: false,
           leading: Padding(
-            padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+            padding: const EdgeInsets.all(8.0),
             child: FlutterFlowIconButton(
-              borderRadius: 20.0,
-              buttonSize: 40.0,
-              icon: Icon(
-                Icons.arrow_back,
-                color: Color(0xFFF8F9FA),
+              borderColor: Colors.transparent,
+              borderRadius: 30.0,
+              borderWidth: 1.0,
+              buttonSize: 44.0,
+              fillColor: Colors.white.withOpacity(0.2), // ✅ Fixed background
+              icon: const Icon(
+                Icons.arrow_back_rounded, // ✅ Fixed Icon widget
+                color: Colors.white,
                 size: 24.0,
               ),
               onPressed: () async {
@@ -65,245 +66,233 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
             ),
           ),
           title: Text(
-            FFLocalizations.of(context).getText(
-              'rnwdwckb' /* Services */,
+            FFLocalizations.of(context).getText('rnwdwckb' /* Services */),
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
             ),
-            style: FlutterFlowTheme.of(context).titleLarge.override(
-                  font: GoogleFonts.interTight(
-                    fontWeight: FontWeight.w500,
-                    fontStyle:
-                        FlutterFlowTheme.of(context).titleLarge.fontStyle,
-                  ),
-                  color: Color(0xFFF8F9FA),
-                  fontSize: 16.0,
-                  letterSpacing: 0.0,
-                  fontWeight: FontWeight.w500,
-                  fontStyle: FlutterFlowTheme.of(context).titleLarge.fontStyle,
-                ),
           ),
           actions: [],
-          centerTitle: false,
-          elevation: 0.0,
+          centerTitle: true,
+          elevation: 0,
+          shadowColor: Colors.transparent,
         ),
-        body: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(20.0, 0.0, 20.0, 0.0),
-                child: Text(
-                  FFLocalizations.of(context).getText(
-                    'xlfqyvqa' /* Comfortable Rides, Anytime */,
-                  ),
-                  style: FlutterFlowTheme.of(context).headlineMedium.override(
-                        font: GoogleFonts.interTight(
-                          fontWeight: FontWeight.normal,
-                          fontStyle: FlutterFlowTheme.of(context)
-                              .headlineMedium
-                              .fontStyle,
-                        ),
-                        color: Colors.black,
-                        fontSize: 24.0,
-                        letterSpacing: 0.0,
-                        fontWeight: FontWeight.normal,
-                        fontStyle: FlutterFlowTheme.of(context)
-                            .headlineMedium
-                            .fontStyle,
-                      ),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsetsDirectional.fromSTEB(20.0, 0.0, 20.0, 0.0),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final screenWidth = constraints.maxWidth;
+              final isNarrow = screenWidth < 360;
+              final padding = isNarrow ? 20.0 : 28.0;
+
+              return SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(padding, 32, padding, 40),
                 child: Column(
-                  mainAxisSize: MainAxisSize.max,
                   children: [
-                    InkWell(
-                      splashColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      onTap: () async {
-                        context.pushNamed(PlanYourRideWidget.routeName);
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        height: 80.0,
-                        decoration: BoxDecoration(
-                          color: Color(0xFFF8F9FA),
-                          borderRadius: BorderRadius.circular(16.0),
-                          border: Border.all(
-                            color: Colors.black,
-                            width: 2.0,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                              20.0, 0.0, 20.0, 0.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/images/mwhg2d.png',
-                                width: 40.0,
-                                height: 40.0,
-                                fit: BoxFit.contain,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'o76sscog' /* Book a bike */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .titleLarge
-                                    .override(
-                                      font: GoogleFonts.interTight(
-                                        fontWeight: FontWeight.normal,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .titleLarge
-                                            .fontStyle,
-                                      ),
-                                      color: Colors.black,
-                                      fontSize: 20.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .titleLarge
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 16.0)),
-                          ),
-                        ),
-                      ),
+                    // 1. Hero Header
+                    _buildHeroHeader(isNarrow),
+
+                    SizedBox(height: isNarrow ? 40 : 56),
+
+                    // 2. Service Cards Grid
+                    _buildServiceCards(isNarrow),
+
+                    SizedBox(height: isNarrow ? 100 : 140),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroHeader(bool isNarrow) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          FFLocalizations.of(context).getText('xlfqyvqa' /* Comfortable Rides, Anytime */),
+          style: GoogleFonts.poppins(
+            fontSize: isNarrow ? 26 : 32,
+            fontWeight: FontWeight.w700,
+            color: Colors.black87,
+            height: 1.2,
+          ),
+        ),
+        SizedBox(height: 12),
+        Text(
+          'Choose your ride type below',
+          style: GoogleFonts.inter(
+            fontSize: isNarrow ? 16 : 18,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildServiceCards(bool isNarrow) {
+    final serviceCards = [
+      {
+        'image': 'assets/images/mwhg2d.png',
+        'label': FFLocalizations.of(context).getText('o76sscog' /* Book a bike */),
+        'color': const Color(0xFF2196F3),
+        'route': PlanYourRideWidget.routeName,
+      },
+      {
+        'image': 'assets/images/ndppdc.png',
+        'label': FFLocalizations.of(context).getText('p3js2d3q' /* Book a auto */),
+        'color': const Color(0xFF4CAF50),
+        'route': PlanYourRideWidget.routeName,
+      },
+      {
+        'image': null, // Use icon instead
+        'label': FFLocalizations.of(context).getText('a1vegvac' /* Book a Cab */),
+        'color': const Color(0xFFFF9800),
+        'icon': Icons.local_taxi,
+        'route': PlanYourRideWidget.routeName,
+      },
+    ];
+
+    return Column(
+      children: List.generate(serviceCards.length, (index) {
+        final card = serviceCards[index];
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: isNarrow ? 16 : 20),
+          child: _buildServiceCard(
+            image: card['image'] as String?,
+            label: card['label'] as String,
+            color: card['color'] as Color,
+            icon: card['icon'] as IconData?,
+            route: card['route'] as String,
+            isNarrow: isNarrow,
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildServiceCard({
+    String? image,
+    required String label,
+    required Color color,
+    IconData? icon,
+    required String route,
+    required bool isNarrow,
+  }) {
+    return GestureDetector(
+      onTap: () => context.pushNamed(route),
+      child: Container(
+        height: isNarrow ? 88 : 100,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.white,
+              color.withOpacity(0.05),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.15),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isNarrow ? 20 : 24,
+            vertical: isNarrow ? 16 : 20,
+          ),
+          child: Row(
+            children: [
+              // Icon/Image Container
+              Container(
+                width: isNarrow ? 52 : 60,
+                height: isNarrow ? 52 : 60,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [color, color.withOpacity(0.8)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: image != null
+                      ? Image.asset(
+                    image,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      Icons.two_wheeler,
+                      color: Colors.white,
+                      size: 28,
                     ),
-                    InkWell(
-                      splashColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      onTap: () async {
-                        context.pushNamed(PlanYourRideWidget.routeName);
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        height: 80.0,
-                        decoration: BoxDecoration(
-                          color: Color(0xFFF8F9FA),
-                          borderRadius: BorderRadius.circular(16.0),
-                          border: Border.all(
-                            color: Colors.black,
-                            width: 2.0,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                              20.0, 0.0, 20.0, 0.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/images/ndppdc.png',
-                                width: 40.0,
-                                height: 40.0,
-                                fit: BoxFit.contain,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'p3js2d3q' /* Book a auto */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .titleLarge
-                                    .override(
-                                      font: GoogleFonts.interTight(
-                                        fontWeight: FontWeight.normal,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .titleLarge
-                                            .fontStyle,
-                                      ),
-                                      color: Colors.black,
-                                      fontSize: 20.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .titleLarge
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 16.0)),
-                          ),
-                        ),
-                      ),
-                    ),
-                    InkWell(
-                      splashColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      onTap: () async {
-                        context.pushNamed(PlanYourRideWidget.routeName);
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        height: 80.0,
-                        decoration: BoxDecoration(
-                          color: Color(0xFFF8F9FA),
-                          borderRadius: BorderRadius.circular(16.0),
-                          border: Border.all(
-                            color: Colors.black,
-                            width: 2.0,
-                          ),
-                        ),
-                        child: Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                              20.0, 0.0, 20.0, 0.0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.local_taxi,
-                                color: Color(0xFFFFCC00),
-                                size: 40.0,
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'a1vegvac' /* Book a Cab */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .titleLarge
-                                    .override(
-                                      font: GoogleFonts.interTight(
-                                        fontWeight: FontWeight.normal,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .titleLarge
-                                            .fontStyle,
-                                      ),
-                                      color: Colors.black,
-                                      fontSize: 20.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .titleLarge
-                                          .fontStyle,
-                                    ),
-                              ),
-                            ].divide(SizedBox(width: 16.0)),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ].divide(SizedBox(height: 16.0)),
+                  )
+                      : icon != null
+                      ? Icon(
+                    icon,
+                    color: Colors.white,
+                    size: isNarrow ? 28 : 32,
+                  )
+                      : const SizedBox(),
                 ),
               ),
-            ]
-                .divide(SizedBox(height: 24.0))
-                .addToStart(SizedBox(height: 24.0))
-                .addToEnd(SizedBox(height: 100.0)),
+
+              SizedBox(width: isNarrow ? 16 : 20),
+
+              // Label
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.poppins(
+                        fontSize: isNarrow ? 18 : 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                        height: 1.2,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Quick booking',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Arrow
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: color,
+                  size: 18,
+                ),
+              ),
+            ],
           ),
         ),
       ),
