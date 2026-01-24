@@ -14,6 +14,7 @@ export 'auto_book_model.dart';
 
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'dart:async';
+import 'package:url_launcher/url_launcher.dart';
 
 class AutoBookWidget extends StatefulWidget {
   const AutoBookWidget({super.key, required this.rideId});
@@ -275,6 +276,27 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       debugPrint("☠️ Exception: $e");
     } finally {
       if (mounted) setState(() => _isCancelling = false);
+    }
+  }
+
+  // Helper to make a phone call
+  Future<void> _makeCall(String? phoneNumber) async {
+    if (phoneNumber == null || phoneNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Driver phone number not available')),
+      );
+      return;
+    }
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch phone app')),
+      );
     }
   }
 
@@ -547,6 +569,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     final totalRides = GetDriverDetailsCall.totalRides(driverDetails) ?? 0;
     final vehicleModel = GetDriverDetailsCall.vehicleModel(driverDetails) ?? 'Auto';
     final vehicleNumber = GetDriverDetailsCall.vehicleNumber(driverDetails) ?? 'XX-00';
+    final driverPhone = DriverIdfetchCall.mobileNumber(driverDetails);
 
     // Image URL Logic
     String? profilePath = GetDriverDetailsCall.profileImage(driverDetails);
@@ -758,7 +781,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                 Column(
                   children: [
                     _buildRapidoCircleButton(Icons.call_rounded, const Color(0xFF4CAF50),
-                            () => debugPrint('Call')),
+                            () => _makeCall(driverPhone)),
                     const SizedBox(height: 10),
                     _buildRapidoCircleButton(Icons.chat_bubble_rounded,
                         const Color(0xFF2196F3), () => debugPrint('Chat')),

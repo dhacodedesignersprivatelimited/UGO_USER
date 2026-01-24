@@ -573,29 +573,27 @@ class CreateRideCall {
     double? pickuplon,
     double? droplat,
     double? droplon,
-
+    dynamic driverId,
   }) async {
-    print('Bearer ${token}');
     final ffApiRequestBody = '''
 {
   "user_id": "${userId}",
   "pickup_location_address": "${escapeStringForJson(pickuplocation)}",
   "drop_location_address": "${escapeStringForJson(droplocation)}",
-  "drop_latitude": "${droplon}",
-  "drop_longitude": "${droplat}",
+  "drop_latitude": "${droplat}",
+  "drop_longitude": "${droplon}",
   "ride_type": "${escapeStringForJson(ridetype)}",
- "pickup_latitude":"${pickuplat}",
+  "pickup_latitude": "${pickuplat}",
   "pickup_longitude": "${pickuplon}"
-  
+  ${driverId != null ? ',"driver_id": "${driverId}"' : ''}
 }''';
     return ApiManager.instance.makeApiCall(
-
       callName: 'createRide',
       apiUrl: 'https://ugotaxi.icacorp.org/api/rides/post',
       callType: ApiCallType.POST,
       headers: {
         'Authorization': 'Bearer ${token}',
-
+        'Content-Type': 'application/json',
       },
       params: {},
       body: ffApiRequestBody,
@@ -611,7 +609,7 @@ class CreateRideCall {
 }
 
 // ---------------------------------------------------------------------------
-// ✅ DriverIdfetchCall CLASS DEFINITION (Added this missing class)
+// ✅ DriverIdfetchCall CLASS DEFINITION
 // ---------------------------------------------------------------------------
 class DriverIdfetchCall {
   static Future<ApiCallResponse> call({
@@ -750,7 +748,7 @@ class DriverIdfetchCall {
 }
 
 // ---------------------------------------------------------------------------
-// ✅ GetDriverDetailsCall WRAPPER (Now correctly references DriverIdfetchCall)
+// ✅ GetDriverDetailsCall WRAPPER
 // ---------------------------------------------------------------------------
 class GetDriverDetailsCall {
   static Future<ApiCallResponse> call({
@@ -763,7 +761,7 @@ class GetDriverDetailsCall {
     );
   }
 
-  // ✅ DRIVER PERSONAL INFO (from DriverIdfetchCall - nested under $.data)
+  // ✅ DRIVER PERSONAL INFO
   static String? name(dynamic response) {
     final firstName = DriverIdfetchCall.firstName(response) ?? '';
     final lastName = DriverIdfetchCall.lastName(response) ?? '';
@@ -794,39 +792,26 @@ class GetDriverDetailsCall {
     return null;
   }
 
-  // ✅ VEHICLE INFO (from ride response - flat structure)
-  // These are from the ride's vehicle object you showed in Postman
   static String? vehicleModel(dynamic response) {
-    // Check root level first (your Postman response)
     var model = castToType<String>(getJsonField(response, r'''$.vehicle_model'''));
     if (model != null) return model;
-
-    // Check data wrapper (DriverIdfetchCall response)
     model = castToType<String>(getJsonField(response, r'''$.data.vehicle_model'''));
-    if (model != null) return model;
-
-    return 'Auto'; // ✅ Fallback
+    return model ?? 'Auto';
   }
 
   static String? vehicleNumber(dynamic response) {
-    // Try license_plate first
     var number = castToType<String>(getJsonField(response, r'''$.license_plate'''));
     if (number != null) return number;
-
-    // Try registration_number
     number = castToType<String>(getJsonField(response, r'''$.registration_number'''));
     if (number != null) return number;
-
-    // Check data wrapper
     number = castToType<String>(getJsonField(response, r'''$.data.license_plate'''));
-    if (number != null) return number;
-
-    return 'AP-00-XX-0000'; // ✅ Fallback
+    return number ?? 'AP-00-XX-0000';
   }
 
   static String? vehicleType(dynamic response) {
     var type = castToType<String>(getJsonField(response, r'''$.vehicle_type'''));
     type ??= castToType<String>(getJsonField(response, r'''$.vehicle_name'''));
+    type ??= castToType<String>(getJsonField(response, r'''$.data.vehicle_type'''));
     return type ?? 'Auto';
   }
 
@@ -834,7 +819,6 @@ class GetDriverDetailsCall {
       castToType<String>(getJsonField(response, r'''$.vehicle_status''')) ??
           'pending_verification';
 
-  // ✅ ADDITIONAL HELPFUL METHODS
   static bool? isOnline(dynamic response) =>
       DriverIdfetchCall.isonline(response);
 
@@ -943,17 +927,17 @@ class SaveAddressCall {
 // ✅ FIXED CANCEL RIDE CALL
 class CancelRide {
   static Future<ApiCallResponse> call({
-    required int rideId,           // ✅ Made required
-    String? cancellationReason,    // ✅ Renamed for consistency
+    required int rideId,
+    String? cancellationReason,
     String? token = '',
-    String? cancelledBy = 'user',  // ✅ Defaulted to 'user'
+    String? cancelledBy = 'user',
   }) async {
     final ffApiRequestBody = '''
 {
   "ride_id": ${rideId},
   "cancellation_reason": "${escapeStringForJson(cancellationReason ?? '')}",
   "cancelled_by": "${escapeStringForJson(cancelledBy ?? 'user')}"
-}'''; // ✅ FIXED: Added missing commas & proper JSON structure
+}''';
 
     return ApiManager.instance.makeApiCall(
       callName: 'cancelRide',
@@ -961,7 +945,7 @@ class CancelRide {
       callType: ApiCallType.PATCH,
       headers: {
         'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json', // ✅ Added content type
+        'Content-Type': 'application/json',
       },
       params: {},
       body: ffApiRequestBody,

@@ -6,6 +6,7 @@ import '/flutter_flow/flutter_flow_widgets.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'bikebook_model.dart';
 export 'bikebook_model.dart';
 
@@ -42,6 +43,20 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
     );
 
     _animationController.forward();
+  }
+
+  Future<void> _makeCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch phone app')),
+      );
+    }
   }
 
   @override
@@ -617,7 +632,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                               width: double.infinity,
                               height: 54,
                               child: ElevatedButton(
-                                onPressed: () {},
+                                onPressed: () => _makeCall('9123456789'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: Color(0xFF3D8033),
