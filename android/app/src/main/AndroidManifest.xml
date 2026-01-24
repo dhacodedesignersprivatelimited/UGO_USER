@@ -18,7 +18,7 @@
     </queries>
 
     <application
-        android:label="UGO-TAXI"
+        android:label="UGO-USER"
         tools:replace="android:label"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true">
