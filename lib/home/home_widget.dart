@@ -1,6 +1,4 @@
 import '/components/menu_widget.dart';
-import '/flutter_flow/flutter_flow_icon_button.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
@@ -607,7 +605,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                   // child: SafeArea(
                     child: 
                     Padding(
-                      padding: EdgeInsets.fromLTRB(horizontalPadding, 70, horizontalPadding, 20),
+                      padding: EdgeInsets.fromLTRB(horizontalPadding, 70, horizontalPadding, 10),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
