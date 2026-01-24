@@ -1,3 +1,5 @@
+import 'package:ugouser/home/home_widget.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -61,46 +63,56 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        key: scaffoldKey,
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFFF7B10),
-          automaticallyImplyLeading: false,
-          title: Row(
-            children: [
-              FlutterFlowIconButton(
-                borderRadius: 12,
-                buttonSize: 40,
-                fillColor: Colors.white.withOpacity(0.2),
-                icon: const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white,
-                  size: 18,
+    return WillPopScope(
+       onWillPop: () async {
+      // Navigate to Home instead of exiting
+      context.pushNamed(HomeWidget.routeName);
+      return false; // Prevent default pop (exit)
+    },
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
+          key: scaffoldKey,
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            backgroundColor: const Color(0xFFFF7B10),
+            automaticallyImplyLeading: false,
+            title: Row(
+              children: [
+                FlutterFlowIconButton(
+                  borderRadius: 12,
+                  buttonSize: 40,
+                  fillColor: Colors.white.withOpacity(0.2),
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                   onPressed: () async {
+                  context.pushNamed(HomeWidget.routeName);
+        
+                },
                 ),
-                onPressed: () => context.safePop(),
-              ),
-              const SizedBox(width: 16),
-              Text(
-                'Your Trips',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  fontSize: 20,
-                  letterSpacing: -0.5,
+                const SizedBox(width: 16),
+                Text(
+                  'Your Trips',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    fontSize: 20,
+                    letterSpacing: -0.5,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
+            elevation: 0,
           ),
-          elevation: 0,
-        ),
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return _buildBody(constraints);
-            },
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return _buildBody(constraints);
+              },
+            ),
           ),
         ),
       ),

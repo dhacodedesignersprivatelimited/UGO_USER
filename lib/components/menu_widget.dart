@@ -12,6 +12,8 @@ export 'menu_model.dart';
 
 class MenuWidget extends StatefulWidget {
   const MenuWidget({super.key});
+  static String routeName = 'menu';
+  static String routePath = '/menuoptions';
 
   @override
   State<MenuWidget> createState() => _MenuWidgetState();
@@ -358,7 +360,8 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
         child: InkWell(
           onTap: () {
             Navigator.of(context).pop();
-            context.goNamed(route);
+           context.pushNamed(route);
+
           },
           borderRadius: BorderRadius.circular(20),
           splashColor: iconColor.withOpacity(0.15),

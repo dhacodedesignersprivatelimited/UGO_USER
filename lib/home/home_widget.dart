@@ -539,8 +539,9 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                       end: Alignment.bottomCenter,
                     ),
                   ),
-                  child: SafeArea(
-                    child: Padding(
+                  // child: SafeArea(
+                    child: 
+                    Padding(
                       padding: EdgeInsets.fromLTRB(horizontalPadding, 70, horizontalPadding, 20),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -587,7 +588,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                         ],
                       ),
                     ),
-                  ),
+                  // ),
                 ),
               ),
             ),

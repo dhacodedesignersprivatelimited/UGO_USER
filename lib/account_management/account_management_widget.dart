@@ -523,41 +523,51 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
     final media = MediaQuery.of(context);
     final isLandscape = media.orientation == Orientation.landscape;
 
-    return Scaffold(
-      key: scaffoldKey,
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFFF7B10),
-        centerTitle: true,
-        title: const Text('Account'),
-        leading: FlutterFlowIconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
+    return WillPopScope(
+       onWillPop: () async {
+      // Navigate to Home instead of exiting
+      context.pushNamed(HomeWidget.routeName);
+      return false; // Prevent default pop (exit)
+    },
+      child: Scaffold(
+        key: scaffoldKey,
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFFF7B10),
+          centerTitle: true,
+          title: const Text('Account'),
+          leading: FlutterFlowIconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+             onPressed: () async {
+                  context.pushNamed(HomeWidget.routeName);
+        
+                },
+          ),
         ),
-      ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            final isSmall = width < 360;
-            final padding = isSmall ? 16.0 : 24.0;
-
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: padding, vertical: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildProfileSection(isSmall),
-                  const SizedBox(height: 32),
-                  _buildQuickActionsGrid(width),
-                  const SizedBox(height: 32),
-                  _buildSettingsList(isSmall),
-                  SizedBox(height: isLandscape ? 24 : 60),
-                ],
-              ),
-            );
-          },
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final isSmall = width < 360;
+              final padding = isSmall ? 16.0 : 24.0;
+      
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: padding, vertical: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildProfileSection(isSmall),
+                    const SizedBox(height: 32),
+                    _buildQuickActionsGrid(width),
+                    const SizedBox(height: 32),
+                    _buildSettingsList(isSmall),
+                    SizedBox(height: isLandscape ? 24 : 60),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

@@ -36,72 +36,82 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-        FocusManager.instance.primaryFocus?.unfocus();
-      },
-      child: Scaffold(
-        key: scaffoldKey,
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFFF7B10),
-          automaticallyImplyLeading: false,
-          leading: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: FlutterFlowIconButton(
-              borderColor: Colors.transparent,
-              borderRadius: 30.0,
-              borderWidth: 1.0,
-              buttonSize: 44.0,
-              fillColor: Colors.white.withOpacity(0.2), // ✅ Fixed background
-              icon: const Icon(
-                Icons.arrow_back_rounded, // ✅ Fixed Icon widget
+    return WillPopScope(
+       onWillPop: () async {
+      // Navigate to Home instead of exiting
+      context.pushNamed(HomeWidget.routeName);
+      return false; // Prevent default pop (exit)
+    },
+      child: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          FocusManager.instance.primaryFocus?.unfocus();
+        },
+        child: Scaffold(
+          key: scaffoldKey,
+          backgroundColor: const Color(0xFFF8FAFC),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFFFF7B10),
+            automaticallyImplyLeading: false,
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: FlutterFlowIconButton(
+                borderColor: Colors.transparent,
+                borderRadius: 30.0,
+                borderWidth: 1.0,
+                buttonSize: 44.0,
+                fillColor: Colors.white.withOpacity(0.2), // ✅ Fixed background
+                icon: const Icon(
+                  Icons.arrow_back_rounded, // ✅ Fixed Icon widget
+                  color: Colors.white,
+                  size: 24.0,
+                ),
+                onPressed: () async {
+                  context.pushNamed(HomeWidget.routeName);
+        //                if (Navigator.of(context).canPop()) {
+        //   Navigator.of(context).pop();
+        // }
+                },
+              ),  
+            ),
+            title: Text(
+              FFLocalizations.of(context).getText('rnwdwckb' /* Services */),
+              style: GoogleFonts.poppins(
                 color: Colors.white,
-                size: 24.0,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
               ),
-              onPressed: () async {
-                context.pushNamed(HomeWidget.routeName);
+            ),
+            actions: [],
+            centerTitle: true,
+            elevation: 0,
+            shadowColor: Colors.transparent,
+          ),
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final screenWidth = constraints.maxWidth;
+                final isNarrow = screenWidth < 360;
+                final padding = isNarrow ? 20.0 : 28.0;
+      
+                return SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(padding, 32, padding, 40),
+                  child: Column(
+                    children: [
+                      // 1. Hero Header
+                      _buildHeroHeader(isNarrow),
+      
+                      SizedBox(height: isNarrow ? 40 : 56),
+      
+                      // 2. Service Cards Grid
+                      _buildServiceCards(isNarrow),
+      
+                      SizedBox(height: isNarrow ? 100 : 140),
+                    ],
+                  ),
+                );
               },
             ),
-          ),
-          title: Text(
-            FFLocalizations.of(context).getText('rnwdwckb' /* Services */),
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          actions: [],
-          centerTitle: true,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-        ),
-        body: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final screenWidth = constraints.maxWidth;
-              final isNarrow = screenWidth < 360;
-              final padding = isNarrow ? 20.0 : 28.0;
-
-              return SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(padding, 32, padding, 40),
-                child: Column(
-                  children: [
-                    // 1. Hero Header
-                    _buildHeroHeader(isNarrow),
-
-                    SizedBox(height: isNarrow ? 40 : 56),
-
-                    // 2. Service Cards Grid
-                    _buildServiceCards(isNarrow),
-
-                    SizedBox(height: isNarrow ? 100 : 140),
-                  ],
-                ),
-              );
-            },
           ),
         ),
       ),
