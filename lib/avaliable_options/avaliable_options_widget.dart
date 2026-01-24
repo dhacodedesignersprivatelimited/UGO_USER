@@ -536,7 +536,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                                         'rideId': 'qr_${DateTime.now().millisecondsSinceEpoch}',
                                         'driverId': qrData['driver_id'].toString(),
                                         'driverName': qrData['driver_name'] ?? 'Driver',
-                                        'license_plate': qrData['vehicle_number'] ?? 'N/A',
+                                        'vehicleNumber': qrData['vehicle_number'] ?? 'N/A',
                                         'rating': (qrData['rating'] ?? '4.5').toString(),
                                         'pickupLocation': pickupLocation,
                                         'dropLocation': dropLocation,
@@ -877,11 +877,21 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                           // Payment/Coupon Row
                           Row(
                             children: [
-                              Icon(Icons.wallet, size: 18, color: Color(0xFF00D084)),
-                              SizedBox(width: 8),
-                              Text('Cash', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                              InkWell(
+                                onTap: () => context.pushNamed(WalletWidget.routeName),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.wallet, size: 18, color: Color(0xFF00D084)),
+                                    SizedBox(width: 8),
+                                    Text('Cash', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ),
                               Spacer(),
-                              Text('Apply Coupon', style: GoogleFonts.inter(color: Color(0xFFFF7B10), fontWeight: FontWeight.w700, fontSize: 13)),
+                              InkWell(
+                                onTap: () => context.pushNamed(VoucherWidget.routeName),
+                                child: Text('Apply Coupon', style: GoogleFonts.inter(color: Color(0xFFFF7B10), fontWeight: FontWeight.w700, fontSize: 13)),
+                              ),
                             ],
                           ),
                           SizedBox(height: 16),
