@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'home_model.dart';
 export 'home_model.dart';
 import '/backend/api_requests/api_calls.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Taxi Booking App Interface - Enhanced UI
 class HomeWidget extends StatefulWidget {
@@ -98,6 +99,27 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
     _pulseController.dispose();
     _model.dispose();
     super.dispose();
+  }
+
+  // Helper to make a phone call
+  Future<void> _makeCall(String? phoneNumber) async {
+    if (phoneNumber == null || phoneNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Phone number not available')),
+      );
+      return;
+    }
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    if (await canLaunchUrl(launchUri)) {
+      await launchUrl(launchUri);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch phone app')),
+      );
+    }
   }
 
   // ==================== QR DIALOG (ENHANCED) ====================
@@ -234,11 +256,14 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                           ],
                           if (qrData.containsKey('phone_number')) ...[
                             const SizedBox(height: 12),
-                            _buildInfoCard(
-                              icon: Icons.phone_rounded,
-                              iconColor: const Color(0xFF9C27B0),
-                              label: 'Phone',
-                              value: qrData['phone_number']?.toString() ?? 'N/A',
+                            InkWell(
+                              onTap: () => _makeCall(qrData['phone_number']?.toString()),
+                              child: _buildInfoCard(
+                                icon: Icons.phone_rounded,
+                                iconColor: const Color(0xFF9C27B0),
+                                label: 'Phone (Click to call)',
+                                value: qrData['phone_number']?.toString() ?? 'N/A',
+                              ),
                             ),
                           ],
                         ],
@@ -286,6 +311,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                                   droplat: FFAppState().dropLatitude!,
                                   droplon: FFAppState().dropLongitude!,
                                   ridetype: "bike",
+                                  driverId: qrData['driver_id'],
                                 );
                                 await Future.delayed(const Duration(milliseconds: 300));
                                 if (mounted) {
@@ -303,10 +329,6 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                                         FFAppState().pickuplocation,
                                         'dropLocation':
                                         FFAppState().droplocation,
-                                        // 'estimatedFare':
-                                        //     estimatedFare.toString(),
-                                        // 'estimatedDistance':
-                                        //     roadDistance.toStringAsFixed(2),
                                         "driver_id":
                                         qrData['driver_id']?.toString() ??
                                             '',
@@ -451,17 +473,60 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
 
       try {
         final decodedData = jsonDecode(scanResult);
-        _model.scantobook = scanResult;
-        _showQRResponseDialog(decodedData);
+        final driverId = decodedData['driver_id'] ?? decodedData['id'];
+        
+        if (driverId != null) {
+            // Fetch real-time driver details
+            final response = await GetDriverDetailsCall.call(
+                driverId: driverId,
+                token: FFAppState().accessToken,
+            );
+            
+            if (response.succeeded) {
+                final Map<String, dynamic> driverData = {
+                    'driver_id': driverId,
+                    'driver_name': GetDriverDetailsCall.name(response.jsonBody),
+                    'vehicle_number': GetDriverDetailsCall.vehicleNumber(response.jsonBody),
+                    'rating': GetDriverDetailsCall.rating(response.jsonBody),
+                    'phone_number': DriverIdfetchCall.mobileNumber(response.jsonBody),
+                };
+                _showQRResponseDialog(driverData);
+            } else {
+                _showQRResponseDialog(decodedData);
+            }
+        } else {
+            _showQRResponseDialog(decodedData);
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('QR Scanned: $scanResult'),
-            backgroundColor: primaryOrange,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        // Fallback if not JSON
+        final rawId = int.tryParse(scanResult);
+        if (rawId != null) {
+             final response = await GetDriverDetailsCall.call(
+                driverId: rawId,
+                token: FFAppState().accessToken,
+            );
+            if (response.succeeded) {
+                 final Map<String, dynamic> driverData = {
+                    'driver_id': rawId,
+                    'driver_name': GetDriverDetailsCall.name(response.jsonBody),
+                    'vehicle_number': GetDriverDetailsCall.vehicleNumber(response.jsonBody),
+                    'rating': GetDriverDetailsCall.rating(response.jsonBody),
+                    'phone_number': DriverIdfetchCall.mobileNumber(response.jsonBody),
+                };
+                _showQRResponseDialog(driverData);
+            } else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Driver ID: $scanResult')));
+            }
+        } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('QR Scanned: $scanResult'),
+                backgroundColor: primaryOrange,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
