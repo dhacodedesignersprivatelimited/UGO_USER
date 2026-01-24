@@ -82,20 +82,20 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
 
       if (response.succeeded) {
         final firstName =
-        (GetUserDetailsCall.firstName(response.jsonBody) ?? '').trim();
+            (GetUserDetailsCall.firstName(response.jsonBody) ?? '').trim();
         final lastName =
-        (GetUserDetailsCall.lastName(response.jsonBody) ?? '').trim();
+            (GetUserDetailsCall.lastName(response.jsonBody) ?? '').trim();
         final rawProfileImg =
-        (GetUserDetailsCall.profileImage(response.jsonBody) ?? '').trim();
+            (GetUserDetailsCall.profileImage(response.jsonBody) ?? '').trim();
 
         final fullName =
-        [firstName, lastName].where((x) => x.isNotEmpty).join(' ');
+            [firstName, lastName].where((x) => x.isNotEmpty).join(' ');
 
         // If backend returns "/uploads/abc.jpg" → make it full
         final imgUrl = rawProfileImg.isNotEmpty
             ? (rawProfileImg.startsWith('http')
-            ? rawProfileImg
-            : 'https://ugotaxi.icacorp.org/$rawProfileImg')
+                ? rawProfileImg
+                : 'https://ugotaxi.icacorp.org/$rawProfileImg')
             : '';
 
         setState(() {
@@ -141,9 +141,21 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
         final isNarrow = screenWidth < 360;
         final isTablet = screenWidth >= 768;
 
-        final itemPadding = isNarrow ? 12.0 : isTablet ? 24.0 : 28.0;
-        final iconSize = isNarrow ? 28.0 : isTablet ? 34.0 : 32.0;
-        final fontSize = isNarrow ? 16.0 : isTablet ? 19.0 : 18.0;
+        final itemPadding = isNarrow
+            ? 12.0
+            : isTablet
+                ? 24.0
+                : 28.0;
+        final iconSize = isNarrow
+            ? 28.0
+            : isTablet
+                ? 34.0
+                : 32.0;
+        final fontSize = isNarrow
+            ? 16.0
+            : isTablet
+                ? 19.0
+                : 18.0;
 
         return Container(
           decoration: const BoxDecoration(
@@ -155,9 +167,9 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
           ),
           child: Column(
             children: [
+              const SizedBox(height: 32),
               _buildHeader(isNarrow, isTablet),
-              const SizedBox(height: 24),
-
+              const SizedBox(height: 20),
               Expanded(
                 child: SlideTransition(
                   position: _slideAnimation,
@@ -215,7 +227,6 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-
               _buildFooter(isNarrow, isTablet),
               SizedBox(height: isNarrow ? 20 : 32),
             ],
@@ -226,14 +237,16 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
   }
 
   Widget _buildHeader(bool isNarrow, bool isTablet) {
-    final avatarSize = isNarrow ? 52.0 : isTablet ? 68.0 : 64.0;
+    final avatarSize = isNarrow
+        ? 52.0
+        : isTablet
+            ? 68.0
+            : 64.0;
 
     return Container(
-      margin: EdgeInsets.all(isNarrow ? 12 : 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(colors: [gradientStart, gradientEnd]),
-        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: gradientEnd.withOpacity(0.3),
@@ -261,28 +274,28 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
               borderRadius: BorderRadius.circular(50),
               child: _isLoadingUser
                   ? Icon(Icons.person,
-                  color: gradientStart.withOpacity(0.75),
-                  size: isNarrow ? 26 : 30)
+                      color: gradientStart.withOpacity(0.75),
+                      size: isNarrow ? 26 : 30)
                   : (_profileImageUrl.isNotEmpty
-                  ? Image.network(
-                _profileImageUrl,
-                fit: BoxFit.cover,
-                // Shows a fallback while bytes load
-                loadingBuilder: (context, child, progress) =>
-                progress == null
-                    ? child
-                    : Icon(Icons.person,
-                    color: gradientStart.withOpacity(0.75),
-                    size: isNarrow ? 26 : 30),
-                // Shows a fallback on error
-                errorBuilder: (context, error, stackTrace) => Icon(
-                  Icons.person,
-                  color: gradientStart,
-                  size: isNarrow ? 26 : 30,
-                ),
-              )
-                  : Icon(Icons.person,
-                  color: gradientStart, size: isNarrow ? 26 : 30)),
+                      ? Image.network(
+                          _profileImageUrl,
+                          fit: BoxFit.cover,
+                          // Shows a fallback while bytes load
+                          loadingBuilder: (context, child, progress) =>
+                              progress == null
+                                  ? child
+                                  : Icon(Icons.person,
+                                      color: gradientStart.withOpacity(0.75),
+                                      size: isNarrow ? 26 : 30),
+                          // Shows a fallback on error
+                          errorBuilder: (context, error, stackTrace) => Icon(
+                            Icons.person,
+                            color: gradientStart,
+                            size: isNarrow ? 26 : 30,
+                          ),
+                        )
+                      : Icon(Icons.person,
+                          color: gradientStart, size: isNarrow ? 26 : 30)),
             ),
           ),
           SizedBox(width: isNarrow ? 14 : 20),
@@ -293,33 +306,33 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                 Text(
                   'Welcome Back!',
                   style: GoogleFonts.poppins(
-                    fontSize: isNarrow ? 13 : 15,
-                    fontWeight: FontWeight.w600,
+                    fontSize: isNarrow ? 16 : 19,
+                    fontWeight: FontWeight.bold,
                     color: Colors.white.withOpacity(0.95),
                   ),
                 ),
                 const SizedBox(height: 4),
                 _isLoadingUser
                     ? SizedBox(
-                  width: 120,
-                  height: 14,
-                  child: LinearProgressIndicator(
-                    backgroundColor: Colors.white.withOpacity(0.3),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      Colors.white,
-                    ),
-                  ),
-                )
+                        width: 120,
+                        height: 14,
+                        child: LinearProgressIndicator(
+                          backgroundColor: Colors.white.withOpacity(0.3),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
                     : Text(
-                  _userDisplayName,
-                  style: GoogleFonts.poppins(
-                    fontSize: isNarrow ? 17 : 20,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                        _userDisplayName,
+                        style: GoogleFonts.poppins(
+                          fontSize: isNarrow ? 16 : 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
               ],
             ),
           ),
@@ -329,15 +342,15 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
   }
 
   Widget _buildMenuItem(
-      BuildContext context,
-      IconData icon,
-      Color iconColor,
-      String labelKey,
-      String route,
-      bool isActive,
-      double iconSize,
-      double fontSize,
-      ) {
+    BuildContext context,
+    IconData icon,
+    Color iconColor,
+    String labelKey,
+    String route,
+    bool isActive,
+    double iconSize,
+    double fontSize,
+  ) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       child: MouseRegion(
@@ -352,19 +365,20 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: isActive ? iconColor.withOpacity(0.12) : Colors.transparent,
+              color:
+                  isActive ? iconColor.withOpacity(0.12) : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
               border: isActive
                   ? Border.all(color: iconColor.withOpacity(0.4), width: 2)
                   : null,
               boxShadow: isActive
                   ? [
-                BoxShadow(
-                  color: iconColor.withOpacity(0.2),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                )
-              ]
+                      BoxShadow(
+                        color: iconColor.withOpacity(0.2),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      )
+                    ]
                   : null,
             ),
             child: Row(

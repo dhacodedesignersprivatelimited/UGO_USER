@@ -6,10 +6,9 @@ import '/flutter_flow/flutter_flow_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'history_model.dart';
-import 'dart:math' as math;
 export 'history_model.dart';
 
-/// Past Booking History List - Premium Responsive Version
+/// Past Booking History List - Refined for Dynamic Status
 class HistoryWidget extends StatefulWidget {
   const HistoryWidget({super.key});
 
@@ -67,7 +66,36 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
       child: Scaffold(
         key: scaffoldKey,
         backgroundColor: Colors.white,
-        appBar: _buildAppBar(),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFFF7B10),
+          automaticallyImplyLeading: false,
+          title: Row(
+            children: [
+              FlutterFlowIconButton(
+                borderRadius: 12,
+                buttonSize: 40,
+                fillColor: Colors.white.withOpacity(0.2),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                onPressed: () => context.safePop(),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                'Your Trips',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  fontSize: 20,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
+          ),
+          elevation: 0,
+        ),
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -79,45 +107,16 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: const Color(0xFFFF7B10),
-      automaticallyImplyLeading: false,
-      title: Row(
-        children: [
-          FlutterFlowIconButton(
-            borderRadius: 12,
-            buttonSize: 40,
-            fillColor: Colors.white.withOpacity(0.2),
-            icon: const Icon(
-              Icons.arrow_back_ios_new_rounded,
-              color: Colors.white,
-              size: 18,
-            ),
-            onPressed: () => context.safePop(),
-          ),
-          const SizedBox(width: 16),
-          Text(
-            'Your Trips',
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              fontSize: 20,
-              letterSpacing: -0.5,
-            ),
-          ),
-        ],
-      ),
-      elevation: 0,
-    );
-  }
-
   Widget _buildBody(BoxConstraints constraints) {
     if (_model.rideHistoryResponse == null) {
-      return _buildLoadingState();
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFFFF7B10),
+          strokeWidth: 3,
+        ),
+      );
     }
 
-    // According to Postman response: data -> rides
     var rides = getJsonField(_model.rideHistoryResponse?.jsonBody, r'''$.data.rides''') as List?;
     
     if (rides == null || rides.isEmpty) {
@@ -150,15 +149,6 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return const Center(
-      child: CircularProgressIndicator(
-        color: Color(0xFFFF7B10),
-        strokeWidth: 3,
       ),
     );
   }
@@ -214,15 +204,14 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
   }
 
   Widget _buildRideCard(dynamic rideItem) {
-    // Map Postman keys: ride_id, driver_name, from_location, to_location, amount, date, time
     final rideId = getJsonField(rideItem, r'''$.ride_id''')?.toString() ?? 'N/A';
     final toLoc = getJsonField(rideItem, r'''$.to_location''')?.toString() ?? 'Destination';
     final dateStr = getJsonField(rideItem, r'''$.date''')?.toString() ?? '';
     final timeStr = getJsonField(rideItem, r'''$.time''')?.toString() ?? '';
     final amount = getJsonField(rideItem, r'''$.amount''')?.toString() ?? '0';
     
-    // Defaulting status since it's not in the Postman response snippet
-    final status = 'Completed'; 
+    // Exact keys from your request: cancelled, completed, Searching in
+    final status = getJsonField(rideItem, r'''$.ride_status''')?.toString() ?? 'Completed';
     final statusColor = _getStatusColor(status);
 
     return Container(
@@ -258,9 +247,13 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
                           color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(
-                          Icons.directions_car_filled_rounded,
-                          color: Color(0xFFFF7B10),
+                        child: Icon(
+                          status.toLowerCase().contains('cancel') 
+                            ? Icons.close_rounded 
+                            : status.toLowerCase().contains('search')
+                              ? Icons.search_rounded
+                              : Icons.directions_car_filled_rounded,
+                          color: statusColor,
                           size: 24,
                         ),
                       ),
@@ -293,7 +286,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
                           ),
                           const SizedBox(height: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
                               color: statusColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
@@ -315,7 +308,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Trip ID: $rideId',
+                        'Trip ID: #$rideId',
                         style: GoogleFonts.inter(
                           color: Colors.grey[500],
                           fontWeight: FontWeight.w600,
@@ -343,7 +336,6 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
   }
 
   void _showRideDetails(dynamic rideItem) {
-    // Map Postman keys: ride_id, driver_name, from_location, to_location, amount, date, time
     final rideId = getJsonField(rideItem, r'''$.ride_id''')?.toString() ?? 'N/A';
     final pickup = getJsonField(rideItem, r'''$.from_location''')?.toString() ?? 'N/A';
     final drop = getJsonField(rideItem, r'''$.to_location''')?.toString() ?? 'N/A';
@@ -351,7 +343,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
     final driverName = getJsonField(rideItem, r'''$.driver_name''')?.toString() ?? 'N/A';
     final date = getJsonField(rideItem, r'''$.date''')?.toString() ?? '';
     final time = getJsonField(rideItem, r'''$.time''')?.toString() ?? '';
-    final status = 'Completed'; // Default since not in snippet
+    final status = getJsonField(rideItem, r'''$.ride_status''')?.toString() ?? 'Completed';
 
     showModalBottomSheet(
       context: context,
@@ -367,50 +359,21 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Ride Details',
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black,
-                  ),
-                ),
+                Text('Ride Details', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(status).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    status.toUpperCase(),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: _getStatusColor(status),
-                    ),
-                  ),
+                  decoration: BoxDecoration(color: _getStatusColor(status).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                  child: Text(status.toUpperCase(), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: _getStatusColor(status))),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              'Trip ID: $rideId',
-              style: GoogleFonts.inter(color: Colors.grey[500], fontSize: 14),
-            ),
+            Text('Trip ID: #$rideId', style: GoogleFonts.inter(color: Colors.grey[500], fontSize: 14)),
             const SizedBox(height: 24),
             _buildDetailRow(Icons.calendar_today_rounded, 'Date & Time', '$date $time'),
             const SizedBox(height: 16),
@@ -421,41 +384,19 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  children: [
-                    const Icon(Icons.circle, color: Colors.green, size: 14),
-                    Container(width: 2, height: 40, color: const Color(0xFFEEEEEE)),
-                    const Icon(Icons.location_on, color: Color(0xFFFF7B10), size: 18),
-                  ],
-                ),
+                Column(children: [const Icon(Icons.circle, color: Colors.green, size: 14), Container(width: 2, height: 40, color: const Color(0xFFEEEEEE)), const Icon(Icons.location_on, color: Color(0xFFFF7B10), size: 18)]),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Pickup',
-                        style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500),
-                      ),
+                      Text('Pickup', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
                       const SizedBox(height: 4),
-                      Text(
-                        pickup,
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Text(pickup, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black), maxLines: 2, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 20),
-                      Text(
-                        'Drop off',
-                        style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500),
-                      ),
+                      Text('Drop off', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
                       const SizedBox(height: 4),
-                      Text(
-                        drop,
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Text(drop, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black), maxLines: 2, overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
@@ -464,41 +405,17 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
             const SizedBox(height: 32),
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
-              ),
+              decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(16)),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Total Fare',
-                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black),
-                  ),
-                  Text(
-                    '₹$fare',
-                    style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.black),
-                  ),
+                  Text('Total Fare', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black)),
+                  Text('₹$fare', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.black)),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF7B10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 0,
-                ),
-                child: Text(
-                  'DONE',
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
-            ),
+            SizedBox(width: double.infinity, height: 56, child: ElevatedButton(onPressed: () => Navigator.pop(context), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7B10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0), child: Text('DONE', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)))),
           ],
         ),
       ),
@@ -510,27 +427,18 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
       children: [
         Icon(icon, size: 20, color: Colors.grey[400]),
         const SizedBox(width: 12),
-        Text(
-          '$label:',
-          style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500),
-        ),
+        Text('$label:', style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600], fontWeight: FontWeight.w500)),
         const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            value,
-            style: GoogleFonts.inter(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w600),
-            textAlign: TextAlign.end,
-          ),
-        ),
+        Expanded(child: Text(value, style: GoogleFonts.inter(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w600), textAlign: TextAlign.end)),
       ],
     );
   }
 
   Color _getStatusColor(String status) {
     final s = status.toLowerCase();
-    if (s.contains('complete')) return const Color(0xFF10B981);
-    if (s.contains('cancel')) return const Color(0xFFEF4444);
-    if (s.contains('pend')) return const Color(0xFFF59E0B);
+    if (s.contains('completed')) return const Color(0xFF10B981);
+    if (s.contains('cancelled')) return const Color(0xFFEF4444);
+    if (s.contains('search')) return const Color(0xFFF59E0B);
     return const Color(0xFFFF7B10);
   }
 }
