@@ -40,7 +40,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _model = createModel(context, () => HomeModel());
-
+    print("current location in home${FFAppState().pickupLatitude}and${FFAppState().pickupLongitude  }");
     // Pulse animation for QR button
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1500),
@@ -275,15 +275,51 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                             flex: 2,
                             child: ElevatedButton(
                               onPressed: () async {
-                                Navigator.pop(context);
+
+                                final createRideRes = await CreateRideCall.call(
+                                  token: FFAppState().accessToken,
+                                  userId: FFAppState().userid,
+                                  pickuplocation: FFAppState().pickuplocation,
+                                  droplocation: FFAppState().droplocation,
+                                  pickuplat: FFAppState().pickupLatitude!,
+                                  pickuplon: FFAppState().pickupLongitude!,
+                                  droplat: FFAppState().dropLatitude!,
+                                  droplon: FFAppState().dropLongitude!,
+                                  ridetype: "bike",
+                                );
                                 await Future.delayed(const Duration(milliseconds: 300));
                                 if (mounted) {
-                                  context.pushNamed(
-                                    DriverDetailsWidget.routeName,
-                                    queryParameters: {
-                                      'driverId': qrData['driver_id'].toString(),
-                                    },
-                                  );
+                                  if (createRideRes.succeeded) {
+                                    final rideId = getJsonField(
+                                        createRideRes.jsonBody,
+                                        r'''$.data.id''')
+                                        .toString();
+                                    context.pushNamed(
+                                      AutoBookWidget.routeName,
+                                      queryParameters: {
+                                        'rideId': rideId,
+                                        'vehicleType': "bike",
+                                        'pickupLocation':
+                                        FFAppState().pickuplocation,
+                                        'dropLocation':
+                                        FFAppState().droplocation,
+                                        // 'estimatedFare':
+                                        //     estimatedFare.toString(),
+                                        // 'estimatedDistance':
+                                        //     roadDistance.toStringAsFixed(2),
+                                        "driver_id":
+                                        qrData['driver_id']?.toString() ??
+                                            '',
+                                      },
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                            content: Text(getJsonField(
+                                                createRideRes.jsonBody,
+                                                r'''$.message''')
+                                                .toString())));
+                                  }
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -294,6 +330,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                                 ),
                                 elevation: 4,
                                 shadowColor: primaryOrange.withOpacity(0.4),
+
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -662,8 +699,8 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
       children: [
         // Location Button
         _buildActionButton(
-          icon: Icons.location_on_rounded,
-          iconColor: const Color(0xFFFF0000),
+          icon:  Icons.location_on_rounded,
+          iconColor:FFAppState().droplocation==null ? const Color(0xFFFF0000) : const Color(0xFF4CAF50),
           onTap: () => context.pushNamed(ChooseDestinationWidget.routeName),
           width: isSmallScreen ? 55 : 65,
         ),
@@ -674,7 +711,23 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
           child: ScaleTransition(
             scale: isScanning ? const AlwaysStoppedAnimation(1.0) : _pulseAnimation,
             child: InkWell(
-              onTap: isScanning ? null : _handleQRScan,
+              onTap: isScanning
+                  ? null
+                  : () {
+                if (FFAppState().droplocation == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content:
+                      Text('Please select a drop location first'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                  return;
+                }
+
+                _handleQRScan();
+              },
+
               borderRadius: BorderRadius.circular(16),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
