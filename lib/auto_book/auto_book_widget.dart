@@ -5,6 +5,9 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/backend/api_requests/api_calls.dart';
 import 'dart:ui';
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
@@ -13,7 +16,6 @@ import 'auto_book_model.dart';
 export 'auto_book_model.dart';
 
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'dart:async';
 import 'package:url_launcher/url_launcher.dart';
 
 class AutoBookWidget extends StatefulWidget {
@@ -39,7 +41,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   static const Color primaryColor = Color(0xFFFF7B10);
 
   // Socket & API
-  late IO.Socket socket;
+  IO.Socket? socket; // changed from late to nullable (safe dispose)
   final String _baseUrl = "https://ugotaxi.icacorp.org";
 
   // Data Storage
@@ -138,19 +140,19 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             .build(),
       );
 
-      socket.onConnect((_) {
+      socket!.onConnect((_) {
         debugPrint("✅ SOCKET CONNECTED");
-        socket.emit("watch_entity", {"type": "ride", "id": widget.rideId});
+        socket!.emit("watch_entity", {"type": "ride", "id": widget.rideId});
       });
 
-      socket.on("ride_updated", (data) {
+      socket!.on("ride_updated", (data) {
         debugPrint("📡 RIDE UPDATED via Socket: $data");
         if (data != null) _processRideUpdate(data);
       });
 
-      socket.onDisconnect((_) => debugPrint("⚠️ SOCKET DISCONNECTED"));
+      socket!.onDisconnect((_) => debugPrint("⚠️ SOCKET DISCONNECTED"));
 
-      socket.connect();
+      socket!.connect();
     } catch (e) {
       debugPrint("☠️ SOCKET EXCEPTION: $e");
     }
@@ -223,7 +225,11 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           }
         });
 
+        // DEBUG LOGS (important for phone issue)
         debugPrint("👨‍✈️ Driver Loaded: ${GetDriverDetailsCall.name(driverDetails)}");
+        debugPrint("🔍 FULL driverDetails JSON: ${jsonEncode(driverDetails)}");
+        debugPrint(
+            '🔍 driverPhone from helper: "${DriverIdfetchCall.mobileNumber(driverDetails)}"');
       } else {
         if (mounted) setState(() => isLoadingDriver = false);
       }
@@ -249,7 +255,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         if (response.succeeded) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(CancelRide.message(response.jsonBody) ?? 'Ride cancelled'),
+              content:
+              Text(CancelRide.message(response.jsonBody) ?? 'Ride cancelled'),
               backgroundColor: Colors.green,
             ),
           );
@@ -259,7 +266,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             _searchTimer?.cancel();
           });
 
-          // Delay before closing to let user see feedback
           Future.delayed(const Duration(seconds: 1), () {
             if (mounted) context.pop();
           });
@@ -279,24 +285,49 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     }
   }
 
-  // Helper to make a phone call
+  // ✅ UPDATED Helper to make a phone call (with logs + cleaning + safer launch)
   Future<void> _makeCall(String? phoneNumber) async {
-    if (phoneNumber == null || phoneNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Driver phone number not available')),
-      );
+    debugPrint('📞 CALL BUTTON PRESSED | Raw phoneNumber: "$phoneNumber"');
+
+    final raw = (phoneNumber ?? '').trim();
+    if (raw.isEmpty || raw == 'null') {
+      debugPrint('❌ PHONE NULL/EMPTY');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Driver phone number not available')),
+        );
+      }
       return;
     }
-    final Uri launchUri = Uri(
-      scheme: 'tel',
-      path: phoneNumber,
-    );
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch phone app')),
-      );
+
+    // Clean number: keep digits and leading +
+    String clean = raw.replaceAll(RegExp(r'[^\d+]'), '');
+    // Optional India normalization: if 10 digits, prefix +91
+    if (!clean.startsWith('+') && RegExp(r'^\d{10}$').hasMatch(clean)) {
+      clean = '+91$clean';
+    }
+
+    debugPrint('📞 Cleaned number: "$clean"');
+
+    final Uri uri = Uri(scheme: 'tel', path: clean);
+
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      debugPrint('📞 launchUrl result: $ok');
+
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch phone app')),
+        );
+      }
+    } catch (e, st) {
+      debugPrint('❌ launchUrl EXCEPTION: $e');
+      debugPrint('Stack: $st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Call failed: $e')),
+        );
+      }
     }
   }
 
@@ -304,8 +335,12 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   void dispose() {
     _searchTimer?.cancel();
     _pulseController.dispose();
-    socket.disconnect();
-    socket.dispose();
+
+    try {
+      socket?.disconnect();
+      socket?.dispose();
+    } catch (_) {}
+
     _model.dispose();
     super.dispose();
   }
@@ -323,13 +358,12 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         backgroundColor: Colors.black,
         body: Stack(
           children: [
-            // Layer 1: Google Map
             Positioned.fill(
               child: FlutterFlowGoogleMap(
                 controller: _model.googleMapsController,
                 onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
                 initialLocation: _model.googleMapsCenter ??
-                    const LatLng(17.385044, 78.486671), // Default Hyderabad
+                    const LatLng(17.385044, 78.486671),
                 markerColor: GoogleMarkerColor.orange,
                 mapType: MapType.normal,
                 initialZoom: 14.0,
@@ -337,16 +371,12 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                 showLocation: true,
               ),
             ),
-
-            // Layer 2: Header (Back & Safety)
             Positioned(
               top: 0,
               left: 0,
               right: 0,
               child: _buildHeader(),
             ),
-
-            // Layer 3: Bottom UI Panel
             Align(
               alignment: Alignment.bottomCenter,
               child: PointerInterceptor(
@@ -387,7 +417,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               color: Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(blurRadius: 10, color: Colors.black12, offset: Offset(0, 4))
+                BoxShadow(
+                    blurRadius: 10, color: Colors.black12, offset: Offset(0, 4))
               ],
             ),
             child: IconButton(
@@ -402,17 +433,21 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: const [
-                  BoxShadow(blurRadius: 10, color: Colors.black12, offset: Offset(0, 4))
+                  BoxShadow(
+                      blurRadius: 10, color: Colors.black12, offset: Offset(0, 4))
                 ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.shield_outlined, color: primaryColor, size: 20),
+                  const Icon(Icons.shield_outlined,
+                      color: primaryColor, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'Safety',
                     style: GoogleFonts.poppins(
-                        color: Colors.black87, fontWeight: FontWeight.w600, fontSize: 14),
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14),
                   ),
                 ],
               ),
@@ -514,7 +549,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             child: ElevatedButton(
               onPressed: _isCancelling ? null : _showCancelDialog,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isCancelling ? Colors.grey[300] : Colors.grey[100],
+                backgroundColor:
+                _isCancelling ? Colors.grey[300] : Colors.grey[100],
                 foregroundColor: Colors.black87,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -528,7 +564,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                   width: 24,
                   child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[600]!)))
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.grey[600]!)))
                   : Text('Cancel Request',
                   style: GoogleFonts.poppins(
                       fontSize: 16, fontWeight: FontWeight.w600)),
@@ -557,7 +594,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             const SizedBox(height: 20),
             Text('Connecting to Captain...',
                 style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600, fontSize: 15, color: Colors.grey[700])),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: Colors.grey[700])),
           ],
         ),
       );
@@ -568,8 +607,11 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     final driverRating = GetDriverDetailsCall.rating(driverDetails) ?? '4.8';
     final totalRides = GetDriverDetailsCall.totalRides(driverDetails) ?? 0;
     final vehicleModel = GetDriverDetailsCall.vehicleModel(driverDetails) ?? 'Auto';
-    final vehicleNumber = GetDriverDetailsCall.vehicleNumber(driverDetails) ?? 'XX-00';
+    final vehicleNumber =
+        GetDriverDetailsCall.vehicleNumber(driverDetails) ?? 'XX-00';
+
     final driverPhone = DriverIdfetchCall.mobileNumber(driverDetails);
+    debugPrint('📞 UI driverPhone value: "$driverPhone"');
 
     // Image URL Logic
     String? profilePath = GetDriverDetailsCall.profileImage(driverDetails);
@@ -591,7 +633,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle
           Container(
             margin: const EdgeInsets.only(top: 12),
             width: 40,
@@ -601,8 +642,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-
-          // Status Header
           Container(
             width: double.infinity,
             margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -616,7 +655,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: (_rideStatus == STATUS_PICKED_UP ? Colors.green : primaryColor)
+                  color: (_rideStatus == STATUS_PICKED_UP
+                      ? Colors.green
+                      : primaryColor)
                       .withOpacity(0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
@@ -649,8 +690,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               ],
             ),
           ),
-
-          // OTP Box
           if (_rideOtp != null && _rideStatus != STATUS_PICKED_UP)
             Container(
               margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
@@ -678,7 +717,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
                       color: const Color(0xFF4CAF50),
                       borderRadius: BorderRadius.circular(10),
@@ -693,15 +733,11 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                 ],
               ),
             ),
-
           const SizedBox(height: 20),
-
-          // Driver Info Row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                // Avatar
                 Stack(
                   children: [
                     Container(
@@ -712,25 +748,29 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                         border: Border.all(color: primaryColor, width: 3),
                         image: profileImageUrl != null
                             ? DecorationImage(
-                            image: NetworkImage(profileImageUrl), fit: BoxFit.cover)
+                            image: NetworkImage(profileImageUrl),
+                            fit: BoxFit.cover)
                             : null,
                       ),
                       child: profileImageUrl == null
-                          ? Icon(Icons.person, size: 40, color: Colors.grey[400])
+                          ? Icon(Icons.person,
+                          size: 40, color: Colors.grey[400])
                           : null,
                     ),
                     Positioned(
                       bottom: 0,
                       right: 0,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
                           color: const Color(0xFF4CAF50),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.star, size: 12, color: Colors.white),
+                            const Icon(Icons.star,
+                                size: 12, color: Colors.white),
                             const SizedBox(width: 3),
                             Text(driverRating,
                                 style: GoogleFonts.poppins(
@@ -744,8 +784,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                   ],
                 ),
                 const SizedBox(width: 16),
-
-                // Text Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -761,11 +799,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                               fontSize: 12, color: Colors.grey[600])),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: primaryColor.withOpacity(0.3)),
+                          border:
+                          Border.all(color: primaryColor.withOpacity(0.3)),
                         ),
                         child: Text('$vehicleModel • $vehicleNumber',
                             style: GoogleFonts.poppins(
@@ -776,12 +816,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                     ],
                   ),
                 ),
-
-                // Buttons
                 Column(
                   children: [
-                    _buildRapidoCircleButton(Icons.call_rounded, const Color(0xFF4CAF50),
-                            () => _makeCall(driverPhone)),
+                    _buildRapidoCircleButton(
+                      Icons.call_rounded,
+                      const Color(0xFF4CAF50),
+                          () => _makeCall(driverPhone?.toString()),
+                    ),
                     const SizedBox(height: 10),
                     _buildRapidoCircleButton(Icons.chat_bubble_rounded,
                         const Color(0xFF2196F3), () => debugPrint('Chat')),
@@ -790,11 +831,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               ],
             ),
           ),
-
           const SizedBox(height: 24),
           Divider(height: 1, color: Colors.grey[200]),
-
-          // Footer Actions
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -806,14 +844,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                       onTap: () => debugPrint('Share'),
                       isPrimary: false),
                 ),
-                const SizedBox(width: 10),
-                // Expanded(
-                //   child: _buildRapidoActionButton(
-                //       icon: Icons.support_agent_rounded,
-                //       label: 'Support',
-                //       onTap: () => debugPrint('Support'),
-                //       isPrimary: false),
-                // ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _buildRapidoActionButton(
@@ -830,7 +860,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     );
   }
 
-  Widget _buildRapidoCircleButton(IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildRapidoCircleButton(
+      IconData icon, Color color, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -873,7 +904,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             const SizedBox(height: 6),
             Text(label,
                 style: GoogleFonts.poppins(
-                    fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: color)),
           ],
         ),
       ),
@@ -903,12 +936,15 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             padding: const EdgeInsets.all(20),
             decoration:
             BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
-            child: Icon(Icons.cancel_rounded, size: 64, color: Colors.red.shade400),
+            child: Icon(Icons.cancel_rounded,
+                size: 64, color: Colors.red.shade400),
           ),
           const SizedBox(height: 24),
           Text('Ride Cancelled',
               style: GoogleFonts.poppins(
-                  fontSize: 24, fontWeight: FontWeight.w700, color: Colors.black87)),
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87)),
           const SizedBox(height: 8),
           Text('Your ride request has been cancelled',
               textAlign: TextAlign.center,
@@ -922,7 +958,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.black87,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text('Back to Home',
                   style: GoogleFonts.poppins(
@@ -940,7 +977,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       barrierDismissible: !_isCancelling,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text('Cancel Ride?',
               style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
           content: Text('Are you sure you want to cancel this ride?',
@@ -948,7 +986,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           actions: [
             TextButton(
               onPressed: _isCancelling ? null : () => Navigator.pop(context),
-              child: Text('No', style: GoogleFonts.poppins(color: Colors.grey[600])),
+              child: Text('No',
+                  style: GoogleFonts.poppins(color: Colors.grey[600])),
             ),
             TextButton(
               onPressed: _isCancelling
@@ -963,7 +1002,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                   height: 20,
                   child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.red)))
+                      valueColor:
+                      AlwaysStoppedAnimation<Color>(Colors.red)))
                   : Text('Yes, Cancel',
                   style: GoogleFonts.poppins(
                       color: Colors.red, fontWeight: FontWeight.w700)),
