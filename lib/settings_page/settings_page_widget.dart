@@ -1800,16 +1800,16 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                     ],
                   ),
 
-                  const SizedBox(height: 24),
+                  // const SizedBox(height: 24),
+                  //
+                  // Text(
+                  //   'Switch account',
+                  //   style: theme.bodyLarge,
+                  // ),
+                  //
+                  // const SizedBox(height: 16),
 
-                  Text(
-                    'Switch account',
-                    style: theme.bodyLarge,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  _signOutButton(context),
+                  // _signOutButton(context),
                 ],
               ),
             );
@@ -1900,32 +1900,32 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
       ),
     );
   }
-
-  // ---------------- SIGN OUT ----------------
-  Widget _signOutButton(BuildContext context) {
-    return InkWell(
-      onTap: () async {
-        GoRouter.of(context).prepareAuthEvent();
-        await authManager.signOut();
-        GoRouter.of(context).clearRedirectLocation();
-        context.goNamedAuth(LoginWidget.routeName, context.mounted);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFFF2F2F), width: 2),
-        ),
-        child: Text(
-          'Sign out',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.interTight(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFFFF2F2F),
-          ),
-        ),
-      ),
-    );
-  }
+  //
+  // // ---------------- SIGN OUT ----------------
+  // Widget _signOutButton(BuildContext context) {
+  //   return InkWell(
+  //     onTap: () async {
+  //       GoRouter.of(context).prepareAuthEvent();
+  //       await authManager.signOut();
+  //       GoRouter.of(context).clearRedirectLocation();
+  //       context.goNamedAuth(LoginWidget.routeName, context.mounted);
+  //     },
+  //     child: Container(
+  //       padding: const EdgeInsets.symmetric(vertical: 14),
+  //       decoration: BoxDecoration(
+  //         borderRadius: BorderRadius.circular(10),
+  //         border: Border.all(color: const Color(0xFFFF2F2F), width: 2),
+  //       ),
+  //       child: Text(
+  //         'Sign out',
+  //         textAlign: TextAlign.center,
+  //         style: GoogleFonts.interTight(
+  //           fontSize: 18,
+  //           fontWeight: FontWeight.w600,
+  //           color: const Color(0xFFFF2F2F),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 }

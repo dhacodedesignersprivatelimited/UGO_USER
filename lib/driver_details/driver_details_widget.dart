@@ -5,18 +5,22 @@ import '/index.dart';
 import '/backend/api_requests/api_calls.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'driver_details_model.dart';
 export 'driver_details_model.dart';
 
-/// Driver Information Summary
 class DriverDetailsWidget extends StatefulWidget {
   const DriverDetailsWidget({
     super.key,
     required this.driverId,
+    this.dropLocation,
+    this.dropDistance,
+    this.tripAmount,
   });
 
   final dynamic driverId;
+  final String? dropLocation;
+  final String? dropDistance;
+  final double? tripAmount;
 
   static String routeName = 'Driver_details';
   static String routePath = '/driverDetails';
@@ -31,6 +35,7 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
   
   bool _isLoading = true;
   dynamic _driverData;
+  int _selectedTip = 0;
 
   @override
   void initState() {
@@ -58,23 +63,6 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
     }
   }
 
-  Future<void> _makeCall(String? phoneNumber) async {
-    if (phoneNumber == null || phoneNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Phone number not available')),
-      );
-      return;
-    }
-    final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch phone app')),
-      );
-    }
-  }
-
   @override
   void dispose() {
     _model.dispose();
@@ -84,199 +72,258 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFFF7B10))));
     }
 
-    final driverName = GetDriverDetailsCall.name(_driverData) ?? 'Captain';
-    final vehicleNum = GetDriverDetailsCall.vehicleNumber(_driverData) ?? 'N/A';
-    final rating = GetDriverDetailsCall.rating(_driverData) ?? '4.8';
-    final phoneNumber = DriverIdfetchCall.mobileNumber(_driverData);
+    final driverName = GetDriverDetailsCall.name(_driverData) ?? 'Sharath';
+    final vehicleNum = GetDriverDetailsCall.vehicleNumber(_driverData) ?? '1287737738';
+    final rating = GetDriverDetailsCall.rating(_driverData) ?? '4.7';
     final profileImg = GetDriverDetailsCall.profileImage(_driverData);
+    
+    final dropLoc = widget.dropLocation ?? FFAppState().droplocation ?? 'Ameerpet';
+    final dropDist = widget.dropDistance ?? '15km';
+    final baseAmount = widget.tripAmount ?? 100.0;
+    final totalAmount = baseAmount + _selectedTip;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: const Color(0xFFF5F5F5),
+        backgroundColor: Colors.white,
         body: SafeArea(
-          top: true,
           child: Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 16.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(24.0),
+                Expanded(
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: FlutterFlowTheme.of(context).primary,
-                      borderRadius: BorderRadius.circular(16.0),
+                      color: const Color(0xFFFF7B10),
+                      borderRadius: BorderRadius.circular(12.0),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24.0),
                       child: Column(
-                        mainAxisSize: MainAxisSize.max,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Align(
-                            alignment: AlignmentDirectional(0.0, 0.0),
+                          // Logo
+                          Center(
                             child: Column(
-                              mainAxisSize: MainAxisSize.max,
-                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Text(
-                                  'UGO TAXI',
-                                  textAlign: TextAlign.center,
-                                  style: FlutterFlowTheme.of(context)
-                                      .headlineLarge
-                                      .override(
-                                        font: GoogleFonts.interTight(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                        color: Colors.white,
-                                      ),
-                                ),
-                                Container(
-                                  width: 120,
-                                  height: 120,
-                                  decoration: BoxDecoration(
+                                  'UGO',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16.0),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(16.0),
-                                    child: profileImg != null 
-                                      ? Image.network(profileImg, fit: BoxFit.cover)
-                                      : Image.asset('assets/images/0l6yw6.png', fit: BoxFit.cover),
+                                    letterSpacing: 2,
                                   ),
                                 ),
-                              ].divide(const SizedBox(height: 16.0)),
+                                Text(
+                                  'T  A  X  I',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white,
+                                    letterSpacing: 4,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Column(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          const SizedBox(height: 30),
+                          // Driver Image
+                          Center(
+                            child: Container(
+                              width: 140,
+                              height: 140,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 10,
+                                  )
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: profileImg != null 
+                                  ? Image.network(profileImg, fit: BoxFit.cover)
+                                  : Image.asset('assets/images/0l6yw6.png', fit: BoxFit.cover),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                          Text(
+                            'Driver details',
+                            style: GoogleFonts.poppins(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          _buildDetailRow('Driver name', driverName),
+                          _buildDetailRow('vehicle number', vehicleNum),
+                          Row(
                             children: [
                               Text(
-                                'Driver details',
-                                style: FlutterFlowTheme.of(context)
-                                    .headlineMedium
-                                    .override(
-                                      font: GoogleFonts.interTight(
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      color: Colors.white,
-                                    ),
+                                'Rating : ',
+                                style: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
                               ),
-                              Column(
-                                mainAxisSize: MainAxisSize.max,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Driver name: $driverName',
-                                    style: FlutterFlowTheme.of(context).bodyLarge.override(
-                                      font: GoogleFonts.inter(),
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Vehicle number: $vehicleNum',
-                                    style: FlutterFlowTheme.of(context).bodyLarge.override(
-                                      font: GoogleFonts.inter(),
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.max,
-                                    children: [
-                                      Text(
-                                        'Rating: ',
-                                        style: FlutterFlowTheme.of(context).bodyLarge.override(
-                                          font: GoogleFonts.inter(),
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      const Icon(Icons.star, color: Color(0xFFFFDE14), size: 20.0),
-                                      Text(
-                                        rating,
-                                        style: FlutterFlowTheme.of(context).bodyLarge.override(
-                                          font: GoogleFonts.inter(),
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ].divide(const SizedBox(width: 4.0)),
-                                  ),
-                                  if (phoneNumber != null)
-                                    InkWell(
-                                      onTap: () => _makeCall(phoneNumber),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                        child: Row(
-                                          children: [
-                                            const Icon(Icons.call, color: Colors.white, size: 20),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              phoneNumber,
-                                              style: FlutterFlowTheme.of(context).bodyLarge.override(
-                                                font: GoogleFonts.inter(),
-                                                color: Colors.white,
-                                                decoration: TextDecoration.underline,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                ].divide(const SizedBox(height: 8.0)),
+                              const Icon(Icons.star, color: Color(0xFFFFDE14), size: 20),
+                              Text(
+                                ' $rating',
+                                style: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
                               ),
-                            ].divide(const SizedBox(height: 16.0)),
+                            ],
                           ),
-                        ].divide(const SizedBox(height: 24.0)),
+                          const SizedBox(height: 8),
+                          _buildDetailRow('Drop location', dropLoc),
+                          _buildDetailRow('Drop distance', dropDist),
+                          const SizedBox(height: 16),
+                          _buildDetailRow('Trip amount', '₹${baseAmount.toStringAsFixed(2)}'),
+                          const SizedBox(height: 20),
+                          Text(
+                            'TIP AMOUNT',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildTipButton(10),
+                              _buildTipButton(20),
+                              _buildTipButton(30),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Total amount',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    color: const Color(0xFF2D7E20),
+                                  ),
+                                ),
+                                Text(
+                                  '₹${totalAmount.toStringAsFixed(2)}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF2D7E20),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
                 Row(
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    FFButtonWidget(
-                      onPressed: () => Navigator.pop(context),
-                      text: 'Cancel',
-                      options: FFButtonOptions(
-                        width: 113.0,
-                        height: 56.0,
-                        color: const Color(0xFFF01C1C),
-                        textStyle: FlutterFlowTheme.of(context).titleMedium.override(
-                          font: GoogleFonts.interTight(),
-                          color: Colors.white,
+                    Expanded(
+                      flex: 1,
+                      child: FFButtonWidget(
+                        onPressed: () => Navigator.pop(context),
+                        text: 'Cancel',
+                        options: FFButtonOptions(
+                          height: 56,
+                          color: const Color(0xFFF01C1C),
+                          textStyle: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        borderRadius: BorderRadius.circular(8.0),
                       ),
                     ),
-                    FFButtonWidget(
-                      onPressed: () async {
-                         // Logic to proceed with this driver (if this is part of book flow)
-                         // For now keeping it simple as per original
-                         context.pushNamed(AutoBookWidget.routeName, queryParameters: {'rideId': '0'}); 
-                      },
-                      text: 'Continue',
-                      options: FFButtonOptions(
-                        width: 219.0,
-                        height: 56.0,
-                        color: FlutterFlowTheme.of(context).primary,
-                        textStyle: FlutterFlowTheme.of(context).titleMedium.override(
-                          font: GoogleFonts.interTight(),
-                          color: Colors.white,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FFButtonWidget(
+                        onPressed: () async {
+                          context.pushNamed(AutoBookWidget.routeName, queryParameters: {
+                            'rideId': '0', // Replace with real ride ID if available
+                          });
+                        },
+                        text: 'Continue',
+                        options: FFButtonOptions(
+                          height: 56,
+                          color: const Color(0xFFFF7B10),
+                          textStyle: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.white, width: 1),
                         ),
-                        borderRadius: BorderRadius.circular(8.0),
                       ),
                     ),
-                  ].divide(const SizedBox(width: 16.0)),
+                  ],
                 ),
-              ].divide(const SizedBox(height: 16.0)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: RichText(
+        text: TextSpan(
+          style: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
+          children: [
+            TextSpan(text: '$label : '),
+            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w400)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTipButton(int amount) {
+    final isSelected = _selectedTip == amount;
+    return InkWell(
+      onTap: () => setState(() => _selectedTip = isSelected ? 0 : amount),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.23,
+        height: 50,
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFF1E6) : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
+        ),
+        child: Center(
+          child: Text(
+            amount.toString(),
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: isSelected ? const Color(0xFFFF7B10) : Colors.black,
             ),
           ),
         ),

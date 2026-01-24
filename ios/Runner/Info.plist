@@ -66,9 +66,12 @@
 	<key>PermissionGroupNotification</key>
     <string>Allow Notification</string>
 
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>tel</string>
+    </array>
 
-
-	<key>UILaunchStoryboardName</key>
+	<key>UILeunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
 	<string>Main</string>

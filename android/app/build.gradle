@@ -30,7 +30,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "com.mycompany.ugocabs"
+    namespace "com.ugocabs.user"
     compileSdkVersion 35
 
     // ✅ THIS FIXES THE AAR ERROR
@@ -66,7 +66,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.mycompany.ugocabs"
+        applicationId "com.ugocabs.user"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()

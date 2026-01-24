@@ -43,7 +43,7 @@
               "client_id": "987401672169-c14vnd1g5ohanh724aier6f2bhcmelu3.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.mycompany.ugocabs"
+                "bundle_id": "com.ugocabs.user"
               }
             }
           ]
@@ -54,7 +54,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:987401672169:android:e3d28d1856c8537103e778",
         "android_client_info": {
-          "package_name": "com.mycompany.ugocabs"
+          "package_name": "com.ugocabs.user"
         }
       },
       "oauth_client": [
@@ -62,7 +62,7 @@
           "client_id": "987401672169-tlf5e77gtddajtgisc49j4coh82mt0mo.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.mycompany.ugocabs",
+            "package_name": "com.ugocabs.user",
             "certificate_hash": "9bbb3186b2189ef16d8f272bdab59362c395cbb4"
           }
         },
@@ -87,7 +87,7 @@
               "client_id": "987401672169-c14vnd1g5ohanh724aier6f2bhcmelu3.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.mycompany.ugocabs"
+                "bundle_id": "com.ugocabs.user"
               }
             }
           ]

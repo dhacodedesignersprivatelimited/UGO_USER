@@ -99,357 +99,6 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  // Helper to make a phone call
-  Future<void> _makeCall(String? phoneNumber) async {
-    if (phoneNumber == null || phoneNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Phone number not available')),
-      );
-      return;
-    }
-    final Uri launchUri = Uri(
-      scheme: 'tel',
-      path: phoneNumber,
-    );
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch phone app')),
-      );
-    }
-  }
-
-  // ==================== QR DIALOG (ENHANCED) ====================
-  void _showQRResponseDialog(Map<String, dynamic> qrData) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'QR Dialog',
-      barrierColor: Colors.black54,
-      transitionDuration: const Duration(milliseconds: 300),
-      transitionBuilder: (context, a1, a2, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: a1, curve: Curves.easeOutBack),
-          child: FadeTransition(opacity: a1, child: child),
-        );
-      },
-      pageBuilder: (context, _, __) {
-        return Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: screenWidth * 0.9,
-              constraints: const BoxConstraints(maxWidth: 400),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryOrange.withOpacity(0.3),
-                    blurRadius: 30,
-                    offset: const Offset(0, 15),
-                  ),
-                ],
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Gradient Header
-                    Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [primaryOrange, deepOrange],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(24),
-                          topRight: Radius.circular(24),
-                        ),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 15,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.check_circle_rounded,
-                              color: primaryOrange,
-                              size: 50,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Driver Verified ✓',
-                            style: GoogleFonts.poppins(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'QR Code Scanned Successfully',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Content
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          _buildInfoCard(
-                            icon: Icons.person_rounded,
-                            iconColor: primaryOrange,
-                            label: 'Driver ID',
-                            value: qrData['driver_id']?.toString() ?? 'N/A',
-                          ),
-                          if (qrData.containsKey('driver_name')) ...[
-                            const SizedBox(height: 12),
-                            _buildInfoCard(
-                              icon: Icons.badge_rounded,
-                              iconColor: const Color(0xFF2196F3),
-                              label: 'Driver Name',
-                              value: qrData['driver_name']?.toString() ?? 'N/A',
-                            ),
-                          ],
-                          if (qrData.containsKey('vehicle_number')) ...[
-                            const SizedBox(height: 12),
-                            _buildInfoCard(
-                              icon: Icons.directions_car_rounded,
-                              iconColor: const Color(0xFF4CAF50),
-                              label: 'Vehicle Number',
-                              value: qrData['vehicle_number']?.toString() ?? 'N/A',
-                            ),
-                          ],
-                          if (qrData.containsKey('rating')) ...[
-                            const SizedBox(height: 12),
-                            _buildInfoCard(
-                              icon: Icons.star_rounded,
-                              iconColor: const Color(0xFFFFC107),
-                              label: 'Rating',
-                              value: '${qrData['rating']} ⭐',
-                            ),
-                          ],
-                          if (qrData.containsKey('phone_number')) ...[
-                            const SizedBox(height: 12),
-                            InkWell(
-                              onTap: () => _makeCall(qrData['phone_number']?.toString()),
-                              child: _buildInfoCard(
-                                icon: Icons.phone_rounded,
-                                iconColor: const Color(0xFF9C27B0),
-                                label: 'Phone (Click to call)',
-                                value: qrData['phone_number']?.toString() ?? 'N/A',
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    // Action Buttons
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                side: const BorderSide(color: primaryOrange, width: 2),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                              child: Text(
-                                'Cancel',
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: primaryOrange,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 2,
-                            child: ElevatedButton(
-                              onPressed: () async {
-
-                                final createRideRes = await CreateRideCall.call(
-                                  token: FFAppState().accessToken,
-                                  userId: FFAppState().userid,
-                                  pickuplocation: FFAppState().pickuplocation,
-                                  droplocation: FFAppState().droplocation,
-                                  pickuplat: FFAppState().pickupLatitude!,
-                                  pickuplon: FFAppState().pickupLongitude!,
-                                  droplat: FFAppState().dropLatitude!,
-                                  droplon: FFAppState().dropLongitude!,
-                                  ridetype: "bike",
-                                  driverId: qrData['driver_id'],
-                                );
-                                await Future.delayed(const Duration(milliseconds: 300));
-                                if (mounted) {
-                                  if (createRideRes.succeeded) {
-                                    final rideId = getJsonField(
-                                        createRideRes.jsonBody,
-                                        r'''$.data.id''')
-                                        .toString();
-                                    context.pushNamed(
-                                      AutoBookWidget.routeName,
-                                      queryParameters: {
-                                        'rideId': rideId,
-                                        'vehicleType': "bike",
-                                        'pickupLocation':
-                                        FFAppState().pickuplocation,
-                                        'dropLocation':
-                                        FFAppState().droplocation,
-                                        "driver_id":
-                                        qrData['driver_id']?.toString() ??
-                                            '',
-                                      },
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                            content: Text(getJsonField(
-                                                createRideRes.jsonBody,
-                                                r'''$.message''')
-                                                .toString())));
-                                  }
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryOrange,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                elevation: 4,
-                                shadowColor: primaryOrange.withOpacity(0.4),
-
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    'Proceed',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildInfoCard({
-    required IconData icon,
-    required Color iconColor,
-    required String label,
-    required String value,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cardBackground,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: iconColor.withOpacity(0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: iconColor.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [iconColor.withOpacity(0.15), iconColor.withOpacity(0.05)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: iconColor, size: 24),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.grey[500],
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  value,
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _handleQRScan() async {
     setState(() => isScanning = true);
 
@@ -469,70 +118,29 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
         return;
       }
 
+      dynamic driverId;
       try {
         final decodedData = jsonDecode(scanResult);
-        final driverId = decodedData['driver_id'] ?? decodedData['id'];
-        
-        if (driverId != null) {
-            // Fetch real-time driver details
-            final response = await GetDriverDetailsCall.call(
-                driverId: driverId,
-                token: FFAppState().accessToken,
-            );
-            
-            if (response.succeeded) {
-                final Map<String, dynamic> driverData = {
-                    'driver_id': driverId,
-                    'driver_name': GetDriverDetailsCall.name(response.jsonBody),
-                    'vehicle_number': GetDriverDetailsCall.vehicleNumber(response.jsonBody),
-                    'rating': GetDriverDetailsCall.rating(response.jsonBody),
-                    'phone_number': DriverIdfetchCall.mobileNumber(response.jsonBody),
-                };
-                _showQRResponseDialog(driverData);
-            } else {
-                _showQRResponseDialog(decodedData);
-            }
-        } else {
-            _showQRResponseDialog(decodedData);
-        }
+        driverId = decodedData['driver_id'] ?? decodedData['id'];
       } catch (e) {
-        // Fallback if not JSON
-        final rawId = int.tryParse(scanResult);
-        if (rawId != null) {
-             final response = await GetDriverDetailsCall.call(
-                driverId: rawId,
-                token: FFAppState().accessToken,
-            );
-            if (response.succeeded) {
-                 final Map<String, dynamic> driverData = {
-                    'driver_id': rawId,
-                    'driver_name': GetDriverDetailsCall.name(response.jsonBody),
-                    'vehicle_number': GetDriverDetailsCall.vehicleNumber(response.jsonBody),
-                    'rating': GetDriverDetailsCall.rating(response.jsonBody),
-                    'phone_number': DriverIdfetchCall.mobileNumber(response.jsonBody),
-                };
-                _showQRResponseDialog(driverData);
-            } else {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Driver ID: $scanResult')));
-            }
-        } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('QR Scanned: $scanResult'),
-                backgroundColor: primaryOrange,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            );
-        }
+        driverId = int.tryParse(scanResult);
+      }
+
+      if (driverId != null) {
+          context.pushNamed(
+            DriverDetailsWidget.routeName,
+            queryParameters: {
+              'driverId': driverId.toString(),
+            },
+          );
+      } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid QR Code. Driver ID not found.')),
+          );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Scan failed: ${e.toString()}'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text('Scan failed: ${e.toString()}')),
       );
     } finally {
       setState(() => isScanning = false);
@@ -564,7 +172,6 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
           ),
         ),
         body: CustomScrollView(
-
           slivers: [
             // ==================== CUSTOM APP BAR ====================
             SliverAppBar(
@@ -602,56 +209,53 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                       end: Alignment.bottomCenter,
                     ),
                   ),
-                  // child: SafeArea(
-                    child: 
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(horizontalPadding, 70, horizontalPadding, 10),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          // Search Bar
-                          _buildSearchBar(context, isSmallScreen),
-                          SizedBox(height: screenHeight * 0.02),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(horizontalPadding, 70, horizontalPadding, 10),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // Search Bar
+                        _buildSearchBar(context, isSmallScreen),
+                        SizedBox(height: screenHeight * 0.02),
 
-                          // "Get a Ride" Header
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                FFLocalizations.of(context).getText('en8fyguh'),
-                                style: GoogleFonts.poppins(
-                                  fontSize: isSmallScreen ? 18 : 22,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
+                        // "Get a Ride" Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              FFLocalizations.of(context).getText('en8fyguh'),
+                              style: GoogleFonts.poppins(
+                                fontSize: isSmallScreen ? 18 : 22,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
                               ),
-                              TextButton(
-                                onPressed: () => context.pushNamed(AvaliableOptionsWidget.routeName),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      FFLocalizations.of(context).getText('76yoeddl'),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13,
-                                        color: Colors.white.withOpacity(0.9),
-                                      ),
+                            ),
+                            TextButton(
+                              onPressed: () => context.pushNamed(AvaliableOptionsWidget.routeName),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    FFLocalizations.of(context).getText('76yoeddl'),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: Colors.white.withOpacity(0.9),
                                     ),
-                                    const SizedBox(width: 4),
-                                    Icon(Icons.arrow_forward_ios_rounded,
-                                        size: 12, color: Colors.white.withOpacity(0.9)),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(Icons.arrow_forward_ios_rounded,
+                                      size: 12, color: Colors.white.withOpacity(0.9)),
+                                ],
                               ),
-                            ],
-                          ),
-                          SizedBox(height: screenHeight * 0.015),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: screenHeight * 0.015),
 
-                          // Action Buttons Row
-                          _buildActionButtonsRow(context, screenWidth, isSmallScreen),
-                        ],
-                      ),
+                        // Action Buttons Row
+                        _buildActionButtonsRow(context, screenWidth, isSmallScreen),
+                      ],
                     ),
-                  // ),
+                  ),
                 ),
               ),
             ),
@@ -788,10 +392,8 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                   );
                   return;
                 }
-
                 _handleQRScan();
               },
-
               borderRadius: BorderRadius.circular(16),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
