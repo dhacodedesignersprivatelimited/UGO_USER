@@ -983,6 +983,35 @@ class CancelRide {
   );
 }
 
+class GetAllNotificationsCall {
+  static Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getAllNotifications',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/notifications/getall',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static List? notifications(dynamic response) => getJsonField(
+    response,
+    r'''$.data.notifications''',
+    true,
+  ) as List?;
+
+  static int? total(dynamic response) => castToType<int>(getJsonField(
+    response,
+    r'''$.data.total''',
+  ));
+}
+
 class ApiPagingParams {
   int nextPageNumber = 0;
   int numItems = 0;

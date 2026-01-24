@@ -488,7 +488,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                   child: IconButton(
                     icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 30),
                     onPressed: () {
-                      // Handle notifications
+                      context.pushNamed(PushnotificationsWidget.routeName);
                     },
                   ),
                 ),
