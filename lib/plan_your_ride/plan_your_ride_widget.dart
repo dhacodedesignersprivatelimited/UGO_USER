@@ -15,6 +15,11 @@ export 'plan_your_ride_model.dart';
 
 const String GOOGLE_MAPS_API_KEY =
     'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y'; // Replace with your API key
+ enum LocationSelection {
+  pickup,
+  drop,
+}
+
 
 class PlanYourRideWidget extends StatefulWidget {
   const PlanYourRideWidget({super.key});
@@ -29,6 +34,7 @@ class PlanYourRideWidget extends StatefulWidget {
 class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   late PlanYourRideModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  LocationSelection activeSelection = LocationSelection.pickup;
 
   GoogleMapController? mapController;
   Set<Marker> markers = {};
@@ -149,6 +155,16 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       dropLocation = location;
     });
   }
+  Future<void> _updateLocationFromMap(LatLng position) async {
+  if (activeSelection == LocationSelection.pickup) {
+    _addPickupMarker(position);
+    await _reverseGeocode(position, true);
+  } else {
+    _addDropMarker(position);
+    await _reverseGeocode(position, false);
+  }
+}
+
 
   Future<void> _reverseGeocode(LatLng location, bool isPickup) async {
     try {
@@ -391,20 +407,33 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
         children: [
           // Google Map Background
           GoogleMap(
-            onMapCreated: (controller) {
-              mapController = controller;
-            },
-            initialCameraPosition: CameraPosition(
-              target: currentLocation,
-              zoom: 15,
-            ),
-            markers: markers,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            mapToolbarEnabled: false,
-          ),
+  onMapCreated: (controller) {
+    mapController = controller;
+  },
 
+  onCameraIdle: () async {
+    if (mapController == null) return;
+
+    final bounds = await mapController!.getVisibleRegion();
+    final LatLng center = LatLng(
+      (bounds.northeast.latitude + bounds.southwest.latitude) / 2,
+      (bounds.northeast.longitude + bounds.southwest.longitude) / 2,
+    );
+
+    _updateLocationFromMap(center);
+  },
+
+  initialCameraPosition: CameraPosition(
+    target: currentLocation,
+    zoom: 15,
+  ),
+  markers: markers,
+  myLocationEnabled: true,
+  myLocationButtonEnabled: false,
+  zoomControlsEnabled: false,
+  mapToolbarEnabled: false,
+)
+,
           // Location Input Cards (Top Overlay)
           Positioned(
             top: 50,
@@ -446,16 +475,24 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               TextField(
-                                controller: _model.pickupController,
-                                decoration: InputDecoration(
-                                  hintText: 'Pickup Location',
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                                onChanged: (value) {
-                                  _searchPlaces(value, true);
-                                },
+                              controller: _model.pickupController,
+                              onTap: () {
+                                activeSelection = LocationSelection.pickup;
+                              },
+                              style: TextStyle(
+                              color: Colors.black,        // ⭐ IMPORTANT
+                              fontSize: 14,
+                            ),
+                              decoration: InputDecoration(
+                                hintText: 'Pickup Location',
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
                               ),
+                              onChanged: (value) {
+                                _searchPlaces(value, true);
+                              },
+                            ),
+
                               if (pickupPredictions.isNotEmpty &&
                                   showPickupDropdown)
                                 Container(
@@ -561,16 +598,24 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               TextField(
-                                controller: _model.dropController,
-                                decoration: InputDecoration(
-                                  hintText: 'Drop Location',
-                                  border: InputBorder.none,
-                                  contentPadding: EdgeInsets.zero,
+                                  controller: _model.dropController,
+                                  onTap: () {
+                                    activeSelection = LocationSelection.drop;
+                                  },
+                                  style: TextStyle(
+                                      color: Colors.black,        // ⭐ IMPORTANT
+                                      fontSize: 14,
+                                    ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Drop Location',
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                  onChanged: (value) {
+                                    _searchPlaces(value, false);
+                                  },
                                 ),
-                                onChanged: (value) {
-                                  _searchPlaces(value, false);
-                                },
-                              ),
+
                               if (dropPredictions.isNotEmpty &&
                                   showDropDropdown)
                                 Container(
@@ -660,97 +705,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
             ),
           ),
 
-          // // Quick Actions (Middle)
-          // Positioned(
-          //   left: 16,
-          //   right: 16,
-          //   top: 320,
-          //   child: Row(
-          //     children: [
-          //       Expanded(
-          //         child: InkWell(
-          //           onTap: _setAirportAsPickup,
-          //           child: Card(
-          //             elevation: 2,
-          //             shape: RoundedRectangleBorder(
-          //               borderRadius: BorderRadius.circular(8),
-          //             ),
-          //             child: Padding(
-          //               padding: EdgeInsets.all(12),
-          //               child: Column(
-          //                 mainAxisSize: MainAxisSize.min,
-          //                 children: [
-          //                   Icon(Icons.flight, color: Color(0xFF000000)),
-          //                   SizedBox(height: 4),
-          //                   Text(
-          //                     'Airport',
-          //                     style: TextStyle(
-          //                       fontSize: 12,
-          //                       fontWeight: FontWeight.w500,
-          //                     ),
-          //                   ),
-          //                 ],
-          //               ),
-          //             ),
-          //           ),
-          //         ),
-          //       ),
-          //       SizedBox(width: 8),
-          //       Expanded(
-          //         child: Card(
-          //           elevation: 2,
-          //           shape: RoundedRectangleBorder(
-          //             borderRadius: BorderRadius.circular(8),
-          //           ),
-          //           child: Padding(
-          //             padding: EdgeInsets.all(12),
-          //             child: Column(
-          //               mainAxisSize: MainAxisSize.min,
-          //               children: [
-          //                 Icon(Icons.home, color: Color(0xFF000000)),
-          //                 SizedBox(height: 4),
-          //                 Text(
-          //                   'Home',
-          //                   style: TextStyle(
-          //                     fontSize: 12,
-          //                     fontWeight: FontWeight.w500,
-          //                   ),
-          //                 ),
-          //               ],
-          //             ),
-          //           ),
-          //         ),
-          //       ),
-          //       SizedBox(width: 8),
-          //       Expanded(
-          //         child: Card(
-          //           elevation: 2,
-          //           shape: RoundedRectangleBorder(
-          //             borderRadius: BorderRadius.circular(8),
-          //           ),
-          //           child: Padding(
-          //             padding: EdgeInsets.all(12),
-          //             child: Column(
-          //               mainAxisSize: MainAxisSize.min,
-          //               children: [
-          //                 Icon(Icons.work, color: Color(0xFF000000)),
-          //                 SizedBox(height: 4),
-          //                 Text(
-          //                   'Work',
-          //                   style: TextStyle(
-          //                     fontSize: 12,
-          //                     fontWeight: FontWeight.w500,
-          //                   ),
-          //                 ),
-          //               ],
-          //             ),
-          //           ),
-          //         ),
-          //       ),
-          //     ],
-          //   ),
-          // ),
-
+          
           // // Confirm Button (Bottom)
           Positioned(
             bottom: 32,

@@ -178,6 +178,33 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
     _model.dispose();
     super.dispose();
   }
+  Future<void> _openScanner() async {
+  final scannedValue = await Navigator.pushNamed(
+    context,
+    ScanToBookWidget.routeName,
+  );
+
+  if (!mounted || scannedValue == null || scannedValue == '-1') return;
+
+  final value = scannedValue.toString();
+
+  if (_isPickupSelected) {
+    setState(() {
+      _model.pickupLocationController?.text = value;
+      FFAppState().pickuplocation = value;
+    });
+
+    _model.destinationLocationFocusNode?.requestFocus();
+  } else {
+    setState(() {
+      _model.destinationLocationController?.text = value;
+      FFAppState().droplocation = value;
+    });
+
+    context.pushNamed(HomeWidget.routeName);
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -205,13 +232,14 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                 child: Column(
                   children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => context.safePop(),
-                        ),
-                        Text(
+                   Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => context.safePop(),
+                      ),
+                      Expanded(
+                        child: Text(
                           'Plan your ride',
                           style: GoogleFonts.inter(
                             fontSize: 18,
@@ -219,8 +247,14 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                             color: Colors.white,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+                        onPressed: _openScanner, // 👈 scanner click
+                      ),
+                    ],
+                  ),
+
                     const SizedBox(height: 12),
                     Row(
                       children: [

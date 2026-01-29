@@ -9,6 +9,8 @@ import 'home_model.dart';
 export 'home_model.dart';
 import '/backend/api_requests/api_calls.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
+
 
 /// Taxi Booking App Interface - Enhanced UI
 class HomeWidget extends StatefulWidget {
@@ -150,6 +152,14 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
   // ==================== MAIN BUILD ====================
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(
+  const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent, // 👈 important
+    statusBarIconBrightness: Brightness.light, // 👈 white icons
+    statusBarBrightness: Brightness.dark, // 👈 iOS support
+  ),
+);
+
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 360;
@@ -223,30 +233,31 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              FFLocalizations.of(context).getText('en8fyguh'),
+                              // FFLocalizations.of(context).getText('en8fyguh'),
+                              'Scan to Go',
                               style: GoogleFonts.poppins(
                                 fontSize: isSmallScreen ? 18 : 22,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
                             ),
-                            TextButton(
-                              onPressed: () => context.pushNamed(AvaliableOptionsWidget.routeName),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    FFLocalizations.of(context).getText('76yoeddl'),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color: Colors.white.withOpacity(0.9),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Icon(Icons.arrow_forward_ios_rounded,
-                                      size: 12, color: Colors.white.withOpacity(0.9)),
-                                ],
-                              ),
-                            ),
+                            // TextButton(
+                            //   onPressed: () => context.pushNamed(AvaliableOptionsWidget.routeName),
+                            //   child: Row(
+                            //     children: [
+                            //       Text(
+                            //         FFLocalizations.of(context).getText('76yoeddl'),
+                            //         style: GoogleFonts.inter(
+                            //           fontSize: 13,
+                            //           color: Colors.white.withOpacity(0.9),
+                            //         ),
+                            //       ),
+                            //       const SizedBox(width: 4),
+                            //       Icon(Icons.arrow_forward_ios_rounded,
+                            //           size: 12, color: Colors.white.withOpacity(0.9)),
+                            //     ],
+                            //   ),
+                            // ),
                           ],
                         ),
                         SizedBox(height: screenHeight * 0.015),
@@ -271,7 +282,8 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
 
                     // Section Header
                     Text(
-                      FFLocalizations.of(context).getText('jbh9xjpf'),
+                      'Our Services',
+                      // FFLocalizations.of(context).getText('jbh9xjpf'),
                       style: GoogleFonts.poppins(
                         fontSize: isSmallScreen ? 18 : 20,
                         fontWeight: FontWeight.w600,
@@ -279,14 +291,34 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                       ),
                     ),
                     const SizedBox(height: 16),
+                    // Ride Types Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildRideTypeCard(
+                          image: 'assets/images/bike.png',
+                          // title: 'Bike',
+                        ),
+                        _buildRideTypeCard(
+                          image: 'assets/images/car.png',
+                          // title: 'Car',
+                        ),
+                        _buildRideTypeCard(
+                          image: 'assets/images/auto.png',
+                          // title: 'Auto',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
 
                     // Promotional Banner
                     _buildPromoBanner(context, screenWidth),
-                    const SizedBox(height: 20),
+                    // const SizedBox(height: 20),
 
                     // Quick Action Card
-                    _buildQuickActionCard(context),
-                    const SizedBox(height: 30),
+                    // _buildQuickActionCard(context),
+                    // const SizedBox(height: 30),
                   ],
                 ),
               ),
@@ -298,6 +330,48 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
   }
 
   // ==================== REUSABLE WIDGETS ====================
+ Widget _buildRideTypeCard({
+  required String image,
+}) {
+  return Expanded(
+    child: TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: -4), // 👈 lift amount
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeInOut,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, value),
+          child: child,
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        height: 90,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12), // 👈 stronger shadow
+              blurRadius: 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Image.asset(
+            image,
+            fit: BoxFit.contain,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+
+
 
   Widget _buildSearchBar(BuildContext context, bool isSmallScreen) {
     return InkWell(
@@ -306,8 +380,8 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.symmetric(
-          horizontal: isSmallScreen ? 16 : 20,
-          vertical: isSmallScreen ? 14 : 16,
+          horizontal: isSmallScreen ? 12 : 16,
+          vertical: isSmallScreen ? 8 : 10,
         ),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -370,7 +444,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
           icon:  Icons.location_on_rounded,
           iconColor:FFAppState().droplocation==null ? const Color(0xFFFF0000) : const Color(0xFF4CAF50),
           onTap: () => context.pushNamed(ChooseDestinationWidget.routeName),
-          width: isSmallScreen ? 55 : 65,
+          width: isSmallScreen ? 48 : 56,
         ),
         const SizedBox(width: 12),
 
@@ -398,8 +472,8 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 14 : 18,
-                  vertical: isSmallScreen ? 14 : 16,
+                  horizontal: isSmallScreen ? 12 : 16,
+                  vertical: isSmallScreen ? 6 : 8,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -486,7 +560,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
             ),
           ],
         ),
-        child: Icon(icon, color: iconColor, size: width * 0.45),
+        child: Icon(icon, color: iconColor, size: width * 0.4),
       ),
     );
   }
