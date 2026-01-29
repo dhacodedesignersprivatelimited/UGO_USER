@@ -1,7 +1,9 @@
 import '/components/ridecomplet_widget.dart';
+import '/components/trip_summary_widget.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/review/review_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'ridecomplete_model.dart';
@@ -25,13 +27,14 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
   @override
   void initState() {
     super.initState();
+    print('DEBUG: [RidecompleteWidget] initState called');
     _model = createModel(context, () => RidecompleteModel());
   }
 
   @override
   void dispose() {
+    print('DEBUG: [RidecompleteWidget] dispose called');
     _model.dispose();
-
     super.dispose();
   }
 
@@ -46,59 +49,66 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
         key: scaffoldKey,
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         appBar: AppBar(
-          backgroundColor: FlutterFlowTheme.of(context).tertiary,
+          backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
           automaticallyImplyLeading: false,
-          leading: FlutterFlowIconButton(
-            borderColor: Colors.transparent,
-            borderRadius: 30.0,
-            borderWidth: 1.0,
-            buttonSize: 60.0,
-            icon: Icon(
-              Icons.arrow_back_rounded,
-              color: Colors.white,
-              size: 30.0,
-            ),
-            onPressed: () async {
-              context.pop();
-            },
-          ),
-          title: Text(
-            FFLocalizations.of(context).getText(
-              'okj4gvo3' /* Ride Complete */,
-            ),
-            style: FlutterFlowTheme.of(context).headlineMedium.override(
-                  font: GoogleFonts.interTight(
-                    fontWeight:
-                        FlutterFlowTheme.of(context).headlineMedium.fontWeight,
-                    fontStyle:
-                        FlutterFlowTheme.of(context).headlineMedium.fontStyle,
+          leading: _model.currentStep > 0
+              ? FlutterFlowIconButton(
+                  borderColor: Colors.transparent,
+                  borderRadius: 30.0,
+                  borderWidth: 1.0,
+                  buttonSize: 60.0,
+                  icon: Icon(
+                    Icons.arrow_back_rounded,
+                    color: FlutterFlowTheme.of(context).primaryText,
+                    size: 30.0,
                   ),
-                  color: Colors.white,
+                  onPressed: () async {
+                    print('DEBUG: [RidecompleteWidget] Back button pressed. Moving to step: ${_model.currentStep - 1}');
+                    setState(() {
+                      _model.currentStep--;
+                    });
+                  },
+                )
+              : null,
+          title: Text(
+            _model.currentStep == 0 ? 'Ride Complete' : 'Trip Summary',
+            style: FlutterFlowTheme.of(context).headlineMedium.override(
+                  font: GoogleFonts.interTight(),
+                  color: FlutterFlowTheme.of(context).primaryText,
                   fontSize: 22.0,
-                  letterSpacing: 0.0,
-                  fontWeight:
-                      FlutterFlowTheme.of(context).headlineMedium.fontWeight,
-                  fontStyle:
-                      FlutterFlowTheme.of(context).headlineMedium.fontStyle,
+                  fontWeight: FontWeight.bold,
                 ),
           ),
           actions: [],
-          centerTitle: false,
-          elevation: 2.0,
+          centerTitle: true,
+          elevation: 0.0,
         ),
         body: SafeArea(
           top: true,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                wrapWithModel(
-                  model: _model.ridecompletModel,
-                  updateCallback: () => safeSetState(() {}),
-                  child: RidecompletWidget(),
+          child: Column(
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              if (_model.currentStep == 0)
+                Expanded(
+                  child: RidecompletWidget(
+                    onNext: () {
+                      print('DEBUG: [RidecompleteWidget] Step 0 (Ride Complete) finished. Moving to Trip Summary');
+                      setState(() {
+                        _model.currentStep = 1;
+                      });
+                    },
+                  ),
                 ),
-              ],
-            ),
+              if (_model.currentStep == 1)
+                Expanded(
+                  child: TripSummaryWidget(
+                    onNext: () {
+                      print('DEBUG: [RidecompleteWidget] Step 1 (Trip Summary) finished. Navigating to Reviews');
+                      context.pushNamed(ReviewWidget.routeName);
+                    },
+                  ),
+                ),
+            ],
           ),
         ),
       ),

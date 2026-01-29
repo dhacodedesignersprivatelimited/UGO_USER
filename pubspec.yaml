@@ -125,6 +125,7 @@ dependencies:
   latlong2: ^0.9.1
   latlng: ^2.0.7
   image_picker: ^1.0.4
+  flutter_rating_bar: ^4.0.1
 
 dependency_overrides:
   google_api_headers: 4.5.3
