@@ -216,7 +216,7 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
               ),
             ),
 
-            // ✅ RAPIDO-STYLE Bottom Sheet
+            // ✅ UGO-STYLE Bottom Sheet
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
@@ -249,7 +249,7 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                       child: ListView(
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                         children: [
-                          // Pickup Location (Rapido Compact Style)
+                          // Pickup Location (UGO Compact Style)
                           Container(
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
@@ -349,7 +349,7 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
 
                           const SizedBox(height: 20),
 
-                          // ✅ Vehicle Card (Rapido Style)
+                          // ✅ Vehicle Card (UGO Style)
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -414,7 +414,7 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                           decoration: BoxDecoration(
-                                            color: Color(0xFFFFD700), // Rapido Yellow
+                                            color: Color(0xFFFFD700), // UGO Yellow
                                             borderRadius: BorderRadius.circular(20),
                                           ),
                                           child: Text(
@@ -436,7 +436,7 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
 
                           const SizedBox(height: 28),
 
-                          // ✅ Cancel Button (Rapido Orange)
+                          // ✅ Cancel Button (UGO Orange)
                           SizedBox(
                             width: double.infinity,
                             height: 56,
@@ -445,7 +445,7 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _isCancelling
                                     ? Colors.grey[300]
-                                    : const Color(0xFFFF7B10), // Rapido Orange
+                                    : const Color(0xFFFF7B10), // UGO Orange
                                 foregroundColor: Colors.white,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(

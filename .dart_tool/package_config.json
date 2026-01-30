@@ -338,6 +338,12 @@
       "languageVersion": "3.6"
     },
     {
+      "name": "flutter_rating_bar",
+      "rootUri": "file:///Users/mekalamanjunadh/.pub-cache/hosted/pub.dev/flutter_rating_bar-4.0.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.14"
+    },
+    {
       "name": "flutter_shaders",
       "rootUri": "file:///Users/mekalamanjunadh/.pub-cache/hosted/pub.dev/flutter_shaders-0.1.3",
       "packageUri": "lib/",

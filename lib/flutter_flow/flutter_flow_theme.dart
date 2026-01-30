@@ -2,10 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'package:shared_preferences/shared_preferences.dart';
 
-const  kThemeModeKey= '__theme_mode__';
+const kThemeModeKey = '__theme_mode__';
 
 SharedPreferences? _prefs;
 
@@ -18,7 +17,7 @@ abstract class FlutterFlowTheme {
     return darkMode == null
         ? ThemeMode.system
         : darkMode
-            ? ThemeMode.light
+            ? ThemeMode.dark
             : ThemeMode.light;
   }
 
@@ -142,22 +141,48 @@ class LightModeTheme extends FlutterFlowTheme {
   @Deprecated('Use tertiary instead')
   Color get tertiaryColor => tertiary;
 
-  late Color primary = const Color(0xFFFF7B10);
-  late Color secondary = const Color(0xFFFFFFFF);
-  late Color tertiary = const Color(0xFFEE8B60);
-  late Color alternate = const Color(0xFFE0E3E7);
-  late Color primaryText = const Color(0xFF14181B);
-  late Color secondaryText = const Color(0xFF57636C);
-  late Color primaryBackground = const Color(0xFFF1F4F8);
-  late Color secondaryBackground = const Color(0xFFFFFFFF);
-  late Color accent1 = const Color(0xFF000000);
-  late Color accent2 = const Color(0x4D39D2C0);
-  late Color accent3 = const Color(0x4DEE8B60);
-  late Color accent4 = const Color(0xCCFFFFFF);
-  late Color success = const Color(0xFF249689);
-  late Color warning = const Color(0xFFF9CF58);
-  late Color error = const Color(0xFFFF5963);
-  late Color info = const Color(0xFFFFFFFF);
+  late Color primary = const Color(0xFFFF7B10); // Orange primary
+  late Color secondary = const Color(0xFFFF9F4D); // Lighter orange
+  late Color tertiary = const Color(0xFFFFB876); // Even lighter orange
+  late Color alternate = const Color(0xFFFFE4CC); // Very light orange
+  late Color primaryText = const Color(0xFF1A1A1A); // Dark gray text
+  late Color secondaryText = const Color(0xFF666666); // Medium gray text
+  late Color primaryBackground = const Color(0xFFFFF8F3); // Very light cream
+  late Color secondaryBackground = const Color(0xFFFFFFFF); // White
+  late Color accent1 = const Color(0xFFFF7B10); // Orange accent
+  late Color accent2 = const Color(0x4DFF7B10); // Transparent orange
+  late Color accent3 = const Color(0x26FF7B10); // Very transparent orange
+  late Color accent4 = const Color(0xFFFFEEE0); // Light orange tint
+  late Color success = const Color(0xFF28A745); // Green
+  late Color warning = const Color(0xFFFFC107); // Amber
+  late Color error = const Color(0xFFDC3545); // Red
+  late Color info = const Color(0xFF17A2B8); // Cyan
+}
+
+class DarkModeTheme extends FlutterFlowTheme {
+  @Deprecated('Use primary instead')
+  Color get primaryColor => primary;
+  @Deprecated('Use secondary instead')
+  Color get secondaryColor => secondary;
+  @Deprecated('Use tertiary instead')
+  Color get tertiaryColor => tertiary;
+
+  late Color primary = const Color(0xFFFF7B10); // Orange primary
+  late Color secondary = const Color(0xFFFF9F4D); // Lighter orange
+  late Color tertiary = const Color(0xFFFFB876); // Even lighter orange
+  late Color alternate = const Color(0xFF2A2A2A); // Dark gray
+  late Color primaryText = const Color(0xFFFFFFFF); // White text
+  late Color secondaryText = const Color(0xFFB0B0B0); // Light gray text
+  late Color primaryBackground = const Color(0xFF121212); // Almost black
+  late Color secondaryBackground = const Color(0xFF1E1E1E); // Dark gray
+  late Color accent1 = const Color(0xFFFF7B10); // Orange accent
+  late Color accent2 = const Color(0x4DFF7B10); // Transparent orange
+  late Color accent3 = const Color(0x26FF7B10); // Very transparent orange
+  late Color accent4 = const Color(0xFF2D2520); // Dark orange tint
+  late Color success = const Color(0xFF4CAF50); // Bright green
+  late Color warning = const Color(0xFFFDD835); // Bright yellow
+  late Color error = const Color(0xFFF44336); // Bright red
+  late Color info = const Color(0xFF29B6F6); // Bright cyan
 }
 
 abstract class Typography {
@@ -318,32 +343,6 @@ class ThemeTypography extends Typography {
         fontWeight: FontWeight.normal,
         fontSize: 12.0,
       );
-}
-
-class DarkModeTheme extends FlutterFlowTheme {
-  @Deprecated('Use primary instead')
-  Color get primaryColor => primary;
-  @Deprecated('Use secondary instead')
-  Color get secondaryColor => secondary;
-  @Deprecated('Use tertiary instead')
-  Color get tertiaryColor => tertiary;
-
-  late Color primary = const Color(0xFFFF7B10);
-  late Color secondary = const Color(0xFF000000);
-  late Color tertiary = const Color(0xFFEE8B60);
-  late Color alternate = const Color(0xFFFFFFFF);
-  late Color primaryText = const Color(0xFF000000);
-  late Color secondaryText = const Color(0xFF95A1AC);
-  late Color primaryBackground = const Color(0xFFFFFFFF);
-  late Color secondaryBackground = const Color(0xFFFFFFFF);
-  late Color accent1 = const Color(0xFF000000);
-  late Color accent2 = const Color(0x4D39D2C0);
-  late Color accent3 = const Color(0x4DEE8B60);
-  late Color accent4 = const Color(0xB2262D34);
-  late Color success = const Color(0xFF249689);
-  late Color warning = const Color(0xFFF9CF58);
-  late Color error = const Color(0xFFFF5963);
-  late Color info = const Color(0xFFFFFFFF);
 }
 
 extension TextStyleHelper on TextStyle {

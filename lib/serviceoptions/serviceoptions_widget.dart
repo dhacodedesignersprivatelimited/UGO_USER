@@ -72,7 +72,7 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
         //   Navigator.of(context).pop();
         // }
                 },
-              ),  
+              ),
             ),
             title: Text(
               FFLocalizations.of(context).getText('rnwdwckb' /* Services */),
@@ -93,19 +93,19 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
                 final screenWidth = constraints.maxWidth;
                 final isNarrow = screenWidth < 360;
                 final padding = isNarrow ? 20.0 : 28.0;
-      
+
                 return SingleChildScrollView(
                   padding: EdgeInsets.fromLTRB(padding, 32, padding, 40),
                   child: Column(
                     children: [
                       // 1. Hero Header
                       _buildHeroHeader(isNarrow),
-      
+
                       SizedBox(height: isNarrow ? 40 : 56),
-      
+
                       // 2. Service Cards Grid
                       _buildServiceCards(isNarrow),
-      
+
                       SizedBox(height: isNarrow ? 100 : 140),
                     ],
                   ),

@@ -1,9 +1,10 @@
-import '/flutter_flow/flutter_flow_icon_button.dart';
+import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import '/flutter_flow/flutter_flow_widgets.dart';
+import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'voucher_model.dart';
 export 'voucher_model.dart';
 
@@ -20,31 +21,8 @@ class VoucherWidget extends StatefulWidget {
 class _VoucherWidgetState extends State<VoucherWidget> {
   late VoucherModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-
-  // Mock coupons list like Uber
-  final List<Map<String, dynamic>> availableCoupons = [
-    {
-      'code': 'UGONEW50',
-      'title': '50% off on your first 3 rides',
-      'expiry': 'Valid until 30 Nov',
-      'description': 'Max discount ₹50 per ride. Valid on all vehicle types.',
-      'color': const Color(0xFFFF7B10),
-    },
-    {
-      'code': 'OFFICE20',
-      'title': '₹20 off on daily commute',
-      'expiry': 'Valid until 15 Nov',
-      'description': 'Valid between 8 AM - 11 AM and 5 PM - 8 PM.',
-      'color': Colors.blue,
-    },
-    {
-      'code': 'WEEKEND30',
-      'title': '30% off on Weekend trips',
-      'expiry': 'Valid Sat & Sun',
-      'description': 'Valid on rides above ₹100. Max discount ₹100.',
-      'color': Colors.green,
-    },
-  ];
+  
+  List<dynamic> _vouchers = [];
 
   @override
   void initState() {
@@ -52,6 +30,20 @@ class _VoucherWidgetState extends State<VoucherWidget> {
     _model = createModel(context, () => VoucherModel());
     _model.textController ??= TextEditingController();
     _model.textFieldFocusNode ??= FocusNode();
+  }
+
+  void _applyVoucher(String code, double discount) {
+    final appState = FFAppState();
+    appState.appliedCouponCode = code;
+    appState.discountAmount = discount;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Voucher $code applied! ₹$discount saved.'),
+        backgroundColor: const Color(0xFF00D084),
+      ),
+    );
+    context.pop();
   }
 
   @override
@@ -83,13 +75,10 @@ class _VoucherWidgetState extends State<VoucherWidget> {
               fontWeight: FontWeight.w700,
             ),
           ),
-          centerTitle: false,
         ),
         body: SafeArea(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Promo Code Input Section
               Container(
                 width: double.infinity,
                 color: Colors.white,
@@ -99,11 +88,7 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                   children: [
                     Text(
                       'Enter promo code',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[600],
-                      ),
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[600]),
                     ),
                     const SizedBox(height: 12),
                     Row(
@@ -121,39 +106,42 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                               focusNode: _model.textFieldFocusNode,
                               decoration: InputDecoration(
                                 hintText: 'Example: SAVE50',
-                                hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
                                 border: InputBorder.none,
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                               ),
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         ElevatedButton(
                           onPressed: () {
-                            debugPrint('Applying code: ${_model.textController?.text}');
+                            final code = _model.textController?.text.toUpperCase() ?? '';
+                            final coupon = _vouchers.firstWhere(
+                              (c) => c['code_name'].toString().toUpperCase() == code,
+                              orElse: () => null,
+                            );
+                            if (coupon != null) {
+                              final disc = double.tryParse(coupon['discount_value']?.toString() ?? '0') ?? 0.0;
+                              _applyVoucher(code, disc);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Invalid promo code'), backgroundColor: Colors.red),
+                              );
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.orange,
                             minimumSize: const Size(80, 52),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            elevation: 0,
                           ),
-                          child: Text(
-                            'Apply',
-                            style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
+                          child: const Text('Apply', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-
               const SizedBox(height: 12),
-
-              // Available Offers Section
               Expanded(
                 child: Container(
                   width: double.infinity,
@@ -165,21 +153,49 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                         padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
                         child: Text(
                           'Available Offers',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
+                          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800),
                         ),
                       ),
                       Expanded(
-                        child: ListView.separated(
-                          itemCount: availableCoupons.length,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          separatorBuilder: (context, index) => const SizedBox(height: 16),
-                          itemBuilder: (context, index) {
-                            final coupon = availableCoupons[index];
-                            return _buildCouponCard(coupon);
+                        child: FutureBuilder<ApiCallResponse>(
+                          future: GetAllVouchersCall.call(token: FFAppState().accessToken),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(child: CircularProgressIndicator(color: Colors.orange));
+                            }
+                            
+                            if (snapshot.hasError || snapshot.data == null || !snapshot.data!.succeeded) {
+                              debugPrint('Voucher API Error: ${snapshot.data?.jsonBody}');
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.error_outline, color: Colors.grey, size: 48),
+                                    const SizedBox(height: 16),
+                                    Text('Failed to load coupons', style: GoogleFonts.inter(color: Colors.grey)),
+                                    TextButton(onPressed: () => setState(() {}), child: const Text('Retry'))
+                                  ],
+                                ),
+                              );
+                            }
+                            
+                            _vouchers = GetAllVouchersCall.data(snapshot.data!.jsonBody) ?? [];
+                            
+                            if (_vouchers.isEmpty) {
+                              return Center(
+                                child: Text('No offers available at the moment', style: GoogleFonts.inter(color: Colors.grey)),
+                              );
+                            }
+
+                            return ListView.separated(
+                              itemCount: _vouchers.length,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              separatorBuilder: (_, __) => const SizedBox(height: 16),
+                              itemBuilder: (context, index) {
+                                final v = _vouchers[index];
+                                return _buildCouponCard(v);
+                              },
+                            );
                           },
                         ),
                       ),
@@ -194,7 +210,14 @@ class _VoucherWidgetState extends State<VoucherWidget> {
     );
   }
 
-  Widget _buildCouponCard(Map<String, dynamic> coupon) {
+  Widget _buildCouponCard(dynamic v) {
+    final code = v['code_name'] ?? 'PROMO';
+    final discount = v['discount_value']?.toString() ?? '0';
+    final type = v['discount_type'] ?? 'flat';
+    final expiry = v['expiry_date'] != null ? 'Exp: ${v['expiry_date'].toString().split('T')[0]}' : 'No Expiry';
+    
+    String title = type == 'percentage' ? '$discount% OFF' : '₹$discount OFF';
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
@@ -205,36 +228,24 @@ class _VoucherWidgetState extends State<VoucherWidget> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 48, height: 48,
                   decoration: BoxDecoration(
-                    color: (coupon['color'] as Color).withOpacity(0.1),
+                    color: Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.local_offer_rounded, color: coupon['color'] as Color, size: 24),
+                  child: const Icon(Icons.local_offer_rounded, color: Colors.orange),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        coupon['title'] as String,
-                        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
-                      ),
+                      Text(title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold)),
+                      Text('Get a discount on your ride using this promo code.', style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600])),
                       const SizedBox(height: 4),
-                      Text(
-                        coupon['description'] as String,
-                        style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600], height: 1.4),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        coupon['expiry'] as String,
-                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF00D084)),
-                      ),
+                      Text(expiry, style: GoogleFonts.inter(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
@@ -243,34 +254,17 @@ class _VoucherWidgetState extends State<VoucherWidget> {
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-            ),
+            decoration: BoxDecoration(color: Colors.grey[50], borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12))),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    coupon['code'] as String,
-                    style: GoogleFonts.robotoMono(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black),
-                  ),
-                ),
+                Text(code, style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
                 TextButton(
                   onPressed: () {
-                    _model.textController?.text = coupon['code'] as String;
-                    setState(() {});
+                    final disc = double.tryParse(discount) ?? 0.0;
+                    _applyVoucher(code, disc);
                   },
-                  child: Text(
-                    'APPLY',
-                    style: GoogleFonts.inter(color: const Color(0xFFFF7B10), fontWeight: FontWeight.w800, fontSize: 13),
-                  ),
+                  child: const Text('APPLY', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),

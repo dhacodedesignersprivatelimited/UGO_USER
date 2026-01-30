@@ -11,7 +11,6 @@ import '/backend/api_requests/api_calls.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 
-
 /// Taxi Booking App Interface - Enhanced UI
 class HomeWidget extends StatefulWidget {
   const HomeWidget({super.key});
@@ -23,12 +22,14 @@ class HomeWidget extends StatefulWidget {
   State<HomeWidget> createState() => _HomeWidgetState();
 }
 
-class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateMixin {
+class _HomeWidgetState extends State<HomeWidget>
+    with SingleTickerProviderStateMixin {
   late HomeModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
   bool isScanning = false;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  bool _isCheckingRideStatus = false;
 
   // Color Constants for vibrant look
   static const Color primaryOrange = Color(0xFFFF7B10);
@@ -41,8 +42,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     _model = createModel(context, () => HomeModel());
-    print("current location in home${FFAppState().pickupLatitude}and${FFAppState().pickupLongitude  }");
-    // Pulse animation for QR button
+
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -53,13 +53,19 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkRideStatus();
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _checkRideStatus();
+      });
     });
   }
 
   Future<void> _checkRideStatus() async {
+    if (_isCheckingRideStatus || FFAppState().bookingInProgress) return;
+
     final token = FFAppState().accessToken;
     if (token.isEmpty) return;
+
+    setState(() => _isCheckingRideStatus = true);
 
     try {
       final response = await GetRideStatus.call(
@@ -68,29 +74,51 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
       );
 
       _model.apiResult85c = response;
-      if (!response.succeeded) return;
+      if (!mounted || !response.succeeded) return;
 
-      final rideId = getJsonField(
-        _model.apiResult85c?.jsonBody,
-        r'''$.data.rides[:].id''',
+      final rideList = getJsonField(
+        response.jsonBody,
+        r'''$.data.rides''',
       );
 
       final rideCount = GetRideStatus.count(response.jsonBody);
 
-      if (rideCount == null || rideCount == 0) {
+      if (rideCount == null || rideCount == 0 || rideList == null) {
         FFAppState().bookingInProgress = false;
-      } else {
-        FFAppState().bookingInProgress = true;
-        final actualRideId = rideId is List && rideId.isNotEmpty ? rideId.first : rideId;
-        if (mounted && actualRideId != null) {
-          context.pushNamed(
-            AutoBookWidget.routeName,
-            queryParameters: {'rideId': actualRideId.toString()},
-          );
+      } else if (rideList is List && rideList.isNotEmpty) {
+        dynamic firstRide = rideList.first;
+        dynamic rideId;
+
+        if (firstRide is Map<String, dynamic>) {
+          rideId = firstRide['id'];
+        } else if (firstRide is Map) {
+          rideId = firstRide['id'];
+        } else {
+          rideId = firstRide;
         }
+
+        if (rideId != null) {
+          FFAppState().bookingInProgress = true;
+          if (mounted) {
+            context.pushNamed(
+              AutoBookWidget.routeName,
+              queryParameters: {
+                'rideId': rideId.toString(),
+              },
+            );
+          }
+        } else {
+          FFAppState().bookingInProgress = false;
+        }
+      } else {
+        FFAppState().bookingInProgress = false;
       }
     } catch (e) {
       debugPrint('Ride status check failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isCheckingRideStatus = false);
+      }
     }
   }
 
@@ -102,6 +130,8 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
   }
 
   void _handleQRScan() async {
+    if (isScanning) return;
+
     setState(() => isScanning = true);
 
     try {
@@ -116,36 +146,55 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
       if (!mounted) return;
 
       if (scanResult == '-1') {
-        setState(() => isScanning = false);
         return;
       }
 
       dynamic driverId;
       try {
-        final decodedData = jsonDecode(scanResult);
-        driverId = decodedData['driver_id'] ?? decodedData['id'];
+        if (scanResult.trim().startsWith('{')) {
+          final decodedData = jsonDecode(scanResult);
+          driverId = decodedData['driver_id'] ?? decodedData['id'];
+        } else {
+          driverId = int.tryParse(scanResult);
+        }
       } catch (e) {
+        debugPrint('QR decode error: $e');
         driverId = int.tryParse(scanResult);
       }
 
       if (driverId != null) {
-          context.pushNamed(
-            DriverDetailsWidget.routeName,
-            queryParameters: {
-              'driverId': driverId.toString(),
-            },
-          );
+        context.pushNamed(
+          DriverDetailsWidget.routeName,
+          queryParameters: {
+            'driverId': driverId.toString(),
+          },
+        );
       } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid QR Code. Driver ID not found.')),
-          );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              FFLocalizations.of(context)
+                  .getText('invalid_qr_code'),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
+      debugPrint('QR Scan error: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Scan failed: ${e.toString()}')),
+        SnackBar(
+          content: Text(
+            '${FFLocalizations.of(context).getText('scan_failed')}: ${e.toString()}',
+          ),
+          duration: const Duration(seconds: 3),
+        ),
       );
     } finally {
-      setState(() => isScanning = false);
+      if (mounted) {
+        setState(() => isScanning = false);
+      }
     }
   }
 
@@ -153,12 +202,12 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
-  const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent, // 👈 important
-    statusBarIconBrightness: Brightness.light, // 👈 white icons
-    statusBarBrightness: Brightness.dark, // 👈 iOS support
-  ),
-);
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+    );
 
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
@@ -177,7 +226,7 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
             child: wrapWithModel(
               model: _model.menuModel,
               updateCallback: () => safeSetState(() {}),
-              child: MenuWidget(),
+              child: const MenuWidget(),
             ),
           ),
         ),
@@ -189,9 +238,15 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
               floating: false,
               pinned: true,
               backgroundColor: primaryOrange,
-              leading: IconButton(
-                icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 30),
-                onPressed: () => scaffoldKey.currentState?.openDrawer(),
+              leading: Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(
+                    Icons.menu_rounded,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
               ),
               title: Image.asset(
                 'assets/images/k45cu8.png',
@@ -203,9 +258,14 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: IconButton(
-                    icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 30),
+                    icon: const Icon(
+                      Icons.notifications_none_rounded,
+                      color: Colors.white,
+                      size: 30,
+                    ),
                     onPressed: () {
-                      context.pushNamed(PushnotificationsWidget.routeName);
+                      context.pushNamed(
+                          PushnotificationsWidget.routeName);
                     },
                   ),
                 ),
@@ -220,50 +280,39 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                     ),
                   ),
                   child: Padding(
-                    padding: EdgeInsets.fromLTRB(horizontalPadding, 70, horizontalPadding, 10),
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      70,
+                      horizontalPadding,
+                      10,
+                    ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        // Search Bar
                         _buildSearchBar(context, isSmallScreen),
                         SizedBox(height: screenHeight * 0.02),
-
-                        // "Get a Ride" Header
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              // FFLocalizations.of(context).getText('en8fyguh'),
-                              'Scan to Go',
+                              FFLocalizations.of(context)
+                                  .getText('scan_to_go'),
                               style: GoogleFonts.poppins(
-                                fontSize: isSmallScreen ? 18 : 22,
+                                fontSize:
+                                isSmallScreen ? 18 : 22,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
                             ),
-                            // TextButton(
-                            //   onPressed: () => context.pushNamed(AvaliableOptionsWidget.routeName),
-                            //   child: Row(
-                            //     children: [
-                            //       Text(
-                            //         FFLocalizations.of(context).getText('76yoeddl'),
-                            //         style: GoogleFonts.inter(
-                            //           fontSize: 13,
-                            //           color: Colors.white.withOpacity(0.9),
-                            //         ),
-                            //       ),
-                            //       const SizedBox(width: 4),
-                            //       Icon(Icons.arrow_forward_ios_rounded,
-                            //           size: 12, color: Colors.white.withOpacity(0.9)),
-                            //     ],
-                            //   ),
-                            // ),
                           ],
                         ),
                         SizedBox(height: screenHeight * 0.015),
-
-                        // Action Buttons Row
-                        _buildActionButtonsRow(context, screenWidth, isSmallScreen),
+                        _buildActionButtonsRow(
+                          context,
+                          screenWidth,
+                          isSmallScreen,
+                        ),
                       ],
                     ),
                   ),
@@ -276,49 +325,35 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
               child: Padding(
                 padding: EdgeInsets.all(horizontalPadding),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20),
-
-                    // Section Header
                     Text(
-                      'Our Services',
-                      // FFLocalizations.of(context).getText('jbh9xjpf'),
+                      FFLocalizations.of(context)
+                          .getText('our_services'),
                       style: GoogleFonts.poppins(
-                        fontSize: isSmallScreen ? 18 : 20,
+                        fontSize:
+                        isSmallScreen ? 18 : 20,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Ride Types Row
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
                       children: [
                         _buildRideTypeCard(
-                          image: 'assets/images/bike.png',
-                          // title: 'Bike',
-                        ),
+                            image: 'assets/images/bike.png'),
                         _buildRideTypeCard(
-                          image: 'assets/images/car.png',
-                          // title: 'Car',
-                        ),
+                            image: 'assets/images/car.png'),
                         _buildRideTypeCard(
-                          image: 'assets/images/auto.png',
-                          // title: 'Auto',
-                        ),
+                            image: 'assets/images/auto.png'),
                       ],
                     ),
                     const SizedBox(height: 20),
-
-
-                    // Promotional Banner
                     _buildPromoBanner(context, screenWidth),
-                    // const SizedBox(height: 20),
-
-                    // Quick Action Card
-                    // _buildQuickActionCard(context),
-                    // const SizedBox(height: 30),
                   ],
                 ),
               ),
@@ -330,52 +365,51 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
   }
 
   // ==================== REUSABLE WIDGETS ====================
- Widget _buildRideTypeCard({
-  required String image,
-}) {
-  return Expanded(
-    child: TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: -4), // 👈 lift amount
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeInOut,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, value),
-          child: child,
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        height: 90,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.12), // 👈 stronger shadow
-              blurRadius: 14,
-              offset: const Offset(0, 8),
+  Widget _buildRideTypeCard({required String image}) {
+    return Expanded(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: -4.0),
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeInOut,
+        builder: (context, value, child) {
+          return Transform.translate(
+            offset: Offset(0, value),
+            child: child,
+          );
+        },
+        child: Container(
+          margin:
+          const EdgeInsets.symmetric(horizontal: 6),
+          height: 90,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius:
+            BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: 14,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Image.asset(
+              image,
+              fit: BoxFit.contain,
             ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Image.asset(
-            image,
-            fit: BoxFit.contain,
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-
-
-
-  Widget _buildSearchBar(BuildContext context, bool isSmallScreen) {
+  Widget _buildSearchBar(
+      BuildContext context, bool isSmallScreen) {
     return InkWell(
-      onTap: () => context.pushNamed(PlanYourRideWidget.routeName),
+      onTap: () =>
+          context.pushNamed(PlanYourRideWidget.routeName),
       borderRadius: BorderRadius.circular(30),
       child: Container(
         width: double.infinity,
@@ -385,7 +419,8 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
         ),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
+          borderRadius:
+          BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -400,29 +435,43 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: primaryOrange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius:
+                BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.search_rounded, color: primaryOrange, size: 22),
+              child: const Icon(
+                Icons.search_rounded,
+                color: primaryOrange,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
-                FFLocalizations.of(context).getText('h1w2v3fi'),
+                FFLocalizations.of(context)
+                    .getText('h1w2v3fi'),
                 style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 14 : 15,
+                  fontSize:
+                  isSmallScreen ? 14 : 15,
                   color: Colors.grey[500],
                   fontWeight: FontWeight.w400,
                 ),
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding:
+              const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 6,
+              ),
               decoration: BoxDecoration(
-                color: lightOrange.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
+                color: lightOrange
+                    .withOpacity(0.2),
+                borderRadius:
+                BorderRadius.circular(20),
               ),
               child: Text(
-                'Now',
+                FFLocalizations.of(context)
+                    .getText('now'),
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: deepOrange,
@@ -436,95 +485,158 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
     );
   }
 
-  Widget _buildActionButtonsRow(BuildContext context, double screenWidth, bool isSmallScreen) {
+  Widget _buildActionButtonsRow(
+      BuildContext context,
+      double screenWidth,
+      bool isSmallScreen,
+      ) {
     return Row(
       children: [
-        // Location Button
         _buildActionButton(
-          icon:  Icons.location_on_rounded,
-          iconColor:FFAppState().droplocation==null ? const Color(0xFFFF0000) : const Color(0xFF4CAF50),
-          onTap: () => context.pushNamed(ChooseDestinationWidget.routeName),
+          icon: Icons.location_on_rounded,
+          iconColor: FFAppState().droplocation == null
+              ? const Color(0xFFFF0000)
+              : const Color(0xFF4CAF50),
+          onTap: () => context.pushNamed(
+              ChooseDestinationWidget.routeName),
           width: isSmallScreen ? 48 : 56,
         ),
         const SizedBox(width: 12),
-
-        // QR Scan Button (Expanded)
         Expanded(
           child: ScaleTransition(
-            scale: isScanning ? const AlwaysStoppedAnimation(1.0) : _pulseAnimation,
+            scale: isScanning
+                ? const AlwaysStoppedAnimation(1.0)
+                : _pulseAnimation,
             child: InkWell(
               onTap: isScanning
                   ? null
                   : () {
-                if (FFAppState().droplocation == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content:
-                      Text('Please select a drop location first'),
-                      duration: Duration(seconds: 2),
+                if (FFAppState().droplocation ==
+                    null) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        FFLocalizations.of(context)
+                            .getText(
+                            'please_select_drop_location'),
+                      ),
+                      duration: const Duration(
+                          seconds: 2),
                     ),
                   );
                   return;
                 }
                 _handleQRScan();
               },
-              borderRadius: BorderRadius.circular(16),
+              borderRadius:
+              BorderRadius.circular(16),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+                duration: const Duration(
+                    milliseconds: 300),
                 padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 12 : 16,
-                  vertical: isSmallScreen ? 6 : 8,
+                  horizontal:
+                  isSmallScreen ? 12 : 16,
+                  vertical:
+                  isSmallScreen ? 6 : 8,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
                   border: isScanning
-                      ? Border.all(color: lightOrange, width: 2)
+                      ? Border.all(
+                    color: lightOrange,
+                    width: 2,
+                  )
                       : null,
+                  borderRadius:
+                  BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black
+                          .withOpacity(0.08),
                       blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      offset:
+                      const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment:
+                  MainAxisAlignment.center,
                   children: [
                     Container(
-                      width: isSmallScreen ? 32 : 38,
-                      height: isSmallScreen ? 32 : 38,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [primaryOrange, deepOrange],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                      width: isSmallScreen
+                          ? 32
+                          : 38,
+                      height: isSmallScreen
+                          ? 32
+                          : 38,
+                      decoration:
+                      const BoxDecoration(
+                        gradient:
+                        LinearGradient(
+                          colors: [
+                            primaryOrange,
+                            deepOrange
+                          ],
+                          begin: Alignment
+                              .topLeft,
+                          end: Alignment
+                              .bottomRight,
                         ),
-                        shape: BoxShape.circle,
+                        shape:
+                        BoxShape.circle,
                       ),
                       child: isScanning
                           ? const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        padding:
+                        EdgeInsets
+                            .all(10),
+                        child:
+                        CircularProgressIndicator(
+                          strokeWidth:
+                          2,
+                          valueColor:
+                          AlwaysStoppedAnimation<
+                              Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
-                          : const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 18),
+                          : const Icon(
+                        Icons
+                            .qr_code_scanner_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(
+                        width: 12),
                     Flexible(
                       child: Text(
                         isScanning
-                            ? 'Scanning...'
-                            : FFLocalizations.of(context).getText('dtkvc9rl'),
-                        style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 13 : 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
+                            ? FFLocalizations.of(
+                            context)
+                            .getText(
+                            'scanning')
+                            : FFLocalizations.of(
+                            context)
+                            .getText(
+                            'dtkvc9rl'),
+                        style:
+                        GoogleFonts.inter(
+                          fontSize:
+                          isSmallScreen
+                              ? 13
+                              : 14,
+                          fontWeight:
+                          FontWeight.w500,
+                          color:
+                          Colors.black87,
                         ),
-                        overflow: TextOverflow.ellipsis,
+                        overflow:
+                        TextOverflow
+                            .ellipsis,
                       ),
                     ),
                   ],
@@ -551,7 +663,8 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
         height: width,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius:
+          BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.08),
@@ -560,16 +673,19 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
             ),
           ],
         ),
-        child: Icon(icon, color: iconColor, size: width * 0.4),
+        child: Icon(
+          icon,
+          color: iconColor,
+          size: width * 0.4,
+        ),
       ),
     );
   }
 
-  Widget _buildPromoBanner(BuildContext context, double screenWidth) {
+  Widget _buildPromoBanner(
+      BuildContext context, double screenWidth) {
     return InkWell(
-      onTap: () {
-        // Navigate to offers or plan ride
-      },
+      onTap: () {},
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: double.infinity,
@@ -585,7 +701,8 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius:
+          BorderRadius.circular(20),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -593,47 +710,66 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
                 'assets/images/skdkzv.png',
                 fit: BoxFit.cover,
               ),
-              // Gradient Overlay
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
                       Colors.transparent,
-                      Colors.black.withOpacity(0.7),
+                      Colors.black
+                          .withOpacity(0.7),
                     ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                    begin: Alignment
+                        .topCenter,
+                    end: Alignment
+                        .bottomCenter,
                   ),
                 ),
               ),
-              // Text Content
               Positioned(
                 left: 20,
                 bottom: 20,
                 right: 20,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                  CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         Text(
-                          FFLocalizations.of(context).getText('96ev15d0'),
-                          style: GoogleFonts.poppins(
+                          FFLocalizations.of(
+                              context)
+                              .getText(
+                              '96ev15d0'),
+                          style: GoogleFonts
+                              .poppins(
                             fontSize: 18,
-                            fontWeight: FontWeight.w600,
+                            fontWeight:
+                            FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                        const SizedBox(
+                            width: 6),
+                        const Icon(
+                          Icons
+                              .arrow_forward_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(
+                        height: 4),
                     Text(
-                      FFLocalizations.of(context).getText('39myr84r'),
+                      FFLocalizations.of(
+                          context)
+                          .getText(
+                          '39myr84r'),
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: Colors.white.withOpacity(0.85),
+                        color: Colors.white
+                            .withOpacity(
+                            0.85),
                       ),
                     ),
                   ],
@@ -641,90 +777,6 @@ class _HomeWidgetState extends State<HomeWidget> with SingleTickerProviderStateM
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickActionCard(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        // Handle quick booking
-      },
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [cardBackground, Colors.white],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: primaryOrange.withOpacity(0.3), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: primaryOrange.withOpacity(0.1),
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [primaryOrange, deepOrange],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: primaryOrange.withOpacity(0.4),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.flash_on_rounded, color: Colors.white, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    FFLocalizations.of(context).getText('imvzfpcd'),
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Get a ride in minutes',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: primaryOrange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.arrow_forward_ios_rounded, color: primaryOrange, size: 16),
-            ),
-          ],
         ),
       ),
     );

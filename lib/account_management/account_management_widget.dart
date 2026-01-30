@@ -277,7 +277,7 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
       {'icon': Icons.settings, 'label': 'Settings', 'route': SettingsPageWidget.routeName},
       {'icon': Icons.language, 'label': 'Languages', 'route': LanguageWidget.routeName},
       {'icon': Icons.message, 'label': 'Messages', 'route': MessagesWidget.routeName},
-      {'icon': Icons.gavel, 'label': 'Legal', 'route': null},
+      {'icon': Icons.gavel, 'label': 'Privacy Policy', 'route': PrivacypolicyWidget.routeName},
     ];
 
     return Container(

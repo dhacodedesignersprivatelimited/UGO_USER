@@ -38,6 +38,7 @@
         "flutter_google_places",
         "flutter_localizations",
         "flutter_plugin_android_lifecycle",
+        "flutter_rating_bar",
         "flutter_web_plugins",
         "font_awesome_flutter",
         "from_css_color",
@@ -225,6 +226,13 @@
         "json_annotation",
         "path",
         "yaml"
+      ]
+    },
+    {
+      "name": "flutter_rating_bar",
+      "version": "4.0.1",
+      "dependencies": [
+        "flutter"
       ]
     },
     {
