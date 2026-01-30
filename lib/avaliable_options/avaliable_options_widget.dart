@@ -88,6 +88,24 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     await _addMarkers();
     await _getRoutePolyline();
   }
+double calculateTieredFare({
+    required double distanceKm,
+    required double baseKmStart,
+    required double baseKmEnd,
+    required double baseFare,
+    required double pricePerKm,
+  }) {
+    if (distanceKm <= 0) return 0;
+
+    if (distanceKm <= baseKmEnd) {
+      return baseFare;
+    }
+
+    final extraKm = distanceKm - baseKmEnd;
+    final extraFare = extraKm * pricePerKm;
+
+    return baseFare + extraFare;
+  }
 
   Future<void> _addMarkers() async {
     if (FFAppState().pickupLatitude != null &&
@@ -693,36 +711,55 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                               }
 
                               // ✅ FIXED: Better price parsing with validation
-                              final priceField = getJsonField(
-                                dataItem,
-                                r'''$.kilometer_per_price''',
-                              );
-                              double pricePerKm = 0.0;
+                             final pricing =
+                                  getJsonField(dataItem, r'''$.pricing''');
 
-                              if (priceField != null) {
-                                if (priceField is num) {
-                                  pricePerKm = priceField.toDouble();
-                                } else {
-                                  pricePerKm = double.tryParse(
-                                    priceField.toString(),
-                                  ) ?? 0.0;
-                                }
-                              }
+                              final baseKmStart = double.tryParse(
+                                    getJsonField(
+                                            pricing, r'''$.base_km_start''')
+                                        .toString(),
+                                  ) ??
+                                  1;
+
+                              final baseKmEnd = double.tryParse(
+                                    getJsonField(pricing, r'''$.base_km_end''')
+                                        .toString(),
+                                  ) ??
+                                  5;
+
+                              final baseFare = double.tryParse(
+                                    getJsonField(pricing, r'''$.base_fare''')
+                                        .toString(),
+                                  ) ??
+                                  0;
+
+                              final pricePerKm = double.tryParse(
+                                    getJsonField(pricing, r'''$.price_per_km''')
+                                        .toString(),
+                                  ) ??
+                                  0;
+
+                 
 
                               // ✅ Debug print for each vehicle
                               print('🚗 Vehicle $index: $vehicleType, Price/km: ₹$pricePerKm');
 
                               // ✅ Calculate fare with validation
-                              final baseFare = currentDistance > 0 && pricePerKm > 0
-                                  ? (currentDistance * pricePerKm).round()
-                                  : 0;
+                           final calculatedFare = calculateTieredFare(
+                                distanceKm: currentDistance,
+                                baseKmStart: baseKmStart,
+                                baseKmEnd: baseKmEnd,
+                                baseFare: baseFare,
+                                pricePerKm: pricePerKm,
+                              ).round();
+
 
                               final isSelected = selectedVehicleType == vehicleType;
 
                               // Apply discount if selected
-                              int displayFare = baseFare;
+                              int displayFare = calculatedFare;
                               if (isSelected && appState.discountAmount > 0) {
-                                displayFare = (baseFare - appState.discountAmount)
+                                displayFare = (calculatedFare - appState.discountAmount)
                                     .round()
                                     .clamp(0, 999999);
                               }
@@ -863,7 +900,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                                               // ✅ Show price per km for transparency
                                               if (pricePerKm > 0)
                                                 Text(
-                                                  '₹${pricePerKm.toStringAsFixed(1)}/km',
+                                                  '₹${baseFare.toStringAsFixed(0)} (1–${baseKmEnd.toInt()}km) + ₹${pricePerKm.toStringAsFixed(0)}/km after',
                                                   style: GoogleFonts.inter(
                                                     fontSize: 10,
                                                     color: Colors.grey,
@@ -1091,34 +1128,71 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
 
       // ✅ Get vehicle details with caching
       final vehicleData = await _getVehicleData();
-      double pricePerKm = 0.0;
+      // -------------------------------
+// GET PRICING FOR SELECTED VEHICLE
+// -------------------------------
+      double baseKmStart = 1;
+      double baseKmEnd = 5;
+      double baseFare = 0;
+      double pricePerKm = 0;
 
       for (var vehicle in vehicleData) {
-        String? vType = getJsonField(vehicle, r'''$.vehicle_type''')?.toString();
+        String? vType =
+            getJsonField(vehicle, r'''$.vehicle_type''')?.toString();
         vType ??= getJsonField(vehicle, r'''$.vehicle_name''')?.toString();
 
         if (vType == selectedVehicleType) {
-          final priceField = getJsonField(vehicle, r'''$.kilometer_per_price''');
-          if (priceField != null) {
-            if (priceField is num) {
-              pricePerKm = priceField.toDouble();
-            } else {
-              pricePerKm = double.tryParse(priceField.toString()) ?? 0.0;
-            }
-          }
+          final pricing = getJsonField(vehicle, r'''$.pricing''');
+
+          baseKmStart = double.tryParse(
+                getJsonField(pricing, r'''$.base_km_start''').toString(),
+              ) ??
+              1;
+
+          baseKmEnd = double.tryParse(
+                getJsonField(pricing, r'''$.base_km_end''').toString(),
+              ) ??
+              5;
+
+          baseFare = double.tryParse(
+                getJsonField(pricing, r'''$.base_fare''').toString(),
+              ) ??
+              0;
+
+          pricePerKm = double.tryParse(
+                getJsonField(pricing, r'''$.price_per_km''').toString(),
+              ) ??
+              0;
+
           break;
         }
       }
+
+      if (baseFare == 0 || pricePerKm == 0) {
+        throw Exception('Invalid pricing data for selected vehicle');
+      }
+
+// -------------------------------
+// FINAL FARE CALCULATION
+// -------------------------------
+      final int finalBaseFare = calculateTieredFare(
+        distanceKm: roadDistance,
+        baseKmStart: baseKmStart,
+        baseKmEnd: baseKmEnd,
+        baseFare: baseFare,
+        pricePerKm: pricePerKm,
+      ).round();
+
+    final int finalFare = (finalBaseFare - appState.discountAmount.round())
+          .clamp(0, 999999)
+          .toInt();
+
 
       if (pricePerKm == 0) {
         throw Exception('Unable to calculate fare for selected vehicle');
       }
 
-      // ✅ Calculate fares
-      final baseFare = (roadDistance * pricePerKm).round();
-      final finalFare = (baseFare - appState.discountAmount)
-          .round()
-          .clamp(0, 999999);
+    
 
       print('💰 Fare Calculation:');
       print('   Distance: ${roadDistance.toStringAsFixed(2)} km');
