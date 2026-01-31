@@ -696,7 +696,7 @@ class CreateRideCall {
   "pickup_longitude": ${pickupLongitude},
   "drop_latitude": ${dropLatitude},
   "drop_longitude": ${dropLongitude},
-  "ride_type": "${rideType}"
+  "admin_vehicle_id": "${rideType}"
 }''';
       response = await ApiManager.instance.makeApiCall(
         callName: 'CreateRide',

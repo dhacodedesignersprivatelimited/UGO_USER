@@ -697,7 +697,7 @@ double calculateTieredFare({
                               // ✅ FIXED: Try multiple field names for vehicle type
                               String? vehicleType = getJsonField(
                                 dataItem,
-                                r'''$.vehicle_type''',
+                                r'''$.pricing.vehicle_id''',
                               )?.toString();
                               vehicleType ??= getJsonField(
                                 dataItem,
