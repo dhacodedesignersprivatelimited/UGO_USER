@@ -1,14 +1,17 @@
 import 'dart:convert';
-
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '/flutter_flow/flutter_flow_util.dart';
-
 import 'api_manager.dart';
 
 export 'api_manager.dart' show ApiCallResponse;
 
 const _kPrivateApiFunctionName = 'ffPrivateApiCall';
+
+/// ---------------------------------------------------------------------------
+/// USER MANAGEMENT
+/// ---------------------------------------------------------------------------
 
 class CreateUserCall {
   static Future<ApiCallResponse> call({
@@ -209,6 +212,10 @@ class UpdateProfileImageCall {
   }
 }
 
+/// ---------------------------------------------------------------------------
+/// RIDE HISTORY
+/// ---------------------------------------------------------------------------
+
 class GetRideHistoryCall {
   static Future<ApiCallResponse> call({
     required int userId,
@@ -344,7 +351,10 @@ class GetRideHistoryCall {
   static String? firstTime(dynamic response) => times(response)?.firstOrNull;
 }
 
-// ✅ UPDATED CLASS STRUCTURE WITH BOTH INSTANCE AND STATIC METHODS
+/// ---------------------------------------------------------------------------
+/// VEHICLE & RIDE MANAGEMENT
+/// ---------------------------------------------------------------------------
+
 class GetVehicleDetailsCall {
   // Instance members for object usage
   bool? success;
@@ -401,11 +411,13 @@ class GetVehicleDetailsCall {
         alwaysAllowBody: false,
       );
 
-      if (response.statusCode == 200) { // Assuming 200 indicates success
+      if (response.statusCode == 200) {
+        // Assuming 200 indicates success
         return response;
       } else {
         if (kDebugMode) {
-          print('GetVehicleDetailsCall failed with status code: ${response.statusCode}. Retrying...');
+          print(
+              'GetVehicleDetailsCall failed with status code: ${response.statusCode}. Retrying...');
         }
         currentRetry++;
         if (currentRetry <= maxRetries) {
@@ -487,14 +499,13 @@ class GetVehicleDetailsCall {
       .toList();
 }
 
-// ✅ NEW VEHICLE DATA CLASS (With extra fields for compatibility)
 class VehicleData {
   int? id;
   int? vehicleTypeId;
   int? rideCategory;
   String? vehicleName;
-  String? vehicleType; // Added for compatibility
-  double? kilometerPerPrice; // Added for compatibility
+  String? vehicleType;
+  double? kilometerPerPrice;
   int? seatingCapacity;
   int? luggageCapacity;
   String? vehicleImage;
@@ -522,9 +533,8 @@ class VehicleData {
     vehicleTypeId = json['vehicle_type_id'];
     rideCategory = json['ride_category'];
     vehicleName = json['vehicle_name'];
-    vehicleType = json['vehicle_type']; // Reads from JSON
-    kilometerPerPrice =
-        json['kilometer_per_price']?.toDouble(); // Reads from JSON
+    vehicleType = json['vehicle_type'];
+    kilometerPerPrice = json['kilometer_per_price']?.toDouble();
     seatingCapacity = json['seating_capacity'];
     luggageCapacity = json['luggage_capacity'];
     vehicleImage = json['vehicle_image'];
@@ -573,7 +583,7 @@ class GetRideStatus {
   static int? count(dynamic response) => castToType<int>(
     getJsonField(
       response,
-    r'''$.data.count''',
+      r'''$.data.count''',
     ),
   );
   static List? rides(dynamic response) => getJsonField(
@@ -587,10 +597,7 @@ class GetRideStatus {
       r'''$.data.rides[:].ride_status''',
       true,
     ) as List?;
-    return list
-        ?.where((e) => e != null)
-        .map((e) => e.toString())
-        .toList();
+    return list?.where((e) => e != null).map((e) => e.toString()).toList();
   }
 
   static List<String?>? dropAddress(dynamic response) => (getJsonField(
@@ -641,6 +648,8 @@ class GetRideDetailsCall {
   }
 }
 
+// ✅ FIXED: CreateRideCall updated to match expected API Body
+// Uses "admin_vehicle_id" (INT) instead of "ride_type"
 class CreateRideCall {
   bool? success;
   int? statusCode;
@@ -667,7 +676,7 @@ class CreateRideCall {
     return data;
   }
 
-  // Static call method
+  // ✅ STATIC CALL METHOD
   static Future<ApiCallResponse> call({
     String? token,
     int? userId,
@@ -677,27 +686,42 @@ class CreateRideCall {
     double? pickupLongitude,
     double? dropLatitude,
     double? dropLongitude,
-    String? rideType,
+    int? adminVehicleId, // ✅ Changed from rideType (String) to adminVehicleId (int)
+    String? guestName,
+    String? guestPhone,
+    String? guestInstructions,
     int retryCount = 0,
   }) async {
-    const int maxRetries = 3; // Maximum number of retries
-    const Duration delayDuration = Duration(seconds: 2); // Delay between retries
+    const int maxRetries = 3;
+    const Duration delayDuration = Duration(seconds: 2);
 
     ApiCallResponse? response;
     int currentRetry = retryCount;
 
     while (currentRetry <= maxRetries) {
-      final ffApiRequestBody = '''
-{
-  "user_id": ${userId},
-  "pickup_location_address": "${escapeStringForJson(pickupLocationAddress)}",
-  "drop_location_address": "${escapeStringForJson(dropLocationAddress)}",
-  "pickup_latitude": ${pickupLatitude},
-  "pickup_longitude": ${pickupLongitude},
-  "drop_latitude": ${dropLatitude},
-  "drop_longitude": ${dropLongitude},
-  "admin_vehicle_id": "${rideType}"
-}''';
+      // ✅ Construct JSON exactly like the working cURL request
+      final Map<String, dynamic> requestBody = {
+        "user_id": userId,
+        "pickup_location_address": pickupLocationAddress,
+        "pickup_latitude": pickupLatitude,
+        "pickup_longitude": pickupLongitude,
+        "drop_location_address": dropLocationAddress,
+        "drop_latitude": dropLatitude,
+        "drop_longitude": dropLongitude,
+        "admin_vehicle_id": adminVehicleId, // Sending INT
+      };
+
+      // Add guest fields if present
+      if (guestName != null && guestName.isNotEmpty) {
+        requestBody["guest_name"] = guestName;
+      }
+      if (guestPhone != null && guestPhone.isNotEmpty) {
+        requestBody["guest_phone"] = guestPhone;
+      }
+      if (guestInstructions != null && guestInstructions.isNotEmpty) {
+        requestBody["guest_instructions"] = guestInstructions;
+      }
+
       response = await ApiManager.instance.makeApiCall(
         callName: 'CreateRide',
         apiUrl: 'https://ugotaxi.icacorp.org/api/rides/post',
@@ -707,7 +731,7 @@ class CreateRideCall {
           'Content-Type': 'application/json',
         },
         params: {},
-        body: ffApiRequestBody,
+        body: jsonEncode(requestBody), // Cleaner JSON encoding
         bodyType: BodyType.JSON,
         returnBody: true,
         encodeBodyUtf8: false,
@@ -717,11 +741,12 @@ class CreateRideCall {
         alwaysAllowBody: false,
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
         return response;
       } else {
         if (kDebugMode) {
-          print('CreateRideCall failed with status code: ${response.statusCode}. Retrying...');
+          print(
+              'CreateRideCall failed with status code: ${response.statusCode}. Retrying...');
         }
         currentRetry++;
         if (currentRetry <= maxRetries) {
@@ -729,7 +754,7 @@ class CreateRideCall {
         }
       }
     }
-    return response!; // Return the last response, even if it failed
+    return response!;
   }
 
   // Response helper methods
@@ -848,9 +873,10 @@ class Data {
   }
 }
 
-// ---------------------------------------------------------------------------
-// ✅ DriverIdfetchCall CLASS DEFINITION
-// ---------------------------------------------------------------------------
+/// ---------------------------------------------------------------------------
+/// DRIVER MANAGEMENT
+/// ---------------------------------------------------------------------------
+
 class DriverIdfetchCall {
   static Future<ApiCallResponse> call({
     String? token = '',
@@ -1062,7 +1088,8 @@ class GetDriverDetailsCall {
   }
 
   static String? vehicleType(dynamic response) {
-    var type = castToType<String>(getJsonField(response, r'''$.vehicle_type'''));
+    var type =
+    castToType<String>(getJsonField(response, r'''$.vehicle_type'''));
     type ??= castToType<String>(getJsonField(response, r'''$.vehicle_name'''));
     type ??=
         castToType<String>(getJsonField(response, r'''$.data.vehicle_type'''));
@@ -1204,12 +1231,10 @@ class CancelRide {
 
   // ✅ Added Response Helper Methods
   static bool? success(dynamic response) => castToType<bool>(
-    getJsonField(response,
-    r'''$.success'''),
+    getJsonField(response, r'''$.success'''),
   );
   static String? message(dynamic response) => castToType<String>(
-    getJsonField(response,
-    r'''$.message'''),
+    getJsonField(response, r'''$.message'''),
   );
 }
 

@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math' show cos, sqrt, asin, sin;
@@ -17,7 +16,6 @@ import 'dart:io';
 import 'avaliable_options_model.dart';
 export 'avaliable_options_model.dart';
 
-// ✅ SECURITY: Move to environment variable or backend proxy
 const String GOOGLE_MAPS_API_KEY = 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y';
 
 class AvaliableOptionsWidget extends StatefulWidget {
@@ -36,23 +34,19 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late AnimationController _animationController;
 
-  // ✅ State variables
   String? selectedVehicleType;
   bool isLoadingRide = false;
   bool isScanning = false;
   bool isCalculatingRoute = false;
 
-  // ✅ Map state
   GoogleMapController? mapController;
   Set<Marker> markers = {};
   Set<Polyline> polylines = {};
   bool showMap = true;
 
-  // ✅ Route data
   double? googleDistanceKm;
   String? googleDuration;
 
-  // ✅ Cached vehicle data for performance
   List<dynamic>? _cachedVehicleData;
 
   @override
@@ -65,30 +59,14 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     );
     _animationController.forward();
     _initializeMap();
-
-    // ✅ DEBUG: Remove in production
-    _debugVehicleAPI();
-  }
-
-  // ✅ DEBUG: Check vehicle API response
-  Future<void> _debugVehicleAPI() async {
-    try {
-      final response = await GetVehicleDetailsCall.call();
-      print('🚗 Vehicle API Full Response:');
-      print(jsonEncode(response.jsonBody));
-      print('\n🚗 Parsed Data:');
-      final data = getJsonField(response.jsonBody, r'''$.data''');
-      print(jsonEncode(data));
-    } catch (e) {
-      print('❌ Vehicle API Error: $e');
-    }
   }
 
   Future<void> _initializeMap() async {
     await _addMarkers();
     await _getRoutePolyline();
   }
-double calculateTieredFare({
+
+  double calculateTieredFare({
     required double distanceKm,
     required double baseKmStart,
     required double baseKmEnd,
@@ -96,34 +74,32 @@ double calculateTieredFare({
     required double pricePerKm,
   }) {
     if (distanceKm <= 0) return 0;
-
     if (distanceKm <= baseKmEnd) {
       return baseFare;
     }
-
     final extraKm = distanceKm - baseKmEnd;
     final extraFare = extraKm * pricePerKm;
-
     return baseFare + extraFare;
   }
 
   Future<void> _addMarkers() async {
-    if (FFAppState().pickupLatitude != null &&
-        FFAppState().pickupLongitude != null &&
-        FFAppState().dropLatitude != null &&
-        FFAppState().dropLongitude != null) {
+    final appState = FFAppState();
+    if (appState.pickupLatitude != null &&
+        appState.pickupLongitude != null &&
+        appState.dropLatitude != null &&
+        appState.dropLongitude != null) {
       setState(() {
         markers.clear();
         markers.add(
           Marker(
             markerId: MarkerId('pickup'),
             position: LatLng(
-              FFAppState().pickupLatitude!,
-              FFAppState().pickupLongitude!,
+              appState.pickupLatitude!,
+              appState.pickupLongitude!,
             ),
             infoWindow: InfoWindow(
               title: 'Pickup Location',
-              snippet: FFAppState().pickuplocation,
+              snippet: appState.pickuplocation,
             ),
             icon: BitmapDescriptor.defaultMarkerWithHue(
               BitmapDescriptor.hueGreen,
@@ -135,12 +111,12 @@ double calculateTieredFare({
           Marker(
             markerId: MarkerId('drop'),
             position: LatLng(
-              FFAppState().dropLatitude!,
-              FFAppState().dropLongitude!,
+              appState.dropLatitude!,
+              appState.dropLongitude!,
             ),
             infoWindow: InfoWindow(
               title: 'Drop Location',
-              snippet: FFAppState().droplocation,
+              snippet: appState.droplocation,
             ),
             icon: BitmapDescriptor.defaultMarkerWithHue(
               BitmapDescriptor.hueRed,
@@ -151,12 +127,12 @@ double calculateTieredFare({
     }
   }
 
-  // ✅ IMPROVED: Better error handling for route calculation
   Future<void> _getRoutePolyline() async {
-    if (FFAppState().pickupLatitude == null ||
-        FFAppState().pickupLongitude == null ||
-        FFAppState().dropLatitude == null ||
-        FFAppState().dropLongitude == null) {
+    final appState = FFAppState();
+    if (appState.pickupLatitude == null ||
+        appState.pickupLongitude == null ||
+        appState.dropLatitude == null ||
+        appState.dropLongitude == null) {
       _showError('Invalid location coordinates');
       return;
     }
@@ -166,8 +142,8 @@ double calculateTieredFare({
     try {
       final String url =
           'https://maps.googleapis.com/maps/api/directions/json?'
-          'origin=${FFAppState().pickupLatitude},${FFAppState().pickupLongitude}'
-          '&destination=${FFAppState().dropLatitude},${FFAppState().dropLongitude}'
+          'origin=${appState.pickupLatitude},${appState.pickupLongitude}'
+          '&destination=${appState.dropLatitude},${appState.dropLongitude}'
           '&key=$GOOGLE_MAPS_API_KEY';
 
       final response = await http.get(Uri.parse(url)).timeout(
@@ -178,7 +154,6 @@ double calculateTieredFare({
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
 
-        // ✅ Check API response status
         if (json['status'] != 'OK') {
           throw Exception('Google Maps API error: ${json['status']}');
         }
@@ -221,43 +196,12 @@ double calculateTieredFare({
           'Failed to fetch route: ${response.statusCode}',
         );
       }
-    } on TimeoutException catch (e) {
-      print('⏱️ Timeout: $e');
-      _useFallbackDistance();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Route calculation timed out. Using estimated distance.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-    } on SocketException catch (e) {
-      print('🌐 Network error: $e');
-      _useFallbackDistance();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('No internet connection'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     } catch (e) {
-      print('❌ Error getting route: $e');
+      print('❌ Route Error (Using Fallback): $e');
       _useFallbackDistance();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not calculate route. Using estimated distance.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
     }
   }
 
-  // ✅ Fallback to Haversine distance calculation
   void _useFallbackDistance() {
     final appState = FFAppState();
     if (appState.pickupLatitude != null &&
@@ -347,12 +291,9 @@ double calculateTieredFare({
     mapController?.dispose();
     _animationController.dispose();
     _model.dispose();
-
-    // ✅ Clear data to free memory
     markers.clear();
     polylines.clear();
     _cachedVehicleData = null;
-
     super.dispose();
   }
 
@@ -371,7 +312,6 @@ double calculateTieredFare({
     return earthRadius * c;
   }
 
-  // ✅ Cache vehicle data for performance and retry mechanism
   Future<List<dynamic>> _getVehicleData({bool forceRefresh = false}) async {
     if (_cachedVehicleData != null && !forceRefresh) {
       return _cachedVehicleData!;
@@ -382,7 +322,6 @@ double calculateTieredFare({
       response = await GetVehicleDetailsCall.call();
     } catch (e) {
       print('❌ Error calling GetVehicleDetailsCall: $e');
-      _showError('Failed to fetch vehicle details. Please retry.');
       return [];
     }
 
@@ -394,17 +333,11 @@ double calculateTieredFare({
       _cachedVehicleData = jsonList;
       return jsonList;
     } else {
-      final errorMsg = getJsonField(
-        response.jsonBody,
-        r'''$.message''',
-      )?.toString() ?? 'Failed to load vehicles from API.';
-      print('❌ GetVehicleDetailsCall failed: ${response.statusCode} - $errorMsg');
-      _showError(errorMsg);
+      print('❌ GetVehicleDetailsCall failed: ${response.statusCode}');
       return [];
     }
   }
 
-  // ✅ Show error snackbar
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -427,7 +360,6 @@ double calculateTieredFare({
   Widget build(BuildContext context) {
     final appState = context.watch<FFAppState>();
 
-    // ✅ Use single source of truth for distance
     double currentDistance = googleDistanceKm ?? 0.0;
     if (currentDistance == 0.0 &&
         appState.pickupLatitude != null &&
@@ -449,7 +381,6 @@ double calculateTieredFare({
         backgroundColor: Colors.white,
         body: Stack(
           children: [
-            // ✅ Map Section
             Positioned.fill(
               bottom: MediaQuery.of(context).size.height * 0.45,
               child: Stack(
@@ -475,8 +406,6 @@ double calculateTieredFare({
                     myLocationEnabled: true,
                     myLocationButtonEnabled: false,
                   ),
-
-                  // ✅ Loading overlay for route calculation
                   if (isCalculatingRoute)
                     Container(
                       color: Colors.black26,
@@ -488,9 +417,7 @@ double calculateTieredFare({
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                CircularProgressIndicator(
-                                  color: Color(0xFFFF7B10),
-                                ),
+                                CircularProgressIndicator(color: Color(0xFFFF7B10)),
                                 SizedBox(height: 16),
                                 Text(
                                   'Calculating best route...',
@@ -508,8 +435,6 @@ double calculateTieredFare({
                 ],
               ),
             ),
-
-            // ✅ Back Button
             Positioned(
               top: MediaQuery.of(context).padding.top + 16,
               left: 16,
@@ -521,16 +446,12 @@ double calculateTieredFare({
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: Colors.black12, blurRadius: 8)
-                    ],
+                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
                   ),
                   child: Icon(Icons.arrow_back, color: Colors.black, size: 24),
                 ),
               ),
             ),
-
-            // ✅ Bottom Sheet with Vehicle Options
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
@@ -549,7 +470,6 @@ double calculateTieredFare({
                 ),
                 child: Column(
                   children: [
-                    // ✅ Handle bar
                     Container(
                       margin: EdgeInsets.only(top: 12, bottom: 8),
                       width: 40,
@@ -559,8 +479,6 @@ double calculateTieredFare({
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-
-                    // ✅ Header
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
@@ -575,24 +493,17 @@ double calculateTieredFare({
                             ),
                           ),
                           Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
                               color: Color(0xFFFFF3F0),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
                               children: [
-                                Icon(
-                                  Icons.speed,
-                                  color: Color(0xFFFF7B10),
-                                  size: 14,
-                                ),
+                                Icon(Icons.speed, color: Color(0xFFFF7B10), size: 14),
                                 SizedBox(width: 4),
                                 Text(
-                                  '${currentDistance.toStringAsFixed(1)} km • ${googleDuration ?? "Calculating..."}',
+                                  '${currentDistance.toStringAsFixed(1)} km • ${googleDuration ?? "..."}',
                                   style: GoogleFonts.inter(
                                     color: Color(0xFFFF7B10),
                                     fontSize: 12,
@@ -606,150 +517,41 @@ double calculateTieredFare({
                       ),
                     ),
                     SizedBox(height: 16),
-
-                    // ✅ IMPROVED: Vehicle List
                     Expanded(
                       child: FutureBuilder<List<dynamic>>(
-                        future: _getVehicleData(), // Uses cache on rebuild
+                        future: _getVehicleData(),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
-                            return Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFFFF7B10),
-                              ),
-                            );
+                            return Center(child: CircularProgressIndicator(color: Color(0xFFFF7B10)));
                           }
-
-                          // ✅ Error handling
                           if (snapshot.hasError) {
-                            return Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    size: 48,
-                                    color: Colors.red,
-                                  ),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'Failed to load vehicles',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 8),
-                                  TextButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _cachedVehicleData = null;
-                                        // Trigger a re-fetch of vehicle data
-                                        _getVehicleData(forceRefresh: true);
-                                      });
-                                    },
-                                    child: Text('Retry'),
-                                  ),
-                                ],
-                              ),
-                            );
+                            return Center(child: Text('Failed to load vehicles'));
                           }
-
                           final jsonList = snapshot.data ?? [];
-
                           if (jsonList.isEmpty) {
-                            return Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.directions_car,
-                                    size: 48,
-                                    color: Colors.grey,
-                                  ),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'No vehicles available',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Please try again later',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
+                            return Center(child: Text('No vehicles available'));
                           }
-
                           return ListView.builder(
                             padding: EdgeInsets.symmetric(horizontal: 16),
                             itemCount: jsonList.length,
                             itemBuilder: (context, index) {
                               final dataItem = jsonList[index];
 
-                              // ✅ FIXED: Try multiple field names for vehicle type
-                              String? vehicleType = getJsonField(
-                                dataItem,
-                                r'''$.pricing.vehicle_id''',
-                              )?.toString();
-                                  String? vehicleName = getJsonField(
-                                dataItem,
-                                r'''$.vehicle_name''',
-                              )?.toString();
-                              vehicleType ??= getJsonField(
-                                dataItem,
-                                r'''$.vehicle_name''',
-                              )?.toString();
-                              vehicleType ??= 'Unknown Vehicle';
+                              String? vehicleType = getJsonField(dataItem, r'''$.pricing.vehicle_id''')?.toString();
+                              String? vehicleName = getJsonField(dataItem, r'''$.vehicle_name''')?.toString();
+                              vehicleType ??= getJsonField(dataItem, r'''$.vehicle_name''')?.toString();
 
-                              // Remove 'null' string if API returns it
-                              if (vehicleType == 'null' || vehicleType.isEmpty) {
-                                vehicleType = 'Vehicle ${index + 1}';
+                              if (vehicleType == null || vehicleType == 'null' || vehicleType.isEmpty) {
+                                vehicleType = '1'; // Default ID if missing
                               }
 
-                              // ✅ FIXED: Better price parsing with validation
-                             final pricing =
-                                  getJsonField(dataItem, r'''$.pricing''');
+                              final pricing = getJsonField(dataItem, r'''$.pricing''');
+                              final baseKmStart = double.tryParse(getJsonField(pricing, r'''$.base_km_start''').toString()) ?? 1;
+                              final baseKmEnd = double.tryParse(getJsonField(pricing, r'''$.base_km_end''').toString()) ?? 5;
+                              final baseFare = double.tryParse(getJsonField(pricing, r'''$.base_fare''').toString()) ?? 0;
+                              final pricePerKm = double.tryParse(getJsonField(pricing, r'''$.price_per_km''').toString()) ?? 0;
 
-                              final baseKmStart = double.tryParse(
-                                    getJsonField(
-                                            pricing, r'''$.base_km_start''')
-                                        .toString(),
-                                  ) ??
-                                  1;
-
-                              final baseKmEnd = double.tryParse(
-                                    getJsonField(pricing, r'''$.base_km_end''')
-                                        .toString(),
-                                  ) ??
-                                  5;
-
-                              final baseFare = double.tryParse(
-                                    getJsonField(pricing, r'''$.base_fare''')
-                                        .toString(),
-                                  ) ??
-                                  0;
-
-                              final pricePerKm = double.tryParse(
-                                    getJsonField(pricing, r'''$.price_per_km''')
-                                        .toString(),
-                                  ) ??
-                                  0;
-
-                 
-
-                              // ✅ Debug print for each vehicle
-                              print('🚗 Vehicle $index: $vehicleType, Price/km: ₹$pricePerKm');
-
-                              // ✅ Calculate fare with validation
-                           final calculatedFare = calculateTieredFare(
+                              final calculatedFare = calculateTieredFare(
                                 distanceKm: currentDistance,
                                 baseKmStart: baseKmStart,
                                 baseKmEnd: baseKmEnd,
@@ -757,37 +559,21 @@ double calculateTieredFare({
                                 pricePerKm: pricePerKm,
                               ).round();
 
-
                               final isSelected = selectedVehicleType == vehicleType;
-
-                              // Apply discount if selected
                               int displayFare = calculatedFare;
                               if (isSelected && appState.discountAmount > 0) {
-                                displayFare = (calculatedFare - appState.discountAmount)
-                                    .round()
-                                    .clamp(0, 999999);
+                                displayFare = (calculatedFare - appState.discountAmount).round().clamp(0, 999999);
                               }
 
-                              // ✅ Get vehicle image with fallback
-                              String? vehicleImagePath = getJsonField(
-                                dataItem,
-                                r'''$.vehicle_image''',
-                              )?.toString();
+                              String? vehicleImagePath = getJsonField(dataItem, r'''$.vehicle_image''')?.toString();
                               String? vehicleImageUrl;
-
-                              if (vehicleImagePath != null &&
-                                  vehicleImagePath != 'null' &&
-                                  vehicleImagePath.isNotEmpty) {
+                              if (vehicleImagePath != null && vehicleImagePath != 'null' && vehicleImagePath.isNotEmpty) {
                                 vehicleImageUrl = vehicleImagePath.startsWith('http')
                                     ? vehicleImagePath
                                     : 'https://ugotaxi.icacorp.org/$vehicleImagePath';
                               }
 
-                              // ✅ Get seating capacity
-                              final seatingCapacity = getJsonField(
-                                dataItem,
-                                r'''$.seating_capacity''',
-                              )?.toString() ?? '';
+                              final seatingCapacity = getJsonField(dataItem, r'''$.seating_capacity''')?.toString() ?? '';
 
                               return Padding(
                                 padding: EdgeInsets.only(bottom: 12),
@@ -807,109 +593,47 @@ double calculateTieredFare({
                                     duration: Duration(milliseconds: 200),
                                     padding: EdgeInsets.all(16),
                                     decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? Color(0xFFFDECD2).withOpacity(0.3)
-                                          : Colors.white,
+                                      color: isSelected ? Color(0xFFFDECD2).withOpacity(0.3) : Colors.white,
                                       borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
-                                        color: isSelected
-                                            ? Color(0xFFFF7B10)
-                                            : Color(0xFFEEEEEE),
+                                        color: isSelected ? Color(0xFFFF7B10) : Color(0xFFEEEEEE),
                                         width: isSelected ? 2 : 1,
                                       ),
                                     ),
                                     child: Row(
                                       children: [
-                                        // ✅ Vehicle image with better error handling
                                         vehicleImageUrl != null
                                             ? Image.network(
                                           vehicleImageUrl,
                                           width: 60,
                                           height: 60,
                                           fit: BoxFit.contain,
-                                          loadingBuilder: (context, child, loadingProgress) {
-                                            if (loadingProgress == null) return child;
-                                            return SizedBox(
-                                              width: 60,
-                                              height: 60,
-                                              child: Center(
-                                                child: CircularProgressIndicator(
-                                                  value: loadingProgress.expectedTotalBytes != null
-                                                      ? loadingProgress.cumulativeBytesLoaded /
-                                                      loadingProgress.expectedTotalBytes!
-                                                      : null,
-                                                  strokeWidth: 2,
-                                                  color: Color(0xFFFF7B10),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          errorBuilder: (_, __, ___) => Icon(
-                                            Icons.directions_car,
-                                            size: 40,
-                                            color: Colors.grey,
-                                          ),
+                                          errorBuilder: (_, __, ___) => Icon(Icons.directions_car, size: 40, color: Colors.grey),
                                         )
-                                            : Icon(
-                                          Icons.directions_car,
-                                          size: 40,
-                                          color: Colors.grey,
-                                        ),
+                                            : Icon(Icons.directions_car, size: 40, color: Colors.grey),
                                         SizedBox(width: 16),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                vehicleName!,
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
+                                                vehicleName ?? "Car",
+                                                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
                                               ),
                                               SizedBox(height: 4),
                                               Row(
                                                 children: [
                                                   Text(
                                                     'Get ride in 2 mins',
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 12,
-                                                      color: Color(0xFF00D084),
-                                                      fontWeight: FontWeight.w600,
-                                                    ),
+                                                    style: GoogleFonts.inter(fontSize: 12, color: Color(0xFF00D084), fontWeight: FontWeight.w600),
                                                   ),
                                                   if (seatingCapacity.isNotEmpty) ...[
-                                                    Text(
-                                                      ' • ',
-                                                      style: TextStyle(
-                                                        color: Colors.grey,
-                                                        fontSize: 12,
-                                                      ),
-                                                    ),
-                                                    Icon(
-                                                      Icons.person,
-                                                      size: 12,
-                                                      color: Colors.grey,
-                                                    ),
-                                                    Text(
-                                                      ' $seatingCapacity',
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 11,
-                                                        color: Colors.grey,
-                                                      ),
-                                                    ),
+                                                    Text(' • ', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                                    Icon(Icons.person, size: 12, color: Colors.grey),
+                                                    Text(' $seatingCapacity', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
                                                   ],
                                                 ],
                                               ),
-                                              // ✅ Show price per km for transparency
-                                              if (pricePerKm > 0)
-                                                Text(
-                                                  '₹${baseFare.toStringAsFixed(0)} (1–${baseKmEnd.toInt()}km) + ₹${pricePerKm.toStringAsFixed(0)}/km after',
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 10,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
                                             ],
                                           ),
                                         ),
@@ -917,14 +641,7 @@ double calculateTieredFare({
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             if (isSelected && appState.discountAmount > 0 && baseFare > 0) ...[
-                                              Text(
-                                                '₹$baseFare',
-                                                style: TextStyle(
-                                                  decoration: TextDecoration.lineThrough,
-                                                  color: Colors.grey,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
+                                              Text('₹$baseFare', style: TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey, fontSize: 12)),
                                               SizedBox(height: 2),
                                             ],
                                             Text(
@@ -932,30 +649,9 @@ double calculateTieredFare({
                                               style: GoogleFonts.inter(
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.w900,
-                                                color: displayFare > 0
-                                                    ? Colors.black
-                                                    : Colors.grey,
+                                                color: displayFare > 0 ? Colors.black : Colors.grey,
                                               ),
                                             ),
-                                            if (isSelected && displayFare > 0)
-                                              Text(
-                                                'Best Price',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Color(0xFFFF7B10),
-                                                ),
-                                              ),
-                                            // ✅ Show warning if fare is 0
-                                            if (displayFare == 0)
-                                              Text(
-                                                'Unavailable',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 9,
-                                                  color: Colors.red,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
                                           ],
                                         ),
                                       ],
@@ -968,24 +664,11 @@ double calculateTieredFare({
                         },
                       ),
                     ),
-
-                    // ✅ Bottom Action Bar
                     Container(
-                      padding: EdgeInsets.fromLTRB(
-                        16,
-                        16,
-                        16,
-                        MediaQuery.of(context).padding.bottom + 16,
-                      ),
+                      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 10,
-                            offset: Offset(0, -2),
-                          )
-                        ],
+                        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))],
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -996,18 +679,9 @@ double calculateTieredFare({
                                 onTap: () => context.pushNamed(WalletWidget.routeName),
                                 child: Row(
                                   children: [
-                                    Icon(
-                                      Icons.wallet,
-                                      size: 18,
-                                      color: Color(0xFF00D084),
-                                    ),
+                                    Icon(Icons.wallet, size: 18, color: Color(0xFF00D084)),
                                     SizedBox(width: 8),
-                                    Text(
-                                      'Cash',
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
+                                    Text('Cash', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                                   ],
                                 ),
                               ),
@@ -1017,22 +691,14 @@ double calculateTieredFare({
                                 child: Row(
                                   children: [
                                     Icon(
-                                      appState.appliedCouponCode.isEmpty
-                                          ? Icons.local_offer_outlined
-                                          : Icons.check_circle,
+                                      appState.appliedCouponCode.isEmpty ? Icons.local_offer_outlined : Icons.check_circle,
                                       size: 16,
                                       color: Color(0xFFFF7B10),
                                     ),
                                     SizedBox(width: 6),
                                     Text(
-                                      appState.appliedCouponCode.isEmpty
-                                          ? 'Apply Coupon'
-                                          : 'Coupon Applied: ${appState.appliedCouponCode}',
-                                      style: GoogleFonts.inter(
-                                        color: Color(0xFFFF7B10),
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 13,
-                                      ),
+                                      appState.appliedCouponCode.isEmpty ? 'Apply Coupon' : 'Coupon Applied: ${appState.appliedCouponCode}',
+                                      style: GoogleFonts.inter(color: Color(0xFFFF7B10), fontWeight: FontWeight.w700, fontSize: 13),
                                     ),
                                   ],
                                 ),
@@ -1044,34 +710,16 @@ double calculateTieredFare({
                             width: double.infinity,
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: isLoadingRide || selectedVehicleType == null
-                                  ? null
-                                  : _confirmBooking,
+                              onPressed: isLoadingRide || selectedVehicleType == null ? null : _confirmBooking,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Color(0xFFFF7B10),
                                 disabledBackgroundColor: Colors.grey[300],
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 elevation: 0,
                               ),
                               child: isLoadingRide
-                                  ? SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                                  : Text(
-                                'CONFIRM BOOKING',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
+                                  ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                                  : Text('CONFIRM BOOKING', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
                             ),
                           ),
                         ],
@@ -1087,11 +735,10 @@ double calculateTieredFare({
     );
   }
 
-  // ✅ IMPROVED: Complete validation and error handling
+  // ✅ FIXED CONFIRM BOOKING
   Future<void> _confirmBooking() async {
     final appState = FFAppState();
 
-    // ✅ Validate all required data
     if (selectedVehicleType == null) {
       _showError('Please select a vehicle type');
       return;
@@ -1101,12 +748,12 @@ double calculateTieredFare({
         appState.pickupLongitude == null ||
         appState.dropLatitude == null ||
         appState.dropLongitude == null) {
-      _showError('Invalid location data. Please go back and select locations again.');
+      _showError('Invalid location data. Please re-select locations.');
       return;
     }
 
     if (appState.accessToken.isEmpty) {
-      _showError('Authentication error. Please login again.');
+      _showError('Session expired. Please login again.');
       context.pushNamed(LoginWidget.routeName);
       return;
     }
@@ -1114,7 +761,6 @@ double calculateTieredFare({
     setState(() => isLoadingRide = true);
 
     try {
-      // ✅ Calculate road distance
       double roadDistance = googleDistanceKm ?? 0.0;
       if (roadDistance == 0) {
         roadDistance = calculateDistance(
@@ -1125,60 +771,29 @@ double calculateTieredFare({
         );
       }
 
-      // Validate distance
-      if (roadDistance <= 0) {
-        throw Exception('Invalid distance calculation');
-      }
-
-      // ✅ Get vehicle details with caching
       final vehicleData = await _getVehicleData();
-      // -------------------------------
-// GET PRICING FOR SELECTED VEHICLE
-// -------------------------------
       double baseKmStart = 1;
       double baseKmEnd = 5;
       double baseFare = 0;
       double pricePerKm = 0;
 
+      // ✅ PARSE ID TO INT HERE
+      int finalVehicleId = int.tryParse(selectedVehicleType ?? '0') ?? 0;
+
       for (var vehicle in vehicleData) {
-        String? vType =
-            getJsonField(vehicle, r'''$.vehicle_type''')?.toString();
-        vType ??= getJsonField(vehicle, r'''$.vehicle_name''')?.toString();
+        String? vId = getJsonField(vehicle, r'''$.pricing.vehicle_id''')?.toString();
+        vId ??= getJsonField(vehicle, r'''$.vehicle_name''')?.toString(); // Fallback if needed
 
-        if (vType == selectedVehicleType) {
+        if (vId == selectedVehicleType) {
           final pricing = getJsonField(vehicle, r'''$.pricing''');
-
-          baseKmStart = double.tryParse(
-                getJsonField(pricing, r'''$.base_km_start''').toString(),
-              ) ??
-              1;
-
-          baseKmEnd = double.tryParse(
-                getJsonField(pricing, r'''$.base_km_end''').toString(),
-              ) ??
-              5;
-
-          baseFare = double.tryParse(
-                getJsonField(pricing, r'''$.base_fare''').toString(),
-              ) ??
-              0;
-
-          pricePerKm = double.tryParse(
-                getJsonField(pricing, r'''$.price_per_km''').toString(),
-              ) ??
-              0;
-
+          baseKmStart = double.tryParse(getJsonField(pricing, r'''$.base_km_start''').toString()) ?? 1;
+          baseKmEnd = double.tryParse(getJsonField(pricing, r'''$.base_km_end''').toString()) ?? 5;
+          baseFare = double.tryParse(getJsonField(pricing, r'''$.base_fare''').toString()) ?? 0;
+          pricePerKm = double.tryParse(getJsonField(pricing, r'''$.price_per_km''').toString()) ?? 0;
           break;
         }
       }
 
-      if (baseFare == 0 || pricePerKm == 0) {
-        throw Exception('Invalid pricing data for selected vehicle');
-      }
-
-// -------------------------------
-// FINAL FARE CALCULATION
-// -------------------------------
       final int finalBaseFare = calculateTieredFare(
         distanceKm: roadDistance,
         baseKmStart: baseKmStart,
@@ -1187,25 +802,11 @@ double calculateTieredFare({
         pricePerKm: pricePerKm,
       ).round();
 
-    final int finalFare = (finalBaseFare - appState.discountAmount.round())
-          .clamp(0, 999999)
-          .toInt();
+      final int finalFare = (finalBaseFare - appState.discountAmount.round()).clamp(0, 999999).toInt();
 
+      print('🚀 Creating Ride for User ${appState.userid} | Vehicle ID: $finalVehicleId');
 
-      if (pricePerKm == 0) {
-        throw Exception('Unable to calculate fare for selected vehicle');
-      }
-
-    
-
-      print('💰 Fare Calculation:');
-      print('   Distance: ${roadDistance.toStringAsFixed(2)} km');
-      print('   Price/km: ₹$pricePerKm');
-      print('   Base Fare: ₹$baseFare');
-      print('   Discount: ₹${appState.discountAmount}');
-      print('   Final Fare: ₹$finalFare');
-
-      // ✅ Create ride with proper parameters
+      // ✅ CORRECT CALL: Using adminVehicleId (int)
       final createRideRes = await CreateRideCall.call(
         token: appState.accessToken,
         userId: appState.userid,
@@ -1215,24 +816,20 @@ double calculateTieredFare({
         pickupLongitude: appState.pickupLongitude!,
         dropLatitude: appState.dropLatitude!,
         dropLongitude: appState.dropLongitude!,
-        rideType: selectedVehicleType,
+        adminVehicleId: finalVehicleId, // Passing INT 11
+        // Optional guest fields can be passed here if needed:
+        // guestName: "Name",
+        // guestPhone: "1234567890",
       );
 
       if (createRideRes.succeeded) {
-        final rideIdField = getJsonField(
-          createRideRes.jsonBody,
-          r'''$.data.id''',
-        );
+        final rideId = CreateRideCall.rideId(createRideRes.jsonBody)?.toString() ??
+            getJsonField(createRideRes.jsonBody, r'''$.data.id''')?.toString();
 
-        if (rideIdField == null) {
-          throw Exception('Invalid ride ID in response');
-        }
+        if (rideId == null) throw Exception('No ride ID returned from server');
 
-        final rideId = rideIdField.toString();
+        print('✅ Ride Created: $rideId');
 
-        print('✅ Ride created successfully: $rideId');
-
-        // ✅ Navigate to booking screen
         await context.pushNamed(
           AutoBookWidget.routeName,
           queryParameters: {
@@ -1245,27 +842,16 @@ double calculateTieredFare({
           },
         );
       } else {
-        final errorMsg = getJsonField(
-          createRideRes.jsonBody,
-          r'''$.message''',
-        )?.toString() ?? 'Failed to create ride. Please try again.';
-
-        print('❌ Ride creation failed: $errorMsg');
+        final errorMsg = CreateRideCall.getResponseMessage(createRideRes.jsonBody) ??
+            'Failed to create ride. Please try again.';
         _showError(errorMsg);
       }
-    } on SocketException {
-      _showError('No internet connection. Please check your network.');
-    } on TimeoutException {
-      _showError('Request timed out. Please try again.');
-    } on FormatException catch (e) {
-      _showError('Invalid data format: ${e.message}');
+
     } catch (e) {
-      print('❌ Booking error: $e');
-      _showError('Failed to create booking: ${e.toString()}');
+      print('❌ Booking Exception: $e');
+      _showError('Booking failed: $e');
     } finally {
-      if (mounted) {
-        setState(() => isLoadingRide = false);
-      }
+      if (mounted) setState(() => isLoadingRide = false);
     }
   }
 }
