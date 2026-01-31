@@ -699,6 +699,10 @@ double calculateTieredFare({
                                 dataItem,
                                 r'''$.pricing.vehicle_id''',
                               )?.toString();
+                                  String? vehicleName = getJsonField(
+                                dataItem,
+                                r'''$.vehicle_name''',
+                              )?.toString();
                               vehicleType ??= getJsonField(
                                 dataItem,
                                 r'''$.vehicle_name''',
@@ -857,7 +861,7 @@ double calculateTieredFare({
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                vehicleType!,
+                                                vehicleName!,
                                                 style: GoogleFonts.inter(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.w700,
