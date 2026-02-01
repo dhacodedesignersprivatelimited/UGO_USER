@@ -137,7 +137,7 @@ class _HomeWidgetState extends State<HomeWidget>
     try {
       final scanResult = await FlutterBarcodeScanner.scanBarcode(
         '#FF7B10',
-        FFLocalizations.of(context).getText('b01q6jhz'),
+        'Cancel',
         true,
         ScanMode.BARCODE,
       );
@@ -171,12 +171,9 @@ class _HomeWidgetState extends State<HomeWidget>
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              FFLocalizations.of(context)
-                  .getText('invalid_qr_code'),
-            ),
-            duration: const Duration(seconds: 2),
+          const SnackBar(
+            content: Text('Invalid QR Code'),
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -185,9 +182,7 @@ class _HomeWidgetState extends State<HomeWidget>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            '${FFLocalizations.of(context).getText('scan_failed')}: ${e.toString()}',
-          ),
+          content: Text('Scan failed: ${e.toString()}'),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -264,8 +259,7 @@ class _HomeWidgetState extends State<HomeWidget>
                       size: 30,
                     ),
                     onPressed: () {
-                      context.pushNamed(
-                          PushnotificationsWidget.routeName);
+                      context.pushNamed(PushnotificationsWidget.routeName);
                     },
                   ),
                 ),
@@ -291,16 +285,14 @@ class _HomeWidgetState extends State<HomeWidget>
                       children: [
                         _buildSearchBar(context, isSmallScreen),
                         SizedBox(height: screenHeight * 0.02),
+                        // ✅ HEADER TEXT RESTORED
                         Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              FFLocalizations.of(context)
-                                  .getText('scan_to_go'),
+                              'Scan to Go',
                               style: GoogleFonts.poppins(
-                                fontSize:
-                                isSmallScreen ? 18 : 22,
+                                fontSize: isSmallScreen ? 18 : 22,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
@@ -325,31 +317,25 @@ class _HomeWidgetState extends State<HomeWidget>
               child: Padding(
                 padding: EdgeInsets.all(horizontalPadding),
                 child: Column(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20),
+                    // ✅ "OUR SERVICES" SECTION TITLE RESTORED
                     Text(
-                      FFLocalizations.of(context)
-                          .getText('our_services'),
+                      'Our Services',
                       style: GoogleFonts.poppins(
-                        fontSize:
-                        isSmallScreen ? 18 : 20,
+                        fontSize: isSmallScreen ? 18 : 20,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
                       ),
                     ),
                     const SizedBox(height: 16),
                     Row(
-                      mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildRideTypeCard(
-                            image: 'assets/images/bike.png'),
-                        _buildRideTypeCard(
-                            image: 'assets/images/car.png'),
-                        _buildRideTypeCard(
-                            image: 'assets/images/auto.png'),
+                        _buildRideTypeCard(image: 'assets/images/bike.png'),
+                        _buildRideTypeCard(image: 'assets/images/car.png'),
+                        _buildRideTypeCard(image: 'assets/images/auto.png'),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -378,13 +364,11 @@ class _HomeWidgetState extends State<HomeWidget>
           );
         },
         child: Container(
-          margin:
-          const EdgeInsets.symmetric(horizontal: 6),
+          margin: const EdgeInsets.symmetric(horizontal: 6),
           height: 90,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius:
-            BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.12),
@@ -405,11 +389,9 @@ class _HomeWidgetState extends State<HomeWidget>
     );
   }
 
-  Widget _buildSearchBar(
-      BuildContext context, bool isSmallScreen) {
+  Widget _buildSearchBar(BuildContext context, bool isSmallScreen) {
     return InkWell(
-      onTap: () =>
-          context.pushNamed(PlanYourRideWidget.routeName),
+      onTap: () => context.pushNamed(PlanYourRideWidget.routeName),
       borderRadius: BorderRadius.circular(30),
       child: Container(
         width: double.infinity,
@@ -419,8 +401,7 @@ class _HomeWidgetState extends State<HomeWidget>
         ),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius:
-          BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -435,8 +416,7 @@ class _HomeWidgetState extends State<HomeWidget>
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: primaryOrange.withOpacity(0.1),
-                borderRadius:
-                BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
                 Icons.search_rounded,
@@ -447,35 +427,11 @@ class _HomeWidgetState extends State<HomeWidget>
             const SizedBox(width: 14),
             Expanded(
               child: Text(
-                FFLocalizations.of(context)
-                    .getText('h1w2v3fi'),
+                'Where to go ?',
                 style: GoogleFonts.inter(
-                  fontSize:
-                  isSmallScreen ? 14 : 15,
+                  fontSize: isSmallScreen ? 14 : 15,
                   color: Colors.grey[500],
                   fontWeight: FontWeight.w400,
-                ),
-              ),
-            ),
-            Container(
-              padding:
-              const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
-              ),
-              decoration: BoxDecoration(
-                color: lightOrange
-                    .withOpacity(0.2),
-                borderRadius:
-                BorderRadius.circular(20),
-              ),
-              child: Text(
-                FFLocalizations.of(context)
-                    .getText('now'),
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: deepOrange,
-                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -497,8 +453,7 @@ class _HomeWidgetState extends State<HomeWidget>
           iconColor: FFAppState().droplocation == null
               ? const Color(0xFFFF0000)
               : const Color(0xFF4CAF50),
-          onTap: () => context.pushNamed(
-              ChooseDestinationWidget.routeName),
+          onTap: () => context.pushNamed(ChooseDestinationWidget.routeName),
           width: isSmallScreen ? 48 : 56,
         ),
         const SizedBox(width: 12),
@@ -511,34 +466,23 @@ class _HomeWidgetState extends State<HomeWidget>
               onTap: isScanning
                   ? null
                   : () {
-                if (FFAppState().droplocation ==
-                    null) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        FFLocalizations.of(context)
-                            .getText(
-                            'please_select_drop_location'),
-                      ),
-                      duration: const Duration(
-                          seconds: 2),
+                if (FFAppState().droplocation == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please select drop location'),
+                      duration: Duration(seconds: 2),
                     ),
                   );
                   return;
                 }
                 _handleQRScan();
               },
-              borderRadius:
-              BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16),
               child: AnimatedContainer(
-                duration: const Duration(
-                    milliseconds: 300),
+                duration: const Duration(milliseconds: 300),
                 padding: EdgeInsets.symmetric(
-                  horizontal:
-                  isSmallScreen ? 12 : 16,
-                  vertical:
-                  isSmallScreen ? 6 : 8,
+                  horizontal: isSmallScreen ? 12 : 16,
+                  vertical: isSmallScreen ? 6 : 8,
                 ),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -548,95 +492,57 @@ class _HomeWidgetState extends State<HomeWidget>
                     width: 2,
                   )
                       : null,
-                  borderRadius:
-                  BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black
-                          .withOpacity(0.08),
+                      color: Colors.black.withOpacity(0.08),
                       blurRadius: 10,
-                      offset:
-                      const Offset(0, 4),
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Row(
-                  mainAxisAlignment:
-                  MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      width: isSmallScreen
-                          ? 32
-                          : 38,
-                      height: isSmallScreen
-                          ? 32
-                          : 38,
-                      decoration:
-                      const BoxDecoration(
-                        gradient:
-                        LinearGradient(
-                          colors: [
-                            primaryOrange,
-                            deepOrange
-                          ],
-                          begin: Alignment
-                              .topLeft,
-                          end: Alignment
-                              .bottomRight,
+                      width: isSmallScreen ? 32 : 38,
+                      height: isSmallScreen ? 32 : 38,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [primaryOrange, deepOrange],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        shape:
-                        BoxShape.circle,
+                        shape: BoxShape.circle,
                       ),
                       child: isScanning
                           ? const Padding(
-                        padding:
-                        EdgeInsets
-                            .all(10),
-                        child:
-                        CircularProgressIndicator(
-                          strokeWidth:
-                          2,
-                          valueColor:
-                          AlwaysStoppedAnimation<
-                              Color>(
+                        padding: EdgeInsets.all(10),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
                             Colors.white,
                           ),
                         ),
                       )
                           : const Icon(
-                        Icons
-                            .qr_code_scanner_rounded,
+                        Icons.qr_code_scanner_rounded,
                         color: Colors.white,
                         size: 18,
                       ),
                     ),
-                    const SizedBox(
-                        width: 12),
+                    const SizedBox(width: 12),
                     Flexible(
                       child: Text(
                         isScanning
-                            ? FFLocalizations.of(
-                            context)
-                            .getText(
-                            'scanning')
-                            : FFLocalizations.of(
-                            context)
-                            .getText(
-                            'dtkvc9rl'),
-                        style:
-                        GoogleFonts.inter(
-                          fontSize:
-                          isSmallScreen
-                              ? 13
-                              : 14,
-                          fontWeight:
-                          FontWeight.w500,
-                          color:
-                          Colors.black87,
+                            ? 'Scanning...'
+                            : 'Scan Qr and book the ride',
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 13 : 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
                         ),
-                        overflow:
-                        TextOverflow
-                            .ellipsis,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -663,8 +569,7 @@ class _HomeWidgetState extends State<HomeWidget>
         height: width,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius:
-          BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.08),
@@ -682,8 +587,7 @@ class _HomeWidgetState extends State<HomeWidget>
     );
   }
 
-  Widget _buildPromoBanner(
-      BuildContext context, double screenWidth) {
+  Widget _buildPromoBanner(BuildContext context, double screenWidth) {
     return InkWell(
       onTap: () {},
       borderRadius: BorderRadius.circular(20),
@@ -701,8 +605,7 @@ class _HomeWidgetState extends State<HomeWidget>
           ],
         ),
         child: ClipRRect(
-          borderRadius:
-          BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -715,13 +618,10 @@ class _HomeWidgetState extends State<HomeWidget>
                   gradient: LinearGradient(
                     colors: [
                       Colors.transparent,
-                      Colors.black
-                          .withOpacity(0.7),
+                      Colors.black.withOpacity(0.7),
                     ],
-                    begin: Alignment
-                        .topCenter,
-                    end: Alignment
-                        .bottomCenter,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
                 ),
               ),
@@ -730,46 +630,32 @@ class _HomeWidgetState extends State<HomeWidget>
                 bottom: 20,
                 right: 20,
                 child: Column(
-                  crossAxisAlignment:
-                  CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         Text(
-                          FFLocalizations.of(
-                              context)
-                              .getText(
-                              '96ev15d0'),
-                          style: GoogleFonts
-                              .poppins(
+                          'Auto rides',
+                          style: GoogleFonts.poppins(
                             fontSize: 18,
-                            fontWeight:
-                            FontWeight.w600,
+                            fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
                         ),
-                        const SizedBox(
-                            width: 6),
+                        const SizedBox(width: 6),
                         const Icon(
-                          Icons
-                              .arrow_forward_rounded,
+                          Icons.arrow_forward_rounded,
                           color: Colors.white,
                           size: 18,
                         ),
                       ],
                     ),
-                    const SizedBox(
-                        height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      FFLocalizations.of(
-                          context)
-                          .getText(
-                          '39myr84r'),
+                      'Upfront fares doorstep pickupd',
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: Colors.white
-                            .withOpacity(
-                            0.85),
+                        color: Colors.white.withOpacity(0.85),
                       ),
                     ),
                   ],

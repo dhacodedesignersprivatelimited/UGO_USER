@@ -32,17 +32,16 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     with TickerProviderStateMixin {
   late AvaliableOptionsModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  late AnimationController _animationController;
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
 
   String? selectedVehicleType;
   bool isLoadingRide = false;
-  bool isScanning = false;
   bool isCalculatingRoute = false;
 
   GoogleMapController? mapController;
   Set<Marker> markers = {};
   Set<Polyline> polylines = {};
-  bool showMap = true;
 
   double? googleDistanceKm;
   String? googleDuration;
@@ -53,11 +52,21 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   void initState() {
     super.initState();
     _model = createModel(context, () => AvaliableOptionsModel());
-    _animationController = AnimationController(
-      duration: Duration(milliseconds: 600),
+
+    _slideController = AnimationController(
+      duration: Duration(milliseconds: 400),
       vsync: this,
     );
-    _animationController.forward();
+
+    _slideAnimation = Tween<Offset>(
+      begin: Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _slideController.forward();
     _initializeMap();
   }
 
@@ -97,10 +106,6 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
               appState.pickupLatitude!,
               appState.pickupLongitude!,
             ),
-            infoWindow: InfoWindow(
-              title: 'Pickup Location',
-              snippet: appState.pickuplocation,
-            ),
             icon: BitmapDescriptor.defaultMarkerWithHue(
               BitmapDescriptor.hueGreen,
             ),
@@ -113,10 +118,6 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             position: LatLng(
               appState.dropLatitude!,
               appState.dropLongitude!,
-            ),
-            infoWindow: InfoWindow(
-              title: 'Drop Location',
-              snippet: appState.droplocation,
             ),
             icon: BitmapDescriptor.defaultMarkerWithHue(
               BitmapDescriptor.hueRed,
@@ -133,7 +134,6 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         appState.pickupLongitude == null ||
         appState.dropLatitude == null ||
         appState.dropLongitude == null) {
-      _showError('Invalid location coordinates');
       return;
     }
 
@@ -154,50 +154,40 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
 
-        if (json['status'] != 'OK') {
-          throw Exception('Google Maps API error: ${json['status']}');
-        }
+        if (json['status'] == 'OK' && json['routes'].isNotEmpty) {
+          final route = json['routes'][0];
+          final leg = route['legs'][0];
 
-        if (json['routes'].isEmpty) {
-          throw Exception('No route found between locations');
-        }
+          final distanceInMeters = leg['distance']['value'];
+          final durationText = leg['duration']['text'];
 
-        final route = json['routes'][0];
-        final leg = route['legs'][0];
-
-        final distanceInMeters = leg['distance']['value'];
-        final durationText = leg['duration']['text'];
-
-        final points = _decodePolyline(
-          route['overview_polyline']['points'],
-        );
-
-        setState(() {
-          googleDistanceKm = distanceInMeters / 1000.0;
-          googleDuration = durationText;
-          polylines.clear();
-          polylines.add(
-            Polyline(
-              polylineId: PolylineId('route'),
-              points: points,
-              color: Color(0xFFFF7B10),
-              width: 5,
-              geodesic: true,
-            ),
+          final points = _decodePolyline(
+            route['overview_polyline']['points'],
           );
-          isCalculatingRoute = false;
-        });
 
-        if (mapController != null && points.isNotEmpty) {
-          _animateCameraToBounds(points);
+          setState(() {
+            googleDistanceKm = distanceInMeters / 1000.0;
+            googleDuration = durationText;
+            polylines.clear();
+            polylines.add(
+              Polyline(
+                polylineId: PolylineId('route'),
+                points: points,
+                color: Color(0xFF000000),
+                width: 4,
+                geodesic: true,
+              ),
+            );
+            isCalculatingRoute = false;
+          });
+
+          if (mapController != null && points.isNotEmpty) {
+            _animateCameraToBounds(points);
+          }
         }
-      } else {
-        throw HttpException(
-          'Failed to fetch route: ${response.statusCode}',
-        );
       }
     } catch (e) {
-      print('❌ Route Error (Using Fallback): $e');
+      print('❌ Route Error: $e');
       _useFallbackDistance();
     }
   }
@@ -282,14 +272,14 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     );
 
     mapController?.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, 50),
+      CameraUpdate.newLatLngBounds(bounds, 80),
     );
   }
 
   @override
   void dispose() {
     mapController?.dispose();
-    _animationController.dispose();
+    _slideController.dispose();
     _model.dispose();
     markers.clear();
     polylines.clear();
@@ -298,7 +288,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   }
 
   double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371; // km
+    const double earthRadius = 6371;
     double dLat = (lat2 - lat1) * (3.141592653589793 / 180);
     double dLon = (lon2 - lon1) * (3.141592653589793 / 180);
 
@@ -317,25 +307,20 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
       return _cachedVehicleData!;
     }
 
-    ApiCallResponse response;
     try {
-      response = await GetVehicleDetailsCall.call();
+      final response = await GetVehicleDetailsCall.call();
+      if (response.succeeded) {
+        final jsonList = (getJsonField(
+          response.jsonBody,
+          r'''$.data''',
+        ) as List?)?.toList() ?? [];
+        _cachedVehicleData = jsonList;
+        return jsonList;
+      }
     } catch (e) {
-      print('❌ Error calling GetVehicleDetailsCall: $e');
-      return [];
+      print('❌ Error fetching vehicles: $e');
     }
-
-    if (response.succeeded) {
-      final jsonList = (getJsonField(
-        response.jsonBody,
-        r'''$.data''',
-      ) as List?)?.toList() ?? [];
-      _cachedVehicleData = jsonList;
-      return jsonList;
-    } else {
-      print('❌ GetVehicleDetailsCall failed: ${response.statusCode}');
-      return [];
-    }
+    return [];
   }
 
   void _showError(String message) {
@@ -343,15 +328,10 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 4),
-        action: SnackBarAction(
-          label: 'DISMISS',
-          textColor: Colors.white,
-          onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
-        ),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: EdgeInsets.all(16),
       ),
     );
   }
@@ -374,102 +354,128 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
       );
     }
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        key: scaffoldKey,
-        backgroundColor: Colors.white,
-        body: Stack(
-          children: [
-            Positioned.fill(
-              bottom: MediaQuery.of(context).size.height * 0.45,
-              child: Stack(
-                children: [
-                  GoogleMap(
-                    onMapCreated: (controller) {
-                      mapController = controller;
-                      if (markers.isNotEmpty) {
-                        _initializeMap();
-                      }
-                    },
-                    initialCameraPosition: CameraPosition(
-                      target: LatLng(
-                        appState.pickupLatitude ?? 17.3850,
-                        appState.pickupLongitude ?? 78.4867,
-                      ),
-                      zoom: 14,
-                    ),
-                    markers: markers,
-                    polylines: polylines,
-                    zoomControlsEnabled: false,
-                    mapToolbarEnabled: false,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: false,
+    return Scaffold(
+      key: scaffoldKey,
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // Map Section
+          Positioned.fill(
+            bottom: MediaQuery.of(context).size.height * 0.5,
+            child: GoogleMap(
+              onMapCreated: (controller) {
+                mapController = controller;
+                if (markers.isNotEmpty) {
+                  _initializeMap();
+                }
+              },
+              initialCameraPosition: CameraPosition(
+                target: LatLng(
+                  appState.pickupLatitude ?? 17.3850,
+                  appState.pickupLongitude ?? 78.4867,
+                ),
+                zoom: 14,
+              ),
+              markers: markers,
+              polylines: polylines,
+              zoomControlsEnabled: false,
+              mapToolbarEnabled: false,
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              compassEnabled: false,
+            ),
+          ),
+
+          // Top Bar with Back Button & Trip Info
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 12,
+                left: 16,
+                right: 16,
+                bottom: 16,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
                   ),
-                  if (isCalculatingRoute)
-                    Container(
-                      color: Colors.black26,
-                      child: Center(
-                        child: Card(
-                          margin: EdgeInsets.all(32),
-                          child: Padding(
-                            padding: EdgeInsets.all(24),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                CircularProgressIndicator(color: Color(0xFFFF7B10)),
-                                SizedBox(height: 16),
-                                Text(
-                                  'Calculating best route...',
-                                  style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: () => context.pop(),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
                           ),
+                          child: Icon(Icons.arrow_back, size: 20),
                         ),
                       ),
-                    ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Choose a ride',
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                              ),
+                            ),
+                            Text(
+                              '${currentDistance.toStringAsFixed(1)} km • ${googleDuration ?? "Calculating..."}',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
-              left: 16,
-              child: InkWell(
-                onTap: () => context.pop(),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
-                  ),
-                  child: Icon(Icons.arrow_back, color: Colors.black, size: 24),
-                ),
-              ),
-            ),
-            Align(
-              alignment: Alignment.bottomCenter,
+          ),
+
+          // Bottom Sheet
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: SlideTransition(
+              position: _slideAnimation,
               child: Container(
-                height: MediaQuery.of(context).size.height * 0.55,
-                width: double.infinity,
+                height: MediaQuery.of(context).size.height * 0.58,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 16,
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
                       offset: Offset(0, -4),
-                    )
+                    ),
                   ],
                 ),
                 child: Column(
                   children: [
+                    // Drag Handle
                     Container(
                       margin: EdgeInsets.only(top: 12, bottom: 8),
                       width: 40,
@@ -479,60 +485,49 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Choose Your Ride',
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Color(0xFFFFF3F0),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.speed, color: Color(0xFFFF7B10), size: 14),
-                                SizedBox(width: 4),
-                                Text(
-                                  '${currentDistance.toStringAsFixed(1)} km • ${googleDuration ?? "..."}',
-                                  style: GoogleFonts.inter(
-                                    color: Color(0xFFFF7B10),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 16),
+
+                    // Vehicle List
                     Expanded(
                       child: FutureBuilder<List<dynamic>>(
                         future: _getVehicleData(),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
-                            return Center(child: CircularProgressIndicator(color: Color(0xFFFF7B10)));
+                            return Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFFFF7B10),
+                                strokeWidth: 3,
+                              ),
+                            );
                           }
+
                           if (snapshot.hasError) {
-                            return Center(child: Text('Failed to load vehicles'));
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                                  SizedBox(height: 16),
+                                  Text('Failed to load vehicles'),
+                                ],
+                              ),
+                            );
                           }
+
                           final jsonList = snapshot.data ?? [];
                           if (jsonList.isEmpty) {
-                            return Center(child: Text('No vehicles available'));
+                            return Center(
+                              child: Text(
+                                'No vehicles available',
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            );
                           }
+
                           return ListView.builder(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             itemCount: jsonList.length,
                             itemBuilder: (context, index) {
                               final dataItem = jsonList[index];
@@ -542,7 +537,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                               vehicleType ??= getJsonField(dataItem, r'''$.vehicle_name''')?.toString();
 
                               if (vehicleType == null || vehicleType == 'null' || vehicleType.isEmpty) {
-                                vehicleType = '1'; // Default ID if missing
+                                vehicleType = '1';
                               }
 
                               final pricing = getJsonField(dataItem, r'''$.pricing''');
@@ -577,84 +572,139 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
 
                               return Padding(
                                 padding: EdgeInsets.only(bottom: 12),
-                                child: InkWell(
-                                  onTap: () {
-                                    if (displayFare > 0) {
-                                      setState(() {
-                                        selectedVehicleType = vehicleType;
-                                        appState.vehicleselect = vehicleType!;
-                                      });
-                                    } else {
-                                      _showError('This vehicle is not available right now');
-                                    }
-                                  },
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: AnimatedContainer(
-                                    duration: Duration(milliseconds: 200),
-                                    padding: EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? Color(0xFFFDECD2).withOpacity(0.3) : Colors.white,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: isSelected ? Color(0xFFFF7B10) : Color(0xFFEEEEEE),
-                                        width: isSelected ? 2 : 1,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      if (displayFare > 0) {
+                                        setState(() {
+                                          selectedVehicleType = vehicleType;
+                                          appState.vehicleselect = vehicleType!;
+                                        });
+                                      } else {
+                                        _showError('This vehicle is not available');
+                                      }
+                                    },
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: AnimatedContainer(
+                                      duration: Duration(milliseconds: 200),
+                                      padding: EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? Color(0xFFFFF8F0) : Colors.white,
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: isSelected ? Color(0xFFFF7B10) : Colors.grey[200]!,
+                                          width: isSelected ? 2 : 1,
+                                        ),
+                                        boxShadow: isSelected
+                                            ? [
+                                          BoxShadow(
+                                            color: Color(0xFFFF7B10).withOpacity(0.15),
+                                            blurRadius: 12,
+                                            offset: Offset(0, 4),
+                                          ),
+                                        ]
+                                            : [],
                                       ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        vehicleImageUrl != null
-                                            ? Image.network(
-                                          vehicleImageUrl,
-                                          width: 60,
-                                          height: 60,
-                                          fit: BoxFit.contain,
-                                          errorBuilder: (_, __, ___) => Icon(Icons.directions_car, size: 40, color: Colors.grey),
-                                        )
-                                            : Icon(Icons.directions_car, size: 40, color: Colors.grey),
-                                        SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                vehicleName ?? "Car",
-                                                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+                                      child: Row(
+                                        children: [
+                                          // Vehicle Image
+                                          Container(
+                                            width: 70,
+                                            height: 70,
+                                            child: vehicleImageUrl != null
+                                                ? Image.network(
+                                              vehicleImageUrl,
+                                              fit: BoxFit.contain,
+                                              errorBuilder: (_, __, ___) => Icon(
+                                                Icons.directions_car,
+                                                size: 40,
+                                                color: Colors.grey[400],
                                               ),
-                                              SizedBox(height: 4),
-                                              Row(
-                                                children: [
-                                                  Text(
-                                                    'Get ride in 2 mins',
-                                                    style: GoogleFonts.inter(fontSize: 12, color: Color(0xFF00D084), fontWeight: FontWeight.w600),
+                                            )
+                                                : Icon(
+                                              Icons.directions_car,
+                                              size: 40,
+                                              color: Colors.grey[400],
+                                            ),
+                                          ),
+                                          SizedBox(width: 16),
+
+                                          // Vehicle Info
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  vehicleName ?? 'UGO',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Colors.black,
                                                   ),
-                                                  if (seatingCapacity.isNotEmpty) ...[
-                                                    Text(' • ', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                                                    Icon(Icons.person, size: 12, color: Colors.grey),
-                                                    Text(' $seatingCapacity', style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                                                ),
+                                                SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.access_time,
+                                                      size: 14,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      '2 mins away',
+                                                      style: GoogleFonts.inter(
+                                                        fontSize: 13,
+                                                        color: Colors.grey[600],
+                                                        fontWeight: FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                    if (seatingCapacity.isNotEmpty) ...[
+                                                      Text(' • ', style: TextStyle(color: Colors.grey[400])),
+                                                      Icon(Icons.person, size: 14, color: Colors.grey[600]),
+                                                      Text(
+                                                        ' $seatingCapacity',
+                                                        style: GoogleFonts.inter(
+                                                          fontSize: 13,
+                                                          color: Colors.grey[600],
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ],
-                                                ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+
+                                          // Price
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.end,
+                                            children: [
+                                              if (isSelected && appState.discountAmount > 0 && calculatedFare > 0) ...[
+                                                Text(
+                                                  '₹$calculatedFare',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 13,
+                                                    decoration: TextDecoration.lineThrough,
+                                                    color: Colors.grey[500],
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                SizedBox(height: 2),
+                                              ],
+                                              Text(
+                                                displayFare > 0 ? '₹$displayFare' : '₹--',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: displayFare > 0 ? Colors.black : Colors.grey[400],
+                                                ),
                                               ),
                                             ],
                                           ),
-                                        ),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: [
-                                            if (isSelected && appState.discountAmount > 0 && baseFare > 0) ...[
-                                              Text('₹$baseFare', style: TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey, fontSize: 12)),
-                                              SizedBox(height: 2),
-                                            ],
-                                            Text(
-                                              displayFare > 0 ? '₹$displayFare' : '₹--',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.w900,
-                                                color: displayFare > 0 ? Colors.black : Colors.grey,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -664,62 +714,131 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                         },
                       ),
                     ),
+
+                    // Bottom Action Section
                     Container(
-                      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).padding.bottom + 16),
+                      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 16),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))],
+                        border: Border(
+                          top: BorderSide(color: Colors.grey[200]!),
+                        ),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // Payment & Coupon Row
                           Row(
                             children: [
+                              // Payment Method
                               InkWell(
                                 onTap: () => context.pushNamed(WalletWidget.routeName),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.wallet, size: 18, color: Color(0xFF00D084)),
-                                    SizedBox(width: 8),
-                                    Text('Cash', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                                  ],
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.payment, size: 18, color: Colors.black87),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Cash',
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                               Spacer(),
+
+                              // Coupon
                               InkWell(
                                 onTap: () => context.pushNamed(VoucherWidget.routeName),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      appState.appliedCouponCode.isEmpty ? Icons.local_offer_outlined : Icons.check_circle,
-                                      size: 16,
-                                      color: Color(0xFFFF7B10),
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      appState.appliedCouponCode.isEmpty ? 'Apply Coupon' : 'Coupon Applied: ${appState.appliedCouponCode}',
-                                      style: GoogleFonts.inter(color: Color(0xFFFF7B10), fontWeight: FontWeight.w700, fontSize: 13),
-                                    ),
-                                  ],
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: appState.appliedCouponCode.isEmpty
+                                        ? Colors.grey[100]
+                                        : Color(0xFFFFF8F0),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: appState.appliedCouponCode.isNotEmpty
+                                        ? Border.all(color: Color(0xFFFF7B10))
+                                        : null,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        appState.appliedCouponCode.isEmpty
+                                            ? Icons.local_offer_outlined
+                                            : Icons.check_circle,
+                                        size: 16,
+                                        color: appState.appliedCouponCode.isEmpty
+                                            ? Colors.grey[700]
+                                            : Color(0xFFFF7B10),
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        appState.appliedCouponCode.isEmpty
+                                            ? 'Offers'
+                                            : appState.appliedCouponCode,
+                                        style: GoogleFonts.inter(
+                                          color: appState.appliedCouponCode.isEmpty
+                                              ? Colors.grey[700]
+                                              : Color(0xFFFF7B10),
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
                           ),
+
                           SizedBox(height: 16),
+
+                          // Confirm Button
                           SizedBox(
                             width: double.infinity,
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: isLoadingRide || selectedVehicleType == null ? null : _confirmBooking,
+                              onPressed: isLoadingRide || selectedVehicleType == null
+                                  ? null
+                                  : _confirmBooking,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Color(0xFFFF7B10),
                                 disabledBackgroundColor: Colors.grey[300],
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                                 elevation: 0,
                               ),
                               child: isLoadingRide
-                                  ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                                  : Text('CONFIRM BOOKING', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+                                  ? SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                                  : Text(
+                                'Confirm ${selectedVehicleType != null ? _getVehicleName(selectedVehicleType!) : "Ride"}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -729,13 +848,24 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  // ✅ FIXED CONFIRM BOOKING
+  String _getVehicleName(String vehicleId) {
+    if (_cachedVehicleData == null) return 'Ride';
+
+    for (var vehicle in _cachedVehicleData!) {
+      String? vId = getJsonField(vehicle, r'''$.pricing.vehicle_id''')?.toString();
+      if (vId == vehicleId) {
+        return getJsonField(vehicle, r'''$.vehicle_name''')?.toString() ?? 'Ride';
+      }
+    }
+    return 'Ride';
+  }
+
   Future<void> _confirmBooking() async {
     final appState = FFAppState();
 
@@ -748,12 +878,12 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         appState.pickupLongitude == null ||
         appState.dropLatitude == null ||
         appState.dropLongitude == null) {
-      _showError('Invalid location data. Please re-select locations.');
+      _showError('Invalid location data');
       return;
     }
 
     if (appState.accessToken.isEmpty) {
-      _showError('Session expired. Please login again.');
+      _showError('Session expired. Please login again');
       context.pushNamed(LoginWidget.routeName);
       return;
     }
@@ -777,12 +907,11 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
       double baseFare = 0;
       double pricePerKm = 0;
 
-      // ✅ PARSE ID TO INT HERE
       int finalVehicleId = int.tryParse(selectedVehicleType ?? '0') ?? 0;
 
       for (var vehicle in vehicleData) {
         String? vId = getJsonField(vehicle, r'''$.pricing.vehicle_id''')?.toString();
-        vId ??= getJsonField(vehicle, r'''$.vehicle_name''')?.toString(); // Fallback if needed
+        vId ??= getJsonField(vehicle, r'''$.vehicle_name''')?.toString();
 
         if (vId == selectedVehicleType) {
           final pricing = getJsonField(vehicle, r'''$.pricing''');
@@ -804,9 +933,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
 
       final int finalFare = (finalBaseFare - appState.discountAmount.round()).clamp(0, 999999).toInt();
 
-      print('🚀 Creating Ride for User ${appState.userid} | Vehicle ID: $finalVehicleId');
+      print('🚀 Creating Ride | Vehicle ID: $finalVehicleId | Fare: ₹$finalFare');
 
-      // ✅ CORRECT CALL: Using adminVehicleId (int)
       final createRideRes = await CreateRideCall.call(
         token: appState.accessToken,
         userId: appState.userid,
@@ -816,17 +944,14 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         pickupLongitude: appState.pickupLongitude!,
         dropLatitude: appState.dropLatitude!,
         dropLongitude: appState.dropLongitude!,
-        adminVehicleId: finalVehicleId, // Passing INT 11
-        // Optional guest fields can be passed here if needed:
-        // guestName: "Name",
-        // guestPhone: "1234567890",
+        adminVehicleId: finalVehicleId,
       );
 
       if (createRideRes.succeeded) {
         final rideId = CreateRideCall.rideId(createRideRes.jsonBody)?.toString() ??
             getJsonField(createRideRes.jsonBody, r'''$.data.id''')?.toString();
 
-        if (rideId == null) throw Exception('No ride ID returned from server');
+        if (rideId == null) throw Exception('No ride ID returned');
 
         print('✅ Ride Created: $rideId');
 
@@ -843,10 +968,9 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         );
       } else {
         final errorMsg = CreateRideCall.getResponseMessage(createRideRes.jsonBody) ??
-            'Failed to create ride. Please try again.';
+            'Failed to create ride';
         _showError(errorMsg);
       }
-
     } catch (e) {
       print('❌ Booking Exception: $e');
       _showError('Booking failed: $e');
