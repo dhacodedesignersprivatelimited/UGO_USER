@@ -70,49 +70,6 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
         child: Column(
           mainAxisSize: MainAxisSize.max,
           children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  InkWell(
-                    onTap: () => context.pop(),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.arrow_back, size: 20),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      'Trip Summary',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Content
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -155,7 +112,8 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
 
                             // Dotted Line
                             Padding(
-                              padding: const EdgeInsets.only(left: 9, top: 8, bottom: 8),
+                              padding: const EdgeInsets.only(
+                                  left: 9, top: 8, bottom: 8),
                               child: Container(
                                 width: 2,
                                 height: 24,
@@ -163,7 +121,10 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
                                   gradient: LinearGradient(
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
-                                    colors: [Colors.grey[400]!, Colors.grey[400]!],
+                                    colors: [
+                                      Colors.grey[400]!,
+                                      Colors.grey[400]!
+                                    ],
                                     stops: [0.0, 1.0],
                                   ),
                                 ),
@@ -181,7 +142,10 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
                               location: widget.dropoffLocation ?? 'HSR Layout',
                             ),
 
-                            Divider(height: 32, thickness: 1, color: Colors.grey[300]),
+                            Divider(
+                                height: 32,
+                                thickness: 1,
+                                color: Colors.grey[300]),
 
                             // Distance & Duration
                             Row(
@@ -227,7 +191,8 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.receipt_long, color: primaryColor, size: 22),
+                                Icon(Icons.receipt_long,
+                                    color: primaryColor, size: 22),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Fare Breakdown',
@@ -240,7 +205,6 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
                               ],
                             ),
                             const SizedBox(height: 20),
-
                             _buildFareRow(
                               'Base Fare',
                               widget.baseFare ?? '₹50',
@@ -258,9 +222,10 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
                               widget.taxFees ?? '₹18',
                               isHighlighted: false,
                             ),
-
-                            Divider(height: 32, thickness: 1.5, color: Colors.grey[300]),
-
+                            Divider(
+                                height: 32,
+                                thickness: 1.5,
+                                color: Colors.grey[300]),
                             _buildFareRow(
                               'Total Amount',
                               widget.totalFare ?? '₹188',
@@ -281,7 +246,8 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
                         decoration: BoxDecoration(
                           color: primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: primaryColor.withOpacity(0.3)),
+                          border:
+                              Border.all(color: primaryColor.withOpacity(0.3)),
                         ),
                         padding: const EdgeInsets.all(16),
                         child: Row(
@@ -357,7 +323,8 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
                         padding: const EdgeInsets.all(16),
                         child: Row(
                           children: [
-                            Icon(Icons.headset_mic, color: primaryColor, size: 24),
+                            Icon(Icons.headset_mic,
+                                color: primaryColor, size: 24),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
@@ -546,7 +513,8 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
     );
   }
 
-  Widget _buildFareRow(String label, String value, {required bool isHighlighted}) {
+  Widget _buildFareRow(String label, String value,
+      {required bool isHighlighted}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [

@@ -452,9 +452,18 @@ class GetVehicleDetailsCall {
       .map((x) => castToType<String>(x))
       .withoutNulls
       .toList();
-  static List<double>? price(dynamic response) => (getJsonField(
+  static List<double>? kilometerPerPrice(dynamic response) => (getJsonField(
     response,
-    r'''$.data[:].kilometer_per_price''',
+    r'''$.data[:].pricing.price_per_km''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<double>(x))
+      .withoutNulls
+      .toList();
+  static List<double>? baseFare(dynamic response) => (getJsonField(
+    response,
+    r'''$.data[:].pricing.base_fare''',
     true,
   ) as List?)
       ?.withoutNulls
@@ -505,12 +514,12 @@ class VehicleData {
   int? rideCategory;
   String? vehicleName;
   String? vehicleType;
-  double? kilometerPerPrice;
   int? seatingCapacity;
   int? luggageCapacity;
   String? vehicleImage;
   String? createdAt;
   String? updatedAt;
+  Pricing? pricing; // Added pricing object
   String? vehicleImageUrl;
 
   VehicleData({
@@ -519,12 +528,12 @@ class VehicleData {
     this.rideCategory,
     this.vehicleName,
     this.vehicleType,
-    this.kilometerPerPrice,
     this.seatingCapacity,
     this.luggageCapacity,
     this.vehicleImage,
     this.createdAt,
     this.updatedAt,
+    this.pricing, // Added to constructor
     this.vehicleImageUrl,
   });
 
@@ -534,12 +543,13 @@ class VehicleData {
     rideCategory = json['ride_category'];
     vehicleName = json['vehicle_name'];
     vehicleType = json['vehicle_type'];
-    kilometerPerPrice = json['kilometer_per_price']?.toDouble();
     seatingCapacity = json['seating_capacity'];
     luggageCapacity = json['luggage_capacity'];
     vehicleImage = json['vehicle_image'];
     createdAt = json['createdAt'];
     updatedAt = json['updatedAt'];
+    pricing =
+    json['pricing'] != null ? new Pricing.fromJson(json['pricing']) : null; // Parsing pricing
     vehicleImageUrl = json['vehicle_image_url'];
   }
 
@@ -550,13 +560,62 @@ class VehicleData {
     data['ride_category'] = this.rideCategory;
     data['vehicle_name'] = this.vehicleName;
     data['vehicle_type'] = this.vehicleType;
-    data['kilometer_per_price'] = this.kilometerPerPrice;
     data['seating_capacity'] = this.seatingCapacity;
     data['luggage_capacity'] = this.luggageCapacity;
     data['vehicle_image'] = this.vehicleImage;
     data['createdAt'] = this.createdAt;
-    data['updated_at'] = this.updatedAt;
+    data['updatedAt'] = this.updatedAt;
+    if (this.pricing != null) {
+      data['pricing'] = this.pricing!.toJson();
+    }
     data['vehicle_image_url'] = this.vehicleImageUrl;
+    return data;
+  }
+}
+
+// New Pricing class
+class Pricing {
+  int? id;
+  int? vehicleId;
+  int? baseKmStart;
+  int? baseKmEnd;
+  double? baseFare;
+  double? pricePerKm;
+  String? createdAt;
+  String? updatedAt;
+
+  Pricing({
+    this.id,
+    this.vehicleId,
+    this.baseKmStart,
+    this.baseKmEnd,
+    this.baseFare,
+    this.pricePerKm,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  Pricing.fromJson(Map<String, dynamic> json) {
+    id = json['id'];
+    vehicleId = json['vehicle_id'];
+    baseKmStart = json['base_km_start'];
+    baseKmEnd = json['base_km_end'];
+    baseFare = double.tryParse(json['base_fare']?.toString() ?? '');
+    pricePerKm = double.tryParse(json['price_per_km']?.toString() ?? '');
+    createdAt = json['createdAt'];
+    updatedAt = json['updatedAt'];
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['id'] = this.id;
+    data['vehicle_id'] = this.vehicleId;
+    data['base_km_start'] = this.baseKmStart;
+    data['base_km_end'] = this.baseKmEnd;
+    data['base_fare'] = this.baseFare;
+    data['price_per_km'] = this.pricePerKm;
+    data['createdAt'] = this.createdAt;
+    data['updatedAt'] = this.updatedAt;
     return data;
   }
 }
