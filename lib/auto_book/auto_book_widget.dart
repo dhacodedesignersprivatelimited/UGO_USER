@@ -22,6 +22,7 @@ import '/components/driver_details_component.dart';
 import '/components/ride_cancelled_component.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:url_launcher/url_launcher.dart';
+import '/ride_session.dart';
 
 class AutoBookWidget extends StatefulWidget {
   const AutoBookWidget({super.key, required this.rideId});
@@ -151,6 +152,12 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       final updatedRide = Map<String, dynamic>.from(data);
       if (!mounted) return;
 
+      // Store latest ride and driver data in RideSession singleton
+      RideSession().rideData = updatedRide;
+      if (driverDetails != null) {
+        RideSession().driverData = driverDetails;
+      }
+
       final rawStatus = updatedRide['ride_status'] ?? updatedRide['status'];
       final status = rawStatus?.toString().toLowerCase().trim();
       print('🔄 Processing status: "$status"');
@@ -176,7 +183,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         if (status == 'cancelled') {
           _rideStatus = STATUS_CANCELLED;
           _searchTimer?.cancel();
-        } else if (['accepted', 'arriving', 'driver_assigned'].contains(status)) {
+        } else if (['accepted', 'arriving', 'driver_assigned']
+            .contains(status)) {
           _rideStatus = STATUS_ACCEPTED;
           _searchTimer?.cancel();
         } else if (status == 'started' || status == 'picked_up') {
@@ -220,7 +228,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           driverDetails = response.jsonBody;
           isLoadingDriver = false;
 
-          if (_rideStatus == STATUS_ACCEPTED || _rideStatus == STATUS_SEARCHING) {
+          if (_rideStatus == STATUS_ACCEPTED ||
+              _rideStatus == STATUS_SEARCHING) {
             _rideStatus = STATUS_ARRIVING;
           }
         });
@@ -254,7 +263,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               content: Text('Ride cancelled successfully'),
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           );
 
@@ -272,7 +282,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               content: Text('Failed to cancel. Please try again.'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
           );
         }
@@ -317,7 +328,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             'Cancel Ride?',
             style: GoogleFonts.inter(fontWeight: FontWeight.w700),
@@ -377,8 +389,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             child: FlutterFlowGoogleMap(
               controller: _model.googleMapsController,
               onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
-              initialLocation: _model.googleMapsCenter ??
-                  const LatLng(17.385044, 78.486671),
+              initialLocation:
+                  _model.googleMapsCenter ?? const LatLng(17.385044, 78.486671),
               markerColor: GoogleMarkerColor.orange,
               mapType: MapType.normal,
               initialZoom: 14.0,

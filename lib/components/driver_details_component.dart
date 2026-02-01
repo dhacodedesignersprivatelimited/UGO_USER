@@ -39,7 +39,8 @@ class DriverDetailsComponent extends StatelessWidget {
 
     final driverName = GetDriverDetailsCall.name(driverDetails) ?? 'Captain';
     final driverRating = GetDriverDetailsCall.rating(driverDetails) ?? '4.8';
-    final vehicleNumber = GetDriverDetailsCall.vehicleNumber(driverDetails) ?? 'AP28TA1234';
+    final vehicleNumber =
+        GetDriverDetailsCall.vehicleNumber(driverDetails) ?? 'AP28TA1234';
     final driverPhone = DriverIdfetchCall.mobileNumber(driverDetails);
 
     // ✅ FIXED: Direct dictionary access instead of non-existent method
@@ -55,7 +56,8 @@ class DriverDetailsComponent extends StatelessWidget {
 
     // OTP
     String displayOtp = rideOtp ?? '----';
-    List<String> otpDigits = displayOtp.padRight(4, '-').split('').take(4).toList();
+    List<String> otpDigits =
+        displayOtp.padRight(4, '-').split('').take(4).toList();
 
     // Ride Info
     String pickup = 'Pickup Location';
@@ -67,8 +69,8 @@ class DriverDetailsComponent extends StatelessWidget {
       final ride = ridesCache[0];
       pickup = ride['pickup_location_address'] ?? pickup;
       dropoff = ride['drop_location_address'] ?? dropoff;
-      amount = '₹${ride['total_fare'] ?? '--'}';
-      distance = '${ride['distance'] ?? '--'}km';
+      amount = '₹${ride['estimated_fare'] ?? '--'}';
+      distance = '${ride['ride_distance_km'] ?? '--'}km';
     }
 
     return Container(
@@ -117,22 +119,23 @@ class DriverDetailsComponent extends StatelessWidget {
                   ),
                 ),
                 ...otpDigits.map((digit) => Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: primaryColor),
-                  ),
-                  child: Text(
-                    digit,
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: primaryColor,
-                    ),
-                  ),
-                )),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: primaryColor),
+                      ),
+                      child: Text(
+                        digit,
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: primaryColor,
+                        ),
+                      ),
+                    )),
               ],
             ),
           ),
@@ -153,12 +156,13 @@ class DriverDetailsComponent extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   child: driverImage != null && driverImage.isNotEmpty
                       ? Image.network(
-                    driverImage,
-                    width: 70,
-                    height: 70,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _buildPlaceholderAvatar(),
-                  )
+                          driverImage,
+                          width: 70,
+                          height: 70,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _buildPlaceholderAvatar(),
+                        )
                       : _buildPlaceholderAvatar(),
                 ),
                 const SizedBox(width: 16),
@@ -226,7 +230,8 @@ class DriverDetailsComponent extends StatelessWidget {
             ),
             child: Column(
               children: [
-                _buildLocationRow(Icons.radio_button_checked, Colors.green, pickup),
+                _buildLocationRow(
+                    Icons.radio_button_checked, Colors.green, pickup),
                 SizedBox(height: 12),
                 _buildLocationRow(Icons.location_on, Colors.red, dropoff),
                 Divider(height: 24),

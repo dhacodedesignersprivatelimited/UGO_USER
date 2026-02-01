@@ -945,6 +945,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         dropLatitude: appState.dropLatitude!,
         dropLongitude: appState.dropLongitude!,
         adminVehicleId: finalVehicleId,
+        estimatedFare: finalFare.toString(),
       );
 
       if (createRideRes.succeeded) {

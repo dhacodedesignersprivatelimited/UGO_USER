@@ -4,6 +4,7 @@ import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/review/review_widget.dart';
+import '/ride_session.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'ridecomplete_model.dart';
@@ -29,6 +30,8 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
     super.initState();
     print('DEBUG: [RidecompleteWidget] initState called');
     _model = createModel(context, () => RidecompleteModel());
+    // Optionally clear session after use
+    // RideSession().clear();
   }
 
   @override
@@ -40,6 +43,8 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final rideData = RideSession().rideData ?? {};
+    final driverData = RideSession().driverData ?? {};
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -63,7 +68,8 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
                     size: 30.0,
                   ),
                   onPressed: () async {
-                    print('DEBUG: [RidecompleteWidget] Back button pressed. Moving to step: ${_model.currentStep - 1}');
+                    print(
+                        'DEBUG: [RidecompleteWidget] Back button pressed. Moving to step: \\${_model.currentStep - 1}');
                     setState(() {
                       _model.currentStep--;
                     });
@@ -91,8 +97,18 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
               if (_model.currentStep == 0)
                 Expanded(
                   child: RidecompletWidget(
+                    pickupLocation: rideData['pickup_location_address'],
+                    dropoffLocation: rideData['drop_location_address'],
+                    distance: rideData['ride_distance_km']?.toString(),
+                    duration: rideData['duration']?.toString(),
+                    driverName: driverData['name'] ?? driverData['first_name'],
+                    vehicleNumber: driverData['vehicle_number'],
+                    fare: rideData['estimated_fare'] != null
+                        ? '₹${rideData['estimated_fare']}'
+                        : null,
                     onNext: () {
-                      print('DEBUG: [RidecompleteWidget] Step 0 (Ride Complete) finished. Moving to Trip Summary');
+                      print(
+                          'DEBUG: [RidecompleteWidget] Step 0 (Ride Complete) finished. Moving to Trip Summary');
                       setState(() {
                         _model.currentStep = 1;
                       });
@@ -102,8 +118,16 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
               if (_model.currentStep == 1)
                 Expanded(
                   child: TripSummaryWidget(
+                    pickupLocation: rideData['pickup_location_address'],
+                    dropoffLocation: rideData['drop_location_address'],
+                    distance: rideData['ride_distance_km']?.toString(),
+                    duration: rideData['duration']?.toString(),
+                    totalFare: rideData['estimated_fare'] != null
+                        ? '₹${rideData['estimated_fare']}'
+                        : null,
                     onNext: () {
-                      print('DEBUG: [RidecompleteWidget] Step 1 (Trip Summary) finished. Navigating to Reviews');
+                      print(
+                          'DEBUG: [RidecompleteWidget] Step 1 (Trip Summary) finished. Navigating to Reviews');
                       context.pushNamed(ReviewWidget.routeName);
                     },
                   ),

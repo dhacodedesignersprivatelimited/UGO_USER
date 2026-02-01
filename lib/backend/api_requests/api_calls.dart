@@ -690,6 +690,7 @@ class CreateRideCall {
     String? guestName,
     String? guestPhone,
     String? guestInstructions,
+    String? estimatedFare,
     int retryCount = 0,
   }) async {
     const int maxRetries = 3;
@@ -709,6 +710,7 @@ class CreateRideCall {
         "drop_latitude": dropLatitude,
         "drop_longitude": dropLongitude,
         "admin_vehicle_id": adminVehicleId, // Sending INT
+        "estimated_fare": estimatedFare ?? "0", // Keeping as String per API expectation
       };
 
       // Add guest fields if present
