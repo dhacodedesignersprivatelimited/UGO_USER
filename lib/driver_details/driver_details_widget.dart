@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
@@ -12,12 +14,14 @@ class DriverDetailsWidget extends StatefulWidget {
   const DriverDetailsWidget({
     super.key,
     required this.driverId,
+    required this.vehicleType,
     this.dropLocation,
     this.dropDistance,
     this.tripAmount,
   });
 
   final dynamic driverId;
+  final String? vehicleType;
   final String? dropLocation;
   final String? dropDistance;
   final double? tripAmount;
@@ -32,18 +36,33 @@ class DriverDetailsWidget extends StatefulWidget {
 class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
   late DriverDetailsModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  
+    bool isLoadingRide = false;
   bool _isLoading = true;
   dynamic _driverData;
   int _selectedTip = 0;
+double? googleDistanceKm;
 
+  List<dynamic>? _cachedVehicleData;
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => DriverDetailsModel());
     _fetchDriverDetails();
   }
+double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371;
+    double dLat = (lat2 - lat1) * (3.141592653589793 / 180);
+    double dLon = (lon2 - lon1) * (3.141592653589793 / 180);
 
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * (3.141592653589793 / 180)) *
+            cos(lat2 * (3.141592653589793 / 180)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+
+    double c = 2 * asin(sqrt(a));
+    return earthRadius * c;
+  }
   Future<void> _fetchDriverDetails() async {
     try {
       final response = await GetDriverDetailsCall.call(
@@ -62,13 +81,190 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
+void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        margin: EdgeInsets.all(16),
+      ),
+    );
+  }
   @override
   void dispose() {
     _model.dispose();
     super.dispose();
   }
+  Future<List<dynamic>> _getVehicleData({bool forceRefresh = false}) async {
+    if (_cachedVehicleData != null && !forceRefresh) {
+      return _cachedVehicleData!;
+    }
 
+    try {
+      final response = await GetVehicleDetailsCall.call();
+      if (response.succeeded) {
+        final jsonList = (getJsonField(
+              response.jsonBody,
+              r'''$.data''',
+            ) as List?)
+                ?.toList() ??
+            [];
+        _cachedVehicleData = jsonList;
+        return jsonList;
+      }
+    } catch (e) {
+      print('❌ Error fetching vehicles: $e');
+    }
+    return [];
+  }
+    double calculateTieredFare({
+    required double distanceKm,
+    required double baseKmStart,
+    required double baseKmEnd,
+    required double baseFare,
+    required double pricePerKm,
+  }) {
+    if (distanceKm <= 0) return 0;
+    if (distanceKm <= baseKmEnd) {
+      return baseFare;
+    }
+    final extraKm = distanceKm - baseKmEnd;
+    final extraFare = extraKm * pricePerKm;
+    return baseFare + extraFare;
+  }
+
+Future<void> _confirmBooking() async {
+    final appState = FFAppState();
+
+    if (widget.vehicleType == null) {
+      _showError('Please select a vehicle type');
+      return;
+    }
+
+    if (appState.pickupLatitude == null ||
+        appState.pickupLongitude == null ||
+        appState.dropLatitude == null ||
+        appState.dropLongitude == null) {
+      _showError('Invalid location data');
+      return;
+    }
+
+    if (appState.accessToken.isEmpty) {
+      _showError('Session expired. Please login again');
+      context.pushNamed(LoginWidget.routeName);
+      return;
+    }
+
+    setState(() => isLoadingRide = true);
+
+    try {
+      double roadDistance = googleDistanceKm ?? 0.0;
+      if (roadDistance == 0) {
+        roadDistance = calculateDistance(
+          appState.pickupLatitude!,
+          appState.pickupLongitude!,
+          appState.dropLatitude!,
+          appState.dropLongitude!,
+        );
+      }
+
+      final vehicleData = await _getVehicleData();
+      double baseKmStart = 1;
+      double baseKmEnd = 5;
+      double baseFare = 0;
+      double pricePerKm = 0;
+
+      int finalVehicleId = int.tryParse(widget.vehicleType ?? '0') ?? 0;
+
+      for (var vehicle in vehicleData) {
+        String? vId =
+            getJsonField(vehicle, r'''$.pricing.vehicle_id''')?.toString();
+        vId ??= getJsonField(vehicle, r'''$.vehicle_name''')?.toString();
+
+        if (vId == widget.vehicleType) {
+          final pricing = getJsonField(vehicle, r'''$.pricing''');
+          baseKmStart = double.tryParse(
+                  getJsonField(pricing, r'''$.base_km_start''').toString()) ??
+              1;
+          baseKmEnd = double.tryParse(
+                  getJsonField(pricing, r'''$.base_km_end''').toString()) ??
+              5;
+          baseFare = double.tryParse(
+                  getJsonField(pricing, r'''$.base_fare''').toString()) ??
+              0;
+          pricePerKm = double.tryParse(
+                  getJsonField(pricing, r'''$.price_per_km''').toString()) ??
+              0;
+          break;
+        }
+      }
+
+      final int finalBaseFare = calculateTieredFare(
+        distanceKm: roadDistance,
+        baseKmStart: baseKmStart,
+        baseKmEnd: baseKmEnd,
+        baseFare: baseFare,
+        pricePerKm: pricePerKm,
+      ).round();
+
+      final int finalFare = (finalBaseFare - appState.discountAmount.round())
+          .clamp(0, 999999)
+          .toInt();
+
+      print(
+          '🚀 Creating Ride | Vehicle ID: $finalVehicleId | Fare: ₹$finalFare');
+
+      final createRideRes = await CreateRideCall.call(
+        token: appState.accessToken,
+        userId: appState.userid,
+        pickupLocationAddress: appState.pickuplocation,
+        dropLocationAddress: appState.droplocation,
+        pickupLatitude: appState.pickupLatitude!,
+        pickupLongitude: appState.pickupLongitude!,
+        dropLatitude: appState.dropLatitude!,
+        dropLongitude: appState.dropLongitude!,
+        adminVehicleId: finalVehicleId,
+        estimatedFare: finalFare.toString(),
+        rideStatus: 'started',
+      );
+
+      if (createRideRes.succeeded) {
+        final rideId = CreateRideCall.rideId(createRideRes.jsonBody)
+                ?.toString() ??
+            getJsonField(createRideRes.jsonBody, r'''$.data.id''')?.toString();
+
+        if (rideId == null) throw Exception('No ride ID returned');
+
+        print('✅ Ride Created: $rideId');
+
+        await context.pushNamed(
+          AutoBookWidget.routeName,
+          queryParameters: {
+            'rideId': rideId,
+            'vehicleType': widget.vehicleType ?? '',
+            'pickupLocation': appState.pickuplocation ?? '',
+            'dropLocation': appState.droplocation ?? '',
+            'estimatedFare': finalFare.toString(),
+            'estimatedDistance': roadDistance.toStringAsFixed(2),
+            'ride_status': 'started',
+          },
+        );
+      } else {
+        final errorMsg =
+            CreateRideCall.getResponseMessage(createRideRes.jsonBody) ??
+                'Failed to create ride';
+        _showError(errorMsg);
+      }
+    } catch (e) {
+      print('❌ Booking Exception: $e');
+      _showError('Booking failed: $e');
+    } finally {
+      if (mounted) setState(() => isLoadingRide = false);
+    }
+  }
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -262,9 +458,8 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
                       flex: 2,
                       child: FFButtonWidget(
                         onPressed: () async {
-                          context.pushNamed(AutoBookWidget.routeName, queryParameters: {
-                            'rideId': '0', // Replace with real ride ID if available
-                          });
+                          _confirmBooking();
+                        
                         },
                         text: 'Continue',
                         options: FFButtonOptions(

@@ -580,6 +580,9 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                                         setState(() {
                                           selectedVehicleType = vehicleType;
                                           appState.vehicleselect = vehicleType!;
+                                          // ✅ STORE IN APP STATE
+                                        appState.selectedBaseFare = baseFare;
+                                        appState.selectedPricePerKm = pricePerKm;
                                         });
                                       } else {
                                         _showError('This vehicle is not available');
@@ -965,6 +968,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             'dropLocation': appState.droplocation ?? '',
             'estimatedFare': finalFare.toString(),
             'estimatedDistance': roadDistance.toStringAsFixed(2),
+            'baseFare': baseFare.toString(),
+            'pricePerKm': pricePerKm.toString(),
           },
         );
       } else {

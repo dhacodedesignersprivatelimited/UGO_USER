@@ -11,10 +11,11 @@ import 'ridecomplete_model.dart';
 export 'ridecomplete_model.dart';
 
 class RidecompleteWidget extends StatefulWidget {
-  const RidecompleteWidget({super.key});
+  const RidecompleteWidget({super.key, this.driverDetails});
 
   static String routeName = 'ridecomplete';
   static String routePath = '/ridecomplete';
+  final Map<String, dynamic>? driverDetails;
 
   @override
   State<RidecompleteWidget> createState() => _RidecompleteWidgetState();
@@ -44,7 +45,14 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
   @override
   Widget build(BuildContext context) {
     final rideData = RideSession().rideData ?? {};
-    final driverData = RideSession().driverData ?? {};
+   final driverData = RideSession().driverData;
+
+     print('DEBUG: Ridecomplete.driverData => $driverData');
+     print('🟢 Driver in RideComplete: ${RideSession().driverData}');
+
+      
+  
+
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -101,11 +109,21 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
                     dropoffLocation: rideData['drop_location_address'],
                     distance: rideData['ride_distance_km']?.toString(),
                     duration: rideData['duration']?.toString(),
-                    driverName: driverData['name'] ?? driverData['first_name'],
-                    vehicleNumber: driverData['vehicle_number'],
+                    driverName: driverData != null
+                                     ? (driverData['name'] ??
+                      driverData['first_name'] ??
+                      'Driver not assigned')
+                  : 'Driver not assigned',
+
+                    vehicleNumber: driverData != null
+                  ? (driverData['vehicle_number'] ?? 'N/A')
+                  : 'N/A',
                     fare: rideData['estimated_fare'] != null
                         ? '₹${rideData['estimated_fare']}'
                         : null,
+                         driverDetails: driverData,
+                          // driverName: driverData['name'] ?? driverData['first_name'],
+                          // vehicleNumber: driverData['vehicle_number'],
                     onNext: () {
                       print(
                           'DEBUG: [RidecompleteWidget] Step 0 (Ride Complete) finished. Moving to Trip Summary');

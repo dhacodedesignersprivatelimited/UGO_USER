@@ -1,3 +1,5 @@
+import 'package:ugouser/ride_session.dart';
+
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
@@ -17,6 +19,8 @@ class RidecompletWidget extends StatefulWidget {
     this.driverName,
     this.vehicleNumber,
     this.fare,
+    this.driverDetails,
+
   });
 
   final VoidCallback? onNext;
@@ -27,6 +31,8 @@ class RidecompletWidget extends StatefulWidget {
   final String? driverName;
   final String? vehicleNumber;
   final String? fare;
+  final Map<String, dynamic>? driverDetails; 
+  
 
   @override
   State<RidecompletWidget> createState() => _RidecompletWidgetState();
@@ -80,6 +86,29 @@ class _RidecompletWidgetState extends State<RidecompletWidget>
 
   @override
   Widget build(BuildContext context) {
+    print('🧪 widget.driverDetails => ${widget.driverDetails}');
+  print('🧪 RideSession.driverData => ${RideSession().driverData}');
+   final driverData =
+    widget.driverDetails ??
+    RideSession().driverData ??
+    const {
+      'name': 'Driver not assigned',
+      'vehicle_number': '--',
+    };
+
+
+final driverName =
+    widget.driverName ??
+    driverData['name'] ??
+    driverData['first_name'] ??
+    'Driver not assigned';
+
+final vehicleNumber =
+    widget.vehicleNumber ??
+    driverData['vehicle_number'] ??
+    '--';
+
+ print('🧪 FINAL driverData => $driverData');
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -269,7 +298,9 @@ class _RidecompletWidgetState extends State<RidecompletWidget>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      widget.driverName ?? 'Rahul Sharma',
+                                     driverName ?? 'Driver not assigned',
+
+
                                       style: GoogleFonts.inter(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w700,
@@ -278,7 +309,9 @@ class _RidecompletWidgetState extends State<RidecompletWidget>
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      widget.vehicleNumber ?? 'KA03M5678',
+                                      // driverName,
+                                         vehicleNumber,
+
                                       style: GoogleFonts.inter(
                                         fontSize: 14,
                                         color: Colors.grey[600],

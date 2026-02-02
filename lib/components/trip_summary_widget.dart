@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'trip_summary_model.dart';
 export 'trip_summary_model.dart';
 
+
 class TripSummaryWidget extends StatefulWidget {
   const TripSummaryWidget({
     super.key,
@@ -38,6 +39,8 @@ class TripSummaryWidget extends StatefulWidget {
 
 class _TripSummaryWidgetState extends State<TripSummaryWidget> {
   late TripSummaryModel _model;
+  final appState = FFAppState();
+  
 
   static const Color primaryColor = Color(0xFFFF7B10);
 
@@ -205,32 +208,31 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
                               ],
                             ),
                             const SizedBox(height: 20),
-                            _buildFareRow(
-                              'Base Fare',
-                              widget.baseFare ?? '₹50',
-                              isHighlighted: false,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildFareRow(
-                              'Distance Fare',
-                              widget.distanceFare ?? '₹120',
-                              isHighlighted: false,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildFareRow(
-                              'Tax & Fees',
-                              widget.taxFees ?? '₹18',
-                              isHighlighted: false,
-                            ),
-                            Divider(
-                                height: 32,
-                                thickness: 1.5,
-                                color: Colors.grey[300]),
-                            _buildFareRow(
-                              'Total Amount',
-                              widget.totalFare ?? '₹188',
-                              isHighlighted: true,
-                            ),
+                         _buildFareRow(
+  'Base Fare',
+  '₹${appState.selectedBaseFare.toStringAsFixed(2)}',
+  isHighlighted: false,
+),
+
+const SizedBox(height: 12),
+
+_buildFareRow(
+  'Price / Km',
+  '₹${appState.selectedPricePerKm.toStringAsFixed(2)}',
+  isHighlighted: false,
+),
+
+Divider(
+  height: 32,
+  thickness: 1.5,
+  color: Colors.grey[300],
+),
+
+_buildFareRow(
+  'Total Amount',
+  '₹${(appState.selectedBaseFare + appState.selectedPricePerKm).toStringAsFixed(2)}',
+  isHighlighted: true,
+),
                           ],
                         ),
                       ),

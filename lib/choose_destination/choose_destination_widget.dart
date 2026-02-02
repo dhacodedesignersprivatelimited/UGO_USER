@@ -28,7 +28,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
 
   List<dynamic> _predictions = [];
   bool _isSearching = false;
-  bool _isPickupSelected = false; // true if editing pickup, false if destination
+  bool _isPickupSelected =
+      false; // true if editing pickup, false if destination
 
   // Using the API key found in AvaliableOptionsWidget
   final String _googleMapsApiKey = 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y';
@@ -38,15 +39,22 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
     super.initState();
     _model = createModel(context, () => ChooseDestinationModel());
 
-    _model.pickupLocationController ??= TextEditingController(
-      text: FFAppState().pickuplocation,
-    );
+    // Controllers
+    _model.pickupLocationController ??= TextEditingController();
     _model.pickupLocationFocusNode ??= FocusNode();
-
     _model.destinationLocationController ??= TextEditingController();
     _model.destinationLocationFocusNode ??= FocusNode();
 
-    // Listeners for focus to know which field is being edited
+    // Restore saved addresses to controllers
+    final appState = FFAppState();
+    if (appState.pickuplocation.isNotEmpty) {
+      _model.pickupLocationController?.text = appState.pickuplocation;
+    }
+    if (appState.droplocation.isNotEmpty) {
+      _model.destinationLocationController?.text = appState.droplocation;
+    }
+
+    // Focus listeners
     _model.pickupLocationFocusNode?.addListener(() {
       if (_model.pickupLocationFocusNode?.hasFocus ?? false) {
         setState(() => _isPickupSelected = true);
@@ -59,14 +67,46 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
       }
     });
 
-    // Auto focus destination if pickup is already set
-    if (FFAppState().pickuplocation.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _model.destinationLocationFocusNode?.requestFocus();
-      });
-    } else {
-      _getCurrentLocation();
+    // Restore pickup from saved lat/long or fetch current location if not set
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (appState.pickupLatitude != null &&
+          appState.pickupLongitude != null &&
+          appState.pickupLatitude != 0.0 &&
+          appState.pickupLongitude != 0.0 &&
+          appState.pickuplocation.isEmpty) {
+        try {
+          final placemarks = await geo.placemarkFromCoordinates(
+            appState.pickupLatitude!,
+            appState.pickupLongitude!,
+          );
+          if (placemarks.isNotEmpty && mounted) {
+            final place = placemarks.first;
+            final address =
+                "${place.name}, ${place.subLocality}, ${place.locality}";
+            setState(() {
+              _model.pickupLocationController?.text = address;
+              FFAppState().pickuplocation = address;
+            });
+            _model.destinationLocationFocusNode?.requestFocus();
+          }
+        } catch (e) {
+          debugPrint("Reverse geocode failed: $e");
+          _getCurrentLocation();
+        }
+      } else if (appState.pickuplocation.isEmpty) {
+        _getCurrentLocation();
+      }
+    });
+  }
+
+  Future<String> _getAddressFromLatLng(double lat, double lng) async {
+    final placemarks = await geo.placemarkFromCoordinates(lat, lng);
+
+    if (placemarks.isNotEmpty) {
+      final place = placemarks.first;
+      return "${place.name}, ${place.subLocality}, ${place.locality}";
     }
+    return '';
   }
 
   Future<void> _getCurrentLocation() async {
@@ -89,7 +129,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
 
       if (placemarks.isNotEmpty) {
         geo.Placemark place = placemarks[0];
-        String address = "${place.name}, ${place.subLocality}, ${place.locality}";
+        String address =
+            "${place.name}, ${place.subLocality}, ${place.locality}";
 
         setState(() {
           _model.pickupLocationController?.text = address;
@@ -178,33 +219,33 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
     _model.dispose();
     super.dispose();
   }
+
   Future<void> _openScanner() async {
-  final scannedValue = await Navigator.pushNamed(
-    context,
-    ScanToBookWidget.routeName,
-  );
+    final scannedValue = await Navigator.pushNamed(
+      context,
+      ScanToBookWidget.routeName,
+    );
 
-  if (!mounted || scannedValue == null || scannedValue == '-1') return;
+    if (!mounted || scannedValue == null || scannedValue == '-1') return;
 
-  final value = scannedValue.toString();
+    final value = scannedValue.toString();
 
-  if (_isPickupSelected) {
-    setState(() {
-      _model.pickupLocationController?.text = value;
-      FFAppState().pickuplocation = value;
-    });
+    if (_isPickupSelected) {
+      setState(() {
+        _model.pickupLocationController?.text = value;
+        FFAppState().pickuplocation = value;
+      });
 
-    _model.destinationLocationFocusNode?.requestFocus();
-  } else {
-    setState(() {
-      _model.destinationLocationController?.text = value;
-      FFAppState().droplocation = value;
-    });
+      _model.destinationLocationFocusNode?.requestFocus();
+    } else {
+      setState(() {
+        _model.destinationLocationController?.text = value;
+        FFAppState().droplocation = value;
+      });
 
-    context.pushNamed(HomeWidget.routeName);
+      context.pushNamed(HomeWidget.routeName);
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -232,42 +273,45 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                 child: Column(
                   children: [
-                   Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => context.safePop(),
-                      ),
-                      Expanded(
-                        child: Text(
-                          'Plan your ride',
-                          style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                    Row(
+                      children: [
+                        IconButton(
+                          icon:
+                              const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => context.safePop(),
+                        ),
+                        Expanded(
+                          child: Text(
+                            'Plan your ride',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
-                        onPressed: _openScanner, // 👈 scanner click
-                      ),
-                    ],
-                  ),
-
+                        IconButton(
+                          icon: const Icon(Icons.qr_code_scanner,
+                              color: Colors.white),
+                          onPressed: _openScanner, // 👈 scanner click
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
                         // Left Visual (Uber dots/lines)
                         Column(
                           children: [
-                            const Icon(Icons.circle, size: 12, color: Colors.white),
+                            const Icon(Icons.circle,
+                                size: 12, color: Colors.white),
                             Container(
                               width: 1,
                               height: 35,
                               color: Colors.white.withOpacity(0.6),
                             ),
-                            const Icon(Icons.square, size: 12, color: Colors.white),
+                            const Icon(Icons.square,
+                                size: 12, color: Colors.white),
                           ],
                         ),
                         const SizedBox(width: 16),
@@ -287,20 +331,28 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                                   focusNode: _model.pickupLocationFocusNode,
                                   decoration: InputDecoration(
                                     hintText: 'Pickup Location',
-                                    hintStyle: GoogleFonts.inter(color: Colors.grey[500], fontSize: 14),
+                                    hintStyle: GoogleFonts.inter(
+                                        color: Colors.grey[500], fontSize: 14),
                                     border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    suffixIcon: _model.pickupLocationController!.text.isNotEmpty
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    suffixIcon: _model.pickupLocationController!
+                                            .text.isNotEmpty
                                         ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
-                                      onPressed: () {
-                                        _model.pickupLocationController?.clear();
-                                        setState(() {});
-                                      },
-                                    )
+                                            icon: const Icon(Icons.clear,
+                                                size: 18, color: Colors.grey),
+                                            onPressed: () {
+                                              _model.pickupLocationController
+                                                  ?.clear();
+                                              setState(() {});
+                                            },
+                                          )
                                         : null,
                                   ),
-                                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
+                                  style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black),
                                   onChanged: (val) => _getPlacePredictions(val),
                                 ),
                               ),
@@ -311,29 +363,52 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: _model.destinationLocationFocusNode?.hasFocus ?? false
-                                      ? Border.all(color: Colors.black, width: 1.5)
+                                  border: _model.destinationLocationFocusNode
+                                              ?.hasFocus ??
+                                          false
+                                      ? Border.all(
+                                          color: Colors.black, width: 1.5)
                                       : null,
                                 ),
                                 child: TextField(
-                                  controller: _model.destinationLocationController,
-                                  focusNode: _model.destinationLocationFocusNode,
+                                  controller:
+                                      _model.destinationLocationController,
+                                  focusNode:
+                                      _model.destinationLocationFocusNode,
                                   decoration: InputDecoration(
                                     hintText: 'Where to?',
-                                    hintStyle: GoogleFonts.inter(color: Colors.grey[600], fontSize: 14, fontWeight: FontWeight.w600),
+                                    hintStyle: GoogleFonts.inter(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600),
                                     border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    suffixIcon: _model.destinationLocationController!.text.isNotEmpty
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                                    suffixIcon: _model
+                                            .destinationLocationController!
+                                            .text
+                                            .isNotEmpty
                                         ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
-                                      onPressed: () {
-                                        _model.destinationLocationController?.clear();
-                                        setState(() {});
-                                      },
-                                    )
+                                            icon: const Icon(Icons.clear,
+                                                size: 18, color: Colors.grey),
+                                            onPressed: () async {
+                                              _model
+                                                  .destinationLocationController
+                                                  ?.clear();
+                                              FFAppState().droplocation = '';
+                                              // Remove from SharedPreferences
+                                              final prefs = FFAppState().prefs;
+                                              await prefs
+                                                  .remove('ff_droplocation');
+                                              setState(() {});
+                                            },
+                                          )
                                         : null,
                                   ),
-                                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black),
+                                  style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black),
                                   onChanged: (val) => _getPlacePredictions(val),
                                 ),
                               ),
@@ -342,7 +417,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: const Icon(Icons.my_location, color: Colors.white, size: 24),
+                          icon: const Icon(Icons.my_location,
+                              color: Colors.white, size: 24),
                           onPressed: _getCurrentLocation,
                         ),
                       ],
@@ -357,65 +433,80 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                   color: Colors.white,
                   child: _predictions.isNotEmpty
                       ? ListView.builder(
-                    itemCount: _predictions.length,
-                    itemBuilder: (context, index) {
-                      final prediction = _predictions[index];
-                      return ListTile(
-                        leading: const Icon(Icons.location_on_outlined, color: Color(0xFFFF7B10)),
-                        title: Text(
-                          prediction['structured_formatting']['main_text'],
-                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15, color: Colors.black),
-                        ),
-                        subtitle: Text(
-                          prediction['structured_formatting']['secondary_text'] ?? '',
-                          style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600]),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        onTap: () => _getPlaceDetails(
-                          prediction['place_id'],
-                          prediction['description'],
-                        ),
-                      );
-                    },
-                  )
-                      : _isSearching
-                      ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF7B10)))
-                      : ListView(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    children: [
-                      // Set on Map Option
-                      InkWell(
-                        onTap: () {
-                          context.pushNamed(SetLocationWidget.routeName);
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF7B10).withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(Icons.map_rounded, color: Color(0xFFFF7B10), size: 20),
-                              ),
-                              const SizedBox(width: 16),
-                              Text(
-                                'Set location on map',
+                          itemCount: _predictions.length,
+                          itemBuilder: (context, index) {
+                            final prediction = _predictions[index];
+                            return ListTile(
+                              leading: const Icon(Icons.location_on_outlined,
+                                  color: Color(0xFFFF7B10)),
+                              title: Text(
+                                prediction['structured_formatting']
+                                    ['main_text'],
                                 style: GoogleFonts.inter(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black,
-                                ),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                    color: Colors.black),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                              subtitle: Text(
+                                prediction['structured_formatting']
+                                        ['secondary_text'] ??
+                                    '',
+                                style: GoogleFonts.inter(
+                                    fontSize: 13, color: Colors.grey[600]),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              onTap: () => _getPlaceDetails(
+                                prediction['place_id'],
+                                prediction['description'],
+                              ),
+                            );
+                          },
+                        )
+                      : _isSearching
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                  color: Color(0xFFFF7B10)))
+                          : ListView(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              children: [
+                                // Set on Map Option
+                                InkWell(
+                                  onTap: () {
+                                    context
+                                        .pushNamed(SetLocationWidget.routeName);
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 16),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFF7B10)
+                                                .withOpacity(0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.map_rounded,
+                                              color: Color(0xFFFF7B10),
+                                              size: 20),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Text(
+                                          'Set location on map',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                 ),
               ),
             ],

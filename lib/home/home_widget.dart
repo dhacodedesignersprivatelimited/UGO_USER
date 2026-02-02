@@ -52,15 +52,11 @@ class _HomeWidgetState extends State<HomeWidget>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) _checkRideStatus();
-      });
-    });
+    _checkRideStatus();
   }
 
   Future<void> _checkRideStatus() async {
-    if (_isCheckingRideStatus || FFAppState().bookingInProgress) return;
+    if (_isCheckingRideStatus || FFAppState().bookingInProgress==false) return;
 
     final token = FFAppState().accessToken;
     if (token.isEmpty) return;
@@ -150,10 +146,12 @@ class _HomeWidgetState extends State<HomeWidget>
       }
 
       dynamic driverId;
+      dynamic vehicleType;
       try {
         if (scanResult.trim().startsWith('{')) {
           final decodedData = jsonDecode(scanResult);
           driverId = decodedData['driver_id'] ?? decodedData['id'];
+          vehicleType = decodedData['vehicle_type_id'];
         } else {
           driverId = int.tryParse(scanResult);
         }
@@ -167,6 +165,7 @@ class _HomeWidgetState extends State<HomeWidget>
           DriverDetailsWidget.routeName,
           queryParameters: {
             'driverId': driverId.toString(),
+            'vehicleType': vehicleType?.toString(),
           },
         );
       } else {
@@ -442,15 +441,15 @@ class _HomeWidgetState extends State<HomeWidget>
   }
 
   Widget _buildActionButtonsRow(
-      BuildContext context,
-      double screenWidth,
-      bool isSmallScreen,
-      ) {
+    BuildContext context,
+    double screenWidth,
+    bool isSmallScreen,
+  ) {
     return Row(
       children: [
         _buildActionButton(
           icon: Icons.location_on_rounded,
-          iconColor: FFAppState().droplocation == null
+          iconColor: FFAppState().droplocation.isEmpty
               ? const Color(0xFFFF0000)
               : const Color(0xFF4CAF50),
           onTap: () => context.pushNamed(ChooseDestinationWidget.routeName),
@@ -466,17 +465,17 @@ class _HomeWidgetState extends State<HomeWidget>
               onTap: isScanning
                   ? null
                   : () {
-                if (FFAppState().droplocation == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Please select drop location'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                  return;
-                }
-                _handleQRScan();
-              },
+                      if (FFAppState().droplocation == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please select drop location'),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        return;
+                      }
+                      _handleQRScan();
+                    },
               borderRadius: BorderRadius.circular(16),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -488,9 +487,9 @@ class _HomeWidgetState extends State<HomeWidget>
                   color: Colors.white,
                   border: isScanning
                       ? Border.all(
-                    color: lightOrange,
-                    width: 2,
-                  )
+                          color: lightOrange,
+                          width: 2,
+                        )
                       : null,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
@@ -517,19 +516,19 @@ class _HomeWidgetState extends State<HomeWidget>
                       ),
                       child: isScanning
                           ? const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
+                              padding: EdgeInsets.all(10),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
                           : const Icon(
-                        Icons.qr_code_scanner_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
+                              Icons.qr_code_scanner_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                     ),
                     const SizedBox(width: 12),
                     Flexible(

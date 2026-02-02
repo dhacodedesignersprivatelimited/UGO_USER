@@ -751,6 +751,7 @@ class CreateRideCall {
     String? guestInstructions,
     String? estimatedFare,
     int retryCount = 0,
+    String? rideStatus
   }) async {
     const int maxRetries = 3;
     const Duration delayDuration = Duration(seconds: 2);
@@ -770,6 +771,7 @@ class CreateRideCall {
         "drop_longitude": dropLongitude,
         "admin_vehicle_id": adminVehicleId, // Sending INT
         "estimated_fare": estimatedFare ?? "0", // Keeping as String per API expectation
+        "ride_status": rideStatus ?? " " // Default to "pending" if not provided
       };
 
       // Add guest fields if present

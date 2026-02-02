@@ -356,6 +356,10 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
               'driverId',
               ParamType.JSON,
             ),
+            vehicleType: params.getParam(
+              'vehicleType',
+              ParamType.String,
+            ),
           ),
         ),
         FFRoute(
@@ -431,7 +435,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: RidecompleteWidget.routeName,
           path: RidecompleteWidget.routePath,
-          builder: (context, params) => RidecompleteWidget(),
+          builder: (context, params) => RidecompleteWidget(driverDetails: params.getParam('driverDetails', ParamType.JSON)),
         ),
         FFRoute(
           name: SetLocationWidget.routeName,

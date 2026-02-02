@@ -227,6 +227,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         setState(() {
           driverDetails = response.jsonBody;
           isLoadingDriver = false;
+          RideSession().driverData = driverDetails;
 
           if (_rideStatus == STATUS_ACCEPTED ||
               _rideStatus == STATUS_SEARCHING) {
