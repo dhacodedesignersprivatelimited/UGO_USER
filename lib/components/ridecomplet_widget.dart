@@ -20,7 +20,6 @@ class RidecompletWidget extends StatefulWidget {
     this.vehicleNumber,
     this.fare,
     this.driverDetails,
-
   });
 
   final VoidCallback? onNext;
@@ -31,8 +30,7 @@ class RidecompletWidget extends StatefulWidget {
   final String? driverName;
   final String? vehicleNumber;
   final String? fare;
-  final Map<String, dynamic>? driverDetails; 
-  
+  final Map<String, dynamic>? driverDetails;
 
   @override
   State<RidecompletWidget> createState() => _RidecompletWidgetState();
@@ -86,29 +84,32 @@ class _RidecompletWidgetState extends State<RidecompletWidget>
 
   @override
   Widget build(BuildContext context) {
+    print('🧪 [RidecompletWidget] Build called');
     print('🧪 widget.driverDetails => ${widget.driverDetails}');
-  print('🧪 RideSession.driverData => ${RideSession().driverData}');
-   final driverData =
-    widget.driverDetails ??
-    RideSession().driverData ??
-    const {
-      'name': 'Driver not assigned',
-      'vehicle_number': '--',
-    };
+    print('🧪 RideSession.driverData => ${RideSession().driverData}');
+
+    // ✅ CRITICAL FIX: Proper fallback chain for driver data
+   final rawDriver = widget.driverDetails ?? RideSession().driverData;
+final driverData = rawDriver != null ? rawDriver['data'] : null;
 
 
-final driverName =
-    widget.driverName ??
-    driverData['name'] ??
-    driverData['first_name'] ??
-    'Driver not assigned';
+    print('🧪 FINAL driverData => $driverData');
 
-final vehicleNumber =
-    widget.vehicleNumber ??
-    driverData['vehicle_number'] ??
-    '--';
+    // ✅ Extract driver name with multiple fallback options
+   final driverName = driverData != null
+    ? '${driverData['first_name'] ?? ''} ${driverData['last_name'] ?? ''}'.trim()
+    : null;
 
- print('🧪 FINAL driverData => $driverData');
+
+    // ✅ Extract vehicle number with fallbacks
+    final vehicleNumber = driverData != null
+    ? driverData['vehicle_number']
+    : null;
+
+
+    print('🚗 Driver Name: $driverName');
+    print('🚗 Vehicle Number: $vehicleNumber');
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -238,7 +239,8 @@ final vehicleNumber =
 
                               // Distance & Duration
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
                                 children: [
                                   _buildInfoColumn(
                                     icon: Icons.straighten,
@@ -294,33 +296,32 @@ final vehicleNumber =
                               ),
                               const SizedBox(width: 16),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                     driverName ?? 'Driver not assigned',
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        driverName?.isNotEmpty == true
+            ? driverName!
+            : 'Driver not assigned',
+        style: GoogleFonts.inter(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: Colors.black87,
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        vehicleNumber ?? 'N/A',
+        style: GoogleFonts.inter(
+          fontSize: 14,
+          color: Colors.grey[600],
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    ],
+  ),
+),
 
-
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      // driverName,
-                                         vehicleNumber,
-
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                               if (widget.fare != null)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -361,7 +362,8 @@ final vehicleNumber =
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.star, color: Colors.amber[700], size: 24),
+                            Icon(Icons.star,
+                                color: Colors.amber[700], size: 24),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(

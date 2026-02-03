@@ -230,7 +230,7 @@ Divider(
 
 _buildFareRow(
   'Total Amount',
-  '₹${(appState.selectedBaseFare + appState.selectedPricePerKm).toStringAsFixed(2)}',
+  '₹${appState.selectedBaseFare.toStringAsFixed(2)}',
   isHighlighted: true,
 ),
                           ],

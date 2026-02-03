@@ -18,14 +18,21 @@ class DriverDetailsWidget extends StatefulWidget {
     this.dropLocation,
     this.dropDistance,
     this.tripAmount,
+    this.baseKmStart,
+    this.baseKmEnd,
+    this.baseFare,
+    this.pricePerKm,
   });
 
-  final dynamic driverId;
-  final String? vehicleType;
+  final int? driverId;
+  final int? vehicleType;
   final String? dropLocation;
   final String? dropDistance;
   final double? tripAmount;
-
+  final double? baseKmStart;
+  final double? baseKmEnd;
+  final double? baseFare;
+  final double? pricePerKm;
   static String routeName = 'Driver_details';
   static String routePath = '/driverDetails';
 
@@ -41,6 +48,65 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
   dynamic _driverData;
   int _selectedTip = 0;
 double? googleDistanceKm;
+double _calculatedDistanceKm = 0;
+  double _calculatedFare = 0;
+  double get totalAmount => _calculatedFare + _selectedTip;
+Future<void> _loadDistanceAndFare() async {
+  print("widget.baseFare: ${widget.baseFare}, widget.pricePerKm: ${widget.pricePerKm}" ", widget.baseKmStart: ${widget.baseKmStart}, widget.baseKmEnd: ${widget.baseKmEnd}");
+    final appState = FFAppState();
+
+    final lat1 = appState.pickupLatitude;
+    final lon1 = appState.pickupLongitude;
+    final lat2 = appState.dropLatitude;
+    final lon2 = appState.dropLongitude;
+print(  'Calculating distance and fare with coordinates: ($lat1, $lon1) to ($lat2, $lon2)');
+    if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
+      debugPrint('❌ Missing coordinates');
+      return;
+    }
+
+    // 1️⃣ Distance from GPS
+    final distance = calculateDistance(lat1, lon1, lat2, lon2);
+
+    // 2️⃣ Pricing from widget
+    final baseKmStart = widget.baseKmStart ?? 1;
+    final baseKmEnd = widget.baseKmEnd ?? 5;
+    final baseFare = widget.baseFare ?? 0;
+    final pricePerKm = widget.pricePerKm ?? 0;
+print('✅ Distance: $distance km,');
+    // 3️⃣ Fare
+    final fare = _calculateTierFare(
+      distanceKm: distance,
+      baseKmStart: baseKmStart,
+      baseKmEnd: baseKmEnd,
+      baseFare: baseFare,
+      pricePerKm: pricePerKm,
+    );
+print(  '✅ Distance: $distance km, Fare: ₹$fare');
+    if (mounted) {
+      setState(() {
+        _calculatedDistanceKm = distance;
+        _calculatedFare = fare;
+        print(  '✅ Calculated Distance: $_calculatedDistanceKm km, Fare: ₹$_calculatedFare');
+      });
+    }
+  }
+double _calculateTierFare({
+    required double distanceKm,
+    required double baseKmStart,
+    required double baseKmEnd,
+    required double baseFare,
+    required double pricePerKm,
+  }) {
+    if (distanceKm <= 0) return 0;
+
+    if (distanceKm <= baseKmEnd) {
+      return baseFare;
+    }
+
+    final extraKm = distanceKm - baseKmEnd;
+    return baseFare + (extraKm * pricePerKm);
+  }
 
   List<dynamic>? _cachedVehicleData;
   @override
@@ -48,6 +114,9 @@ double? googleDistanceKm;
     super.initState();
     _model = createModel(context, () => DriverDetailsModel());
     _fetchDriverDetails();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDistanceAndFare();
+    });
   }
 double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     const double earthRadius = 6371;
@@ -139,83 +208,16 @@ void _showError(String message) {
 Future<void> _confirmBooking() async {
     final appState = FFAppState();
 
-    if (widget.vehicleType == null) {
-      _showError('Please select a vehicle type');
-      return;
-    }
 
-    if (appState.pickupLatitude == null ||
-        appState.pickupLongitude == null ||
-        appState.dropLatitude == null ||
-        appState.dropLongitude == null) {
-      _showError('Invalid location data');
-      return;
-    }
+   
 
-    if (appState.accessToken.isEmpty) {
-      _showError('Session expired. Please login again');
-      context.pushNamed(LoginWidget.routeName);
-      return;
-    }
 
     setState(() => isLoadingRide = true);
 
     try {
-      double roadDistance = googleDistanceKm ?? 0.0;
-      if (roadDistance == 0) {
-        roadDistance = calculateDistance(
-          appState.pickupLatitude!,
-          appState.pickupLongitude!,
-          appState.dropLatitude!,
-          appState.dropLongitude!,
-        );
-      }
-
-      final vehicleData = await _getVehicleData();
-      double baseKmStart = 1;
-      double baseKmEnd = 5;
-      double baseFare = 0;
-      double pricePerKm = 0;
-
-      int finalVehicleId = int.tryParse(widget.vehicleType ?? '0') ?? 0;
-
-      for (var vehicle in vehicleData) {
-        String? vId =
-            getJsonField(vehicle, r'''$.pricing.vehicle_id''')?.toString();
-        vId ??= getJsonField(vehicle, r'''$.vehicle_name''')?.toString();
-
-        if (vId == widget.vehicleType) {
-          final pricing = getJsonField(vehicle, r'''$.pricing''');
-          baseKmStart = double.tryParse(
-                  getJsonField(pricing, r'''$.base_km_start''').toString()) ??
-              1;
-          baseKmEnd = double.tryParse(
-                  getJsonField(pricing, r'''$.base_km_end''').toString()) ??
-              5;
-          baseFare = double.tryParse(
-                  getJsonField(pricing, r'''$.base_fare''').toString()) ??
-              0;
-          pricePerKm = double.tryParse(
-                  getJsonField(pricing, r'''$.price_per_km''').toString()) ??
-              0;
-          break;
-        }
-      }
-
-      final int finalBaseFare = calculateTieredFare(
-        distanceKm: roadDistance,
-        baseKmStart: baseKmStart,
-        baseKmEnd: baseKmEnd,
-        baseFare: baseFare,
-        pricePerKm: pricePerKm,
-      ).round();
-
-      final int finalFare = (finalBaseFare - appState.discountAmount.round())
-          .clamp(0, 999999)
-          .toInt();
 
       print(
-          '🚀 Creating Ride | Vehicle ID: $finalVehicleId | Fare: ₹$finalFare');
+          '🚀 Creating Ride | Vehicle ID: ${widget.vehicleType} | Fare: ₹$_calculatedFare');
 
       final createRideRes = await CreateRideCall.call(
         token: appState.accessToken,
@@ -226,9 +228,10 @@ Future<void> _confirmBooking() async {
         pickupLongitude: appState.pickupLongitude!,
         dropLatitude: appState.dropLatitude!,
         dropLongitude: appState.dropLongitude!,
-        adminVehicleId: finalVehicleId,
-        estimatedFare: finalFare.toString(),
+        adminVehicleId: widget.vehicleType,
+        estimatedFare:totalAmount.toStringAsFixed(2),
         rideStatus: 'started',
+        driverId: widget.driverId,
       );
 
       if (createRideRes.succeeded) {
@@ -244,12 +247,13 @@ Future<void> _confirmBooking() async {
           AutoBookWidget.routeName,
           queryParameters: {
             'rideId': rideId,
-            'vehicleType': widget.vehicleType ?? '',
-            'pickupLocation': appState.pickuplocation ?? '',
-            'dropLocation': appState.droplocation ?? '',
-            'estimatedFare': finalFare.toString(),
-            'estimatedDistance': roadDistance.toStringAsFixed(2),
-            'ride_status': 'started',
+            // 'vehicleType': widget.vehicleType ?? '',
+            // 'pickupLocation': appState.pickuplocation ?? '',
+            // 'dropLocation': appState.droplocation ?? '',
+            // 'estimatedFare': _calculatedFare.toStringAsFixed(2),
+            // 'estimatedDistance': _calculatedDistanceKm.toStringAsFixed(2),
+            // 'ride_status': 'started',
+            // 'driverId': widget.driverId?.toString() ?? '',
           },
         );
       } else {
@@ -277,9 +281,11 @@ Future<void> _confirmBooking() async {
     final profileImg = GetDriverDetailsCall.profileImage(_driverData);
     
     final dropLoc = widget.dropLocation ?? FFAppState().droplocation ?? 'Ameerpet';
-    final dropDist = widget.dropDistance ?? '15km';
-    final baseAmount = widget.tripAmount ?? 100.0;
-    final totalAmount = baseAmount + _selectedTip;
+    final baseAmount = _calculatedFare;
+    final dropDist = '${_calculatedDistanceKm.toStringAsFixed(2)} km';
+
+    
+
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),

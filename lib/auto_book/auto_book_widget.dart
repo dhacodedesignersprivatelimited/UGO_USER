@@ -152,11 +152,14 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       final updatedRide = Map<String, dynamic>.from(data);
       if (!mounted) return;
 
-      // Store latest ride and driver data in RideSession singleton
+      print('═══════════════════════════════════════════');
+      print('🔄 PROCESSING RIDE UPDATE');
+      print('   Ride data keys: ${updatedRide.keys.toList()}');
+      print('═══════════════════════════════════════════');
+
+      // ✅ CRITICAL: Store ride data IMMEDIATELY
       RideSession().rideData = updatedRide;
-      if (driverDetails != null) {
-        RideSession().driverData = driverDetails;
-      }
+      print('✅ Stored ride data in RideSession');
 
       final rawStatus = updatedRide['ride_status'] ?? updatedRide['status'];
       final status = rawStatus?.toString().toLowerCase().trim();
@@ -187,7 +190,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             .contains(status)) {
           _rideStatus = STATUS_ACCEPTED;
           _searchTimer?.cancel();
-        } else if (status == 'started' || status == 'picked_up') {
+        } else if (status == 'STARTED' || status == 'picked_up') {
           _rideStatus = STATUS_PICKED_UP;
         } else if (status == 'completed' || status == 'complete') {
           if (_rideStatus != STATUS_COMPLETED) {
@@ -198,20 +201,145 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         }
       });
 
+      // ✅ CRITICAL: Handle navigation with driver data
       if (navigateToComplete) {
-        print('🏁 Navigating to RidecompleteWidget');
-        context.goNamed(RidecompleteWidget.routeName);
+        print('\n🏁 RIDE COMPLETED - PREPARING NAVIGATION');
+        print('═══════════════════════════════════════════');
+        _handleCompletedRideNavigation(updatedRide);
+        return; // Don't continue processing
       }
 
+      // ✅ Fetch driver details if needed (for earlier stages)
       final driverId = updatedRide['driver_id'];
       if (driverId != null && driverDetails == null && !isLoadingDriver) {
+        print('📡 Triggering driver fetch for driver_id: $driverId');
         _fetchDriverDetails(driverId);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print("❌ Error processing ride update: $e");
+      print("Stack trace: $stackTrace");
     }
   }
 
+  // ✅ NEW METHOD: Handle completed ride navigation with driver data
+  Future<void> _handleCompletedRideNavigation(Map<String, dynamic> rideData) async {
+    print('📋 Checking driver data sources...');
+    
+    // Source 1: Local state (already fetched)
+    if (driverDetails != null) {
+      print('✅ Using driver data from LOCAL state');
+      RideSession().driverData = driverDetails;
+      print('   Driver: ${driverDetails?['name'] ?? driverDetails?['first_name']}');
+      print('   Vehicle: ${driverDetails?['vehicle_number']}');
+      _navigateToComplete();
+      return;
+    }
+
+    // Source 2: Nested in ride data
+    if (rideData['driver'] != null) {
+      print('✅ Using driver data from RIDE response');
+      final nestedDriver = rideData['driver'];
+      final driverMap = nestedDriver is Map<String, dynamic> 
+          ? nestedDriver 
+          : Map<String, dynamic>.from(nestedDriver);
+      
+      RideSession().driverData = driverMap;
+      driverDetails = driverMap; // Store locally too
+      print('   Driver: ${driverMap['name'] ?? driverMap['first_name']}');
+      print('   Vehicle: ${driverMap['vehicle_number']}');
+      _navigateToComplete();
+      return;
+    }
+
+    // Source 3: Driver ID exists, need to fetch
+    if (rideData['driver_id'] != null) {
+      print('⚠️  Driver ID found, fetching driver details: ${rideData['driver_id']}');
+      await _fetchDriverDetailsSync(rideData['driver_id']);
+      // Navigation will happen after fetch completes
+      return;
+    }
+
+    // Source 4: Driver info directly in ride data (flat structure)
+    if (rideData['driver_name'] != null || rideData['driver_phone'] != null) {
+      print('✅ Using FLAT driver data from ride response');
+      final flatDriver = {
+        'name': rideData['driver_name'],
+        'first_name': rideData['driver_name'],
+        'phone': rideData['driver_phone'],
+        'mobile_number': rideData['driver_phone'],
+        'vehicle_number': rideData['driver_vehicle'] ?? rideData['vehicle_number'],
+        'rating': rideData['driver_rating'],
+      };
+      
+      RideSession().driverData = flatDriver;
+      driverDetails = flatDriver;
+      print('   Driver: ${flatDriver['name']}');
+      print('   Vehicle: ${flatDriver['vehicle_number']}');
+      _navigateToComplete();
+      return;
+    }
+
+    // No driver data available
+    print('❌ WARNING: No driver data found in any source!');
+    print('   Available ride keys: ${rideData.keys.toList()}');
+    print('   Navigating anyway...');
+    _navigateToComplete();
+  }
+
+  void _navigateToComplete() {
+    print('\n🎯 FINAL CHECK BEFORE NAVIGATION:');
+    print('   RideSession.rideData: ${RideSession().rideData != null ? "SET ✅" : "NULL ❌"}');
+    print('   RideSession.driverData: ${RideSession().driverData != null ? "SET ✅" : "NULL ❌"}');
+    
+    if (RideSession().driverData != null) {
+      print('   Driver Name: ${RideSession().driverData?['name'] ?? RideSession().driverData?['first_name']}');
+      print('   Vehicle: ${RideSession().driverData?['vehicle_number']}');
+    }
+    
+    print('═══════════════════════════════════════════\n');
+    print('🚀 Navigating to RidecompleteWidget');
+    
+    if (mounted) {
+      context.goNamed(RidecompleteWidget.routeName);
+    }
+  }
+
+  // ✅ SYNCHRONOUS driver fetch (waits for result before navigation)
+  Future<void> _fetchDriverDetailsSync(dynamic driverId) async {
+    if (!mounted) return;
+    print('📡 SYNCHRONOUS driver fetch for: $driverId');
+
+    try {
+      final response = await GetDriverDetailsCall.call(
+        driverId: driverId,
+        token: FFAppState().accessToken,
+      );
+
+      if (response.succeeded) {
+        final fetchedDriver = response.jsonBody;
+        
+        if (mounted) {
+          setState(() {
+            driverDetails = fetchedDriver;
+            RideSession().driverData = fetchedDriver;
+          });
+          
+          print('✅ Driver details fetched successfully');
+          print('   Driver: ${fetchedDriver['name'] ?? fetchedDriver['first_name']}');
+          print('   Vehicle: ${fetchedDriver['vehicle_number']}');
+        }
+      } else {
+        print('❌ Driver fetch failed, status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception during driver fetch: $e');
+    } finally {
+      // Navigate regardless of fetch result
+      _navigateToComplete();
+    }
+  }
+
+  // ✅ ASYNCHRONOUS driver fetch (for earlier ride stages)
   Future<void> _fetchDriverDetails(dynamic driverId) async {
     if (!mounted) return;
     setState(() => isLoadingDriver = true);
@@ -227,14 +355,18 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         setState(() {
           driverDetails = response.jsonBody;
           isLoadingDriver = false;
+
+          // ✅ Store in RideSession immediately
           RideSession().driverData = driverDetails;
+          print('✅ Driver details loaded and stored');
+          print('   Driver: ${driverDetails?['name'] ?? driverDetails?['first_name']}');
+          print('   Vehicle: ${driverDetails?['vehicle_number']}');
 
           if (_rideStatus == STATUS_ACCEPTED ||
               _rideStatus == STATUS_SEARCHING) {
             _rideStatus = STATUS_ARRIVING;
           }
         });
-        print("✅ Driver details loaded");
       } else {
         if (mounted) setState(() => isLoadingDriver = false);
       }

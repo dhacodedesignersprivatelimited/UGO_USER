@@ -45,13 +45,34 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
   @override
   Widget build(BuildContext context) {
     final rideData = RideSession().rideData ?? {};
-   final driverData = RideSession().driverData;
+    final driverData = RideSession().driverData;
 
-     print('DEBUG: Ridecomplete.driverData => $driverData');
-     print('🟢 Driver in RideComplete: ${RideSession().driverData}');
+    print('DEBUG: Ridecomplete.driverData => $driverData');
+    print('🟢 Driver in RideComplete: ${RideSession().driverData}');
 
-      
-  
+    // ✅ Extract driver information with fallbacks
+    final driverName = driverData != null
+        ? (driverData['name'] ??
+            driverData['first_name'] ??
+            driverData['driver_name'] ??
+            'Driver not assigned')
+        : 'Driver not assigned';
+
+    final vehicleNumber = driverData != null
+        ? (driverData['vehicle_number'] ??
+            driverData['vehicleNumber'] ??
+            driverData['vehicle_no'] ??
+            'N/A')
+        : 'N/A';
+
+    final fare = rideData['estimated_fare'] != null
+        ? '₹${rideData['estimated_fare']}'
+        : null;
+
+    print('🚗 Passing to RidecompletWidget:');
+    print('   - driverName: $driverName');
+    print('   - vehicleNumber: $vehicleNumber');
+    print('   - fare: $fare');
 
     return GestureDetector(
       onTap: () {
@@ -77,7 +98,7 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
                   ),
                   onPressed: () async {
                     print(
-                        'DEBUG: [RidecompleteWidget] Back button pressed. Moving to step: \\${_model.currentStep - 1}');
+                        'DEBUG: [RidecompleteWidget] Back button pressed. Moving to step: ${_model.currentStep - 1}');
                     setState(() {
                       _model.currentStep--;
                     });
@@ -105,25 +126,18 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
               if (_model.currentStep == 0)
                 Expanded(
                   child: RidecompletWidget(
+                    // Trip location data
                     pickupLocation: rideData['pickup_location_address'],
                     dropoffLocation: rideData['drop_location_address'],
                     distance: rideData['ride_distance_km']?.toString(),
                     duration: rideData['duration']?.toString(),
-                    driverName: driverData != null
-                                     ? (driverData['name'] ??
-                      driverData['first_name'] ??
-                      'Driver not assigned')
-                  : 'Driver not assigned',
-
-                    vehicleNumber: driverData != null
-                  ? (driverData['vehicle_number'] ?? 'N/A')
-                  : 'N/A',
-                    fare: rideData['estimated_fare'] != null
-                        ? '₹${rideData['estimated_fare']}'
-                        : null,
-                         driverDetails: driverData,
-                          // driverName: driverData['name'] ?? driverData['first_name'],
-                          // vehicleNumber: driverData['vehicle_number'],
+                    
+                    // ✅ FIXED: Pass driver details to child component
+                    driverName: driverName,
+                    vehicleNumber: vehicleNumber,
+                    fare: fare,
+                    driverDetails: driverData,
+                    
                     onNext: () {
                       print(
                           'DEBUG: [RidecompleteWidget] Step 0 (Ride Complete) finished. Moving to Trip Summary');

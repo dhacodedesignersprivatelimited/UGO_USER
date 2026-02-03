@@ -137,7 +137,7 @@ class _HomeWidgetState extends State<HomeWidget>
         true,
         ScanMode.BARCODE,
       );
-
+      print('DEBUG: QR Scan Result: $scanResult');
       await Future.delayed(const Duration(milliseconds: 300));
       if (!mounted) return;
 
@@ -145,13 +145,27 @@ class _HomeWidgetState extends State<HomeWidget>
         return;
       }
 
-      dynamic driverId;
-      dynamic vehicleType;
+      int? driverId;
+      int? vehicleType;
+      double? baseFare;
+      double? pricePerKm;
+      double? baseKmStart;
+      double? baseKmEnd;
       try {
         if (scanResult.trim().startsWith('{')) {
           final decodedData = jsonDecode(scanResult);
-          driverId = decodedData['driver_id'] ?? decodedData['id'];
-          vehicleType = decodedData['vehicle_type_id'];
+          driverId = int.tryParse(decodedData['driver_id']?.toString() ?? '');
+          vehicleType =
+              int.tryParse(decodedData['vehicle_type_id']?.toString() ?? '');
+
+          baseFare = double.tryParse(decodedData['pricing']['base_fare']?.toString() ?? '0');
+          pricePerKm =
+              double.tryParse(decodedData['pricing']['price_per_km']?.toString() ?? '0');
+          baseKmStart =
+              double.tryParse(decodedData['pricing']['base_km_start']?.toString() ?? '1');
+          baseKmEnd =
+              double.tryParse(decodedData['pricing']['base_km_end']?.toString() ?? '5');
+
         } else {
           driverId = int.tryParse(scanResult);
         }
@@ -159,13 +173,17 @@ class _HomeWidgetState extends State<HomeWidget>
         debugPrint('QR decode error: $e');
         driverId = int.tryParse(scanResult);
       }
-
+      print('DEBUG: Parsed QR Data - Driver ID: $driverId, Vehicle Type: $vehicleType, Base Fare: $baseFare, Price per Km: $pricePerKm, Base Km Start: $baseKmStart, Base Km End: $baseKmEnd');
       if (driverId != null) {
         context.pushNamed(
           DriverDetailsWidget.routeName,
           queryParameters: {
             'driverId': driverId.toString(),
-            'vehicleType': vehicleType?.toString(),
+            'vehicleType': vehicleType?.toString() ?? '',
+            'baseFare': baseFare?.toString() ?? '0',
+            'pricePerKm': pricePerKm?.toString() ?? '0',
+            'baseKmStart': baseKmStart?.toString() ?? '1',
+            'baseKmEnd': baseKmEnd?.toString() ?? '5',
           },
         );
       } else {
@@ -284,7 +302,6 @@ class _HomeWidgetState extends State<HomeWidget>
                       children: [
                         _buildSearchBar(context, isSmallScreen),
                         SizedBox(height: screenHeight * 0.02),
-                        // ✅ HEADER TEXT RESTORED
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -319,7 +336,6 @@ class _HomeWidgetState extends State<HomeWidget>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20),
-                    // ✅ "OUR SERVICES" SECTION TITLE RESTORED
                     Text(
                       'Our Services',
                       style: GoogleFonts.poppins(
@@ -351,17 +367,45 @@ class _HomeWidgetState extends State<HomeWidget>
 
   // ==================== REUSABLE WIDGETS ====================
   Widget _buildRideTypeCard({required String image}) {
-    return Expanded(
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.0, end: -4.0),
-        duration: const Duration(milliseconds: 900),
-        curve: Curves.easeInOut,
-        builder: (context, value, child) {
-          return Transform.translate(
-            offset: Offset(0, value),
-            child: child,
+  return Expanded(
+    child: TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: -4.0),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeInOut,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, value),
+          child: child,
+        );
+      },
+      child: InkWell(
+        onTap: () {
+          // Show "Coming Soon" message when tapped
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Coming Soon',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: primaryOrange,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              duration: const Duration(seconds: 2),
+            ),
           );
         },
+        borderRadius: BorderRadius.circular(18),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 6),
           height: 90,
@@ -385,9 +429,9 @@ class _HomeWidgetState extends State<HomeWidget>
           ),
         ),
       ),
-    );
-  }
-
+    ),
+  );
+}
   Widget _buildSearchBar(BuildContext context, bool isSmallScreen) {
     return InkWell(
       onTap: () => context.pushNamed(PlanYourRideWidget.routeName),

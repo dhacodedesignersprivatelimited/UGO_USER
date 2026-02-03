@@ -172,7 +172,6 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           path: HomeWidget.routePath,
           builder: (context, params) => HomeWidget(),
         ),
-
         FFRoute(
           name: AccountManagementWidget.routeName,
           path: AccountManagementWidget.routePath,
@@ -196,7 +195,9 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: AutoBookWidget.routeName,
           path: AutoBookWidget.routePath,
-          builder: (context, params) => AutoBookWidget(rideId: params.getParam('rideId', ParamType.int),),
+          builder: (context, params) => AutoBookWidget(
+            rideId: params.getParam('rideId', ParamType.int),
+          ),
         ),
         FFRoute(
           name: BikebookWidget.routeName,
@@ -354,11 +355,27 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, params) => DriverDetailsWidget(
             driverId: params.getParam(
               'driverId',
-              ParamType.JSON,
+              ParamType.int,
             ),
             vehicleType: params.getParam(
               'vehicleType',
-              ParamType.String,
+              ParamType.int,
+            ),
+            baseFare: params.getParam(
+              'baseFare',
+              ParamType.double,
+            ),
+            baseKmStart: params.getParam(
+              'baseKmStart',
+              ParamType.double,
+            ),
+            baseKmEnd: params.getParam(
+              'baseKmEnd',
+              ParamType.double,
+            ),
+            pricePerKm: params.getParam(
+              'pricePerKm',
+              ParamType.double,
             ),
           ),
         ),
@@ -435,7 +452,10 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         FFRoute(
           name: RidecompleteWidget.routeName,
           path: RidecompleteWidget.routePath,
-          builder: (context, params) => RidecompleteWidget(driverDetails: params.getParam('driverDetails', ParamType.JSON)),
+          builder: (context, params) => RidecompleteWidget(
+            driverDetails: params.getParam('driverDetails', ParamType.JSON),
+            // driverMobile: params.getParam('driverMobile', ParamType.String),
+          ),
         ),
         FFRoute(
           name: SetLocationWidget.routeName,
