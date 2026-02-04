@@ -958,6 +958,9 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         if (rideId == null) throw Exception('No ride ID returned');
 
         print('✅ Ride Created: $rideId');
+        // ✅ STORE RIDE ID GLOBALLY
+       appState.currentRideId = int.parse(rideId);
+
 
         await context.pushNamed(
           AutoBookWidget.routeName,

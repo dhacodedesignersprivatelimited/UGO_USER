@@ -151,28 +151,64 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
     return Column(
       children: [
         GestureDetector(
-          onTap: () =>
-              context.pushNamed(ProfileSettingWidget.routeName),
-          child: Container(
-            width: avatarSize,
-            height: avatarSize,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border:
-                  Border.all(color: const Color(0xFFFF7B10), width: 3),
+        onTap: () =>
+            context.pushNamed(ProfileSettingWidget.routeName),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Profile Image Circle
+            Container(
+              width: avatarSize,
+              height: avatarSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFFF7B10),
+                  width: 3,
+                ),
+              ),
+              child: ClipOval(
+                child: _isLoadingUser
+                    ? const Center(child: CircularProgressIndicator())
+                    : (_profileImageUrl.isNotEmpty
+                        ? Image.network(
+                            _profileImageUrl,
+                            fit: BoxFit.cover,
+                          )
+                        : Icon(
+                            Icons.person,
+                            color: const Color(0xFFFF7B10),
+                            size: avatarSize / 2,
+                          )),
+              ),
             ),
-            child: ClipOval(
-              child: _isLoadingUser
-                  ? const Center(child: CircularProgressIndicator())
-                  : (_profileImageUrl.isNotEmpty
-                      ? Image.network(_profileImageUrl,
-                          fit: BoxFit.cover)
-                      : Icon(Icons.person,
-                          color: const Color(0xFFFF7B10),
-                          size: avatarSize / 2)),
+
+            // ✏️ Edit Pencil Icon (bottom-right)
+            Positioned(
+              bottom: 2,
+              right: 2,
+              child: InkWell(
+                onTap: () =>
+                    context.pushNamed(ProfileSettingWidget.routeName),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF7B10),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.edit,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
+      ),
+
         const SizedBox(height: 16),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 260),
@@ -276,7 +312,7 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
     final items = [
       {'icon': Icons.settings, 'label': 'Settings', 'route': SettingsPageWidget.routeName},
       {'icon': Icons.language, 'label': 'Languages', 'route': LanguageWidget.routeName},
-      {'icon': Icons.message, 'label': 'Messages', 'route': MessagesWidget.routeName},
+      // {'icon': Icons.message, 'label': 'Messages', 'route': MessagesWidget.routeName},
       {'icon': Icons.gavel, 'label': 'Privacy Policy', 'route': PrivacypolicyWidget.routeName},
     ];
 

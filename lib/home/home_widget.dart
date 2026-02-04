@@ -321,6 +321,7 @@ class _HomeWidgetState extends State<HomeWidget>
                           screenWidth,
                           isSmallScreen,
                         ),
+                         SizedBox(height: screenHeight * 0.02),
                       ],
                     ),
                   ),
@@ -348,9 +349,18 @@ class _HomeWidgetState extends State<HomeWidget>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildRideTypeCard(image: 'assets/images/bike.png'),
-                        _buildRideTypeCard(image: 'assets/images/car.png'),
-                        _buildRideTypeCard(image: 'assets/images/auto.png'),
+                        _buildRideTypeCard(
+      image: 'assets/images/bike.png',
+      comingSoonMessage: 'Bike rides coming soon',
+    ),
+    _buildRideTypeCard(
+      image: 'assets/images/car.png',
+      comingSoonMessage: 'Car rides coming soon',
+    ),
+    _buildRideTypeCard(
+      image: 'assets/images/auto.png',
+      comingSoonMessage: 'Auto ride available Use Where to go?',
+    ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -366,7 +376,7 @@ class _HomeWidgetState extends State<HomeWidget>
   }
 
   // ==================== REUSABLE WIDGETS ====================
-  Widget _buildRideTypeCard({required String image}) {
+  Widget _buildRideTypeCard({required String image, required String comingSoonMessage}) {
   return Expanded(
     child: TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: -4.0),
@@ -380,31 +390,34 @@ class _HomeWidgetState extends State<HomeWidget>
       },
       child: InkWell(
         onTap: () {
-          // Show "Coming Soon" message when tapped
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Coming Soon',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          const Icon(Icons.info_outline, color: Colors.white),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              comingSoonMessage,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
               ),
-              backgroundColor: primaryOrange,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              duration: const Duration(seconds: 2),
             ),
-          );
-        },
+          ),
+        ],
+      ),
+      backgroundColor: primaryOrange,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      duration: const Duration(seconds: 2),
+    ),
+  );
+},
+
         borderRadius: BorderRadius.circular(18),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 6),

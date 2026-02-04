@@ -84,69 +84,76 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                         onTap: () =>
                             context.pushNamed(AddHomeWidget.routeName),
                       ),
-                      _tile(
-                        icon: Icons.accessibility,
-                        title: 'Accessibility',
-                        subtitle: 'Manage your accessibility settings',
-                        onTap: () => context.pushNamed(
-                            AccessibilitySettingsWidget.routeName),
-                      ),
-                      _tile(
-                        icon: Icons.chat_bubble_outline,
-                        title: 'Communication',
-                        subtitle: 'Manage contact & notifications',
+                       _tile(
+                        icon: Icons.work_outlined,
+                        title: 'Add Work',
                         onTap: () =>
-                            context.pushNamed(CommunicationWidget.routeName),
+                            // context.pushNamed(AddHomeWidget.routeName),
+                            {}
                       ),
+                      // _tile(
+                      //   icon: Icons.accessibility,
+                      //   title: 'Accessibility',
+                      //   subtitle: 'Manage your accessibility settings',
+                      //   onTap: () => context.pushNamed(
+                      //       AccessibilitySettingsWidget.routeName),
+                      // ),
+                      // _tile(
+                      //   icon: Icons.chat_bubble_outline,
+                      //   title: 'Communication',
+                      //   subtitle: 'Manage contact & notifications',
+                      //   onTap: () =>
+                      //       context.pushNamed(CommunicationWidget.routeName),
+                      // ),
                     ],
                   ),
 
-                  _section(
-                    title: 'Safety',
-                    children: [
-                      _tile(
-                        icon: Icons.security,
-                        title: 'Safety preferences',
-                        subtitle:
-                            'Choose and schedule your safety options',
-                        onTap: () => context.pushNamed(
-                            SafetypreferencesWidget.routeName),
-                      ),
-                    ],
-                  ),
+                  // _section(
+                  //   title: 'Safety',
+                  //   children: [
+                  //     _tile(
+                  //       icon: Icons.security,
+                  //       title: 'Safety preferences',
+                  //       subtitle:
+                  //           'Choose and schedule your safety options',
+                  //       onTap: () => context.pushNamed(
+                  //           SafetypreferencesWidget.routeName),
+                  //     ),
+                  //   ],
+                  // ),
 
-                  _section(
-                    title: 'Ride Preferences',
-                    children: [
-                      _tile(
-                        icon: Icons.warning,
-                        title: 'Driver nearby alert',
-                        subtitle: 'Notify me during long waits',
-                        onTap: () => context.pushNamed(
-                            DriversnearbyalertsWidget.routeName),
-                      ),
-                      _tile(
-                        icon: Icons.notifications,
-                        title: 'Commute alerts',
-                        subtitle: 'Traffic & commute notifications',
-                        onTap: () =>
-                            context.pushNamed(CommuteAlertsWidget.routeName),
-                      ),
-                    ],
-                  ),
+                  // _section(
+                  //   title: 'Ride Preferences',
+                  //   children: [
+                  //     _tile(
+                  //       icon: Icons.warning,
+                  //       title: 'Driver nearby alert',
+                  //       subtitle: 'Notify me during long waits',
+                  //       onTap: () => context.pushNamed(
+                  //           DriversnearbyalertsWidget.routeName),
+                  //     ),
+                  //     _tile(
+                  //       icon: Icons.notifications,
+                  //       title: 'Commute alerts',
+                  //       subtitle: 'Traffic & commute notifications',
+                  //       onTap: () =>
+                  //           context.pushNamed(CommuteAlertsWidget.routeName),
+                  //     ),
+                  //   ],
+                  // ),
 
-                  _section(
-                    title: 'Legal',
-                    children: [
-                      _tile(
-                        icon: Icons.privacy_tip_outlined,
-                        title: 'Privacy Policy',
-                        subtitle: 'View our data handling policies',
-                        onTap: () =>
-                            context.pushNamed(PrivacypolicyWidget.routeName),
-                      ),
-                    ],
-                  ),
+                  // _section(
+                  //   title: 'Legal',
+                  //   children: [
+                  //     _tile(
+                  //       icon: Icons.privacy_tip_outlined,
+                  //       title: 'Privacy Policy',
+                  //       subtitle: 'View our data handling policies',
+                  //       onTap: () =>
+                  //           context.pushNamed(PrivacypolicyWidget.routeName),
+                  //     ),
+                  //   ],
+                  // ),
                 ],
               ),
             );

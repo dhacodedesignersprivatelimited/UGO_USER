@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'trip_summary_model.dart';
 export 'trip_summary_model.dart';
 
-
 class TripSummaryWidget extends StatefulWidget {
   const TripSummaryWidget({
     super.key,
@@ -40,7 +39,6 @@ class TripSummaryWidget extends StatefulWidget {
 class _TripSummaryWidgetState extends State<TripSummaryWidget> {
   late TripSummaryModel _model;
   final appState = FFAppState();
-  
 
   static const Color primaryColor = Color(0xFFFF7B10);
 
@@ -62,6 +60,68 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
     super.dispose();
   }
 
+  // Download invoice functionality
+  Future<void> _downloadInvoice() async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: primaryColor),
+              const SizedBox(height: 16),
+              Text(
+                'Generating Invoice...',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Simulate download delay
+    await Future.delayed(const Duration(seconds: 2));
+
+    // Close loading dialog
+    Navigator.pop(context);
+
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Text(
+              'Invoice downloaded successfully!',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+
+    // TODO: Implement actual PDF generation and download
+    // You can use packages like pdf, printing, or path_provider
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -79,6 +139,36 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
                   mainAxisSize: MainAxisSize.max,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const SizedBox(height: 24),
+
+                    // Header Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Trip Summary',
+                            style: GoogleFonts.inter(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Review your completed ride details',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                     const SizedBox(height: 24),
 
                     // Trip Route Card
@@ -208,31 +298,27 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
                               ],
                             ),
                             const SizedBox(height: 20),
-                         _buildFareRow(
-  'Base Fare',
-  '₹${appState.selectedBaseFare.toStringAsFixed(2)}',
-  isHighlighted: false,
-),
-
-const SizedBox(height: 12),
-
-_buildFareRow(
-  'Price / Km',
-  '₹${appState.selectedPricePerKm.toStringAsFixed(2)}',
-  isHighlighted: false,
-),
-
-Divider(
-  height: 32,
-  thickness: 1.5,
-  color: Colors.grey[300],
-),
-
-_buildFareRow(
-  'Total Amount',
-  '₹${appState.selectedBaseFare.toStringAsFixed(2)}',
-  isHighlighted: true,
-),
+                            _buildFareRow(
+                              'Base Fare',
+                              '₹${appState.selectedBaseFare.toStringAsFixed(2)}',
+                              isHighlighted: false,
+                            ),
+                            const SizedBox(height: 12),
+                            _buildFareRow(
+                              'Price / Km',
+                              '₹${appState.selectedPricePerKm.toStringAsFixed(2)}',
+                              isHighlighted: false,
+                            ),
+                            Divider(
+                              height: 32,
+                              thickness: 1.5,
+                              color: Colors.grey[300],
+                            ),
+                            _buildFareRow(
+                              'Total Amount',
+                              '₹${appState.selectedBaseFare.toStringAsFixed(2)}',
+                              isHighlighted: true,
+                            ),
                           ],
                         ),
                       ),
@@ -249,7 +335,7 @@ _buildFareRow(
                           color: primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16),
                           border:
-                              Border.all(color: primaryColor.withOpacity(0.3)),
+                          Border.all(color: primaryColor.withOpacity(0.3)),
                         ),
                         padding: const EdgeInsets.all(16),
                         child: Row(
@@ -282,7 +368,7 @@ _buildFareRow(
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    widget.paymentMethod ?? 'Paid via UPI',
+                                    widget.paymentMethod ?? 'Paid via Cash',
                                     style: GoogleFonts.inter(
                                       fontSize: 13,
                                       color: Colors.grey[700],
@@ -290,19 +376,6 @@ _buildFareRow(
                                     ),
                                   ),
                                 ],
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                // Change payment method
-                              },
-                              child: Text(
-                                'Change',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: primaryColor,
-                                ),
                               ),
                             ),
                           ],
@@ -315,35 +388,40 @@ _buildFareRow(
                     // Support Card
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[200]!),
-                        ),
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            Icon(Icons.headset_mic,
-                                color: primaryColor, size: 24),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Need help with this trip?',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
+                      child: InkWell(
+                        onTap: () {
+                          // Navigate to support/help
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[50],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(Icons.headset_mic,
+                                  color: primaryColor, size: 24),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Need help with this trip?',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
                                 ),
                               ),
-                            ),
-                            Icon(
-                              Icons.chevron_right,
-                              color: Colors.grey[600],
-                              size: 20,
-                            ),
-                          ],
+                              Icon(
+                                Icons.chevron_right,
+                                color: Colors.grey[600],
+                                size: 20,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -370,16 +448,12 @@ _buildFareRow(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Rate Trip Button
+                  // Download Invoice Button
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: () async {
-                        if (widget.onNext != null) {
-                          widget.onNext!();
-                        }
-                      },
+                      onPressed: _downloadInvoice,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: primaryColor,
                         shape: RoundedRectangleBorder(
@@ -390,10 +464,10 @@ _buildFareRow(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.star, color: Colors.white, size: 20),
+                          Icon(Icons.download, color: Colors.white, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            'Rate Your Trip',
+                            'Download Invoice',
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -406,16 +480,17 @@ _buildFareRow(
                   ),
                   const SizedBox(height: 12),
 
-                  // Download Invoice Button
+                  // Back to Home Button
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: OutlinedButton(
                       onPressed: () {
-                        // Download invoice logic
+                        // Navigate to home and clear all previous routes
+                        context.goNamed('Home');
                       },
                       style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Colors.grey[300]!),
+                        side: BorderSide(color: Colors.grey[300]!, width: 1.5),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -423,10 +498,10 @@ _buildFareRow(
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.download, color: Colors.black87, size: 20),
+                          Icon(Icons.home, color: Colors.black87, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            'Download Invoice',
+                            'Back to Home',
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,

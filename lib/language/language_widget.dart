@@ -168,16 +168,14 @@ class _LanguageWidgetState extends State<LanguageWidget> {
                                   FlutterFlowTheme.of(context).alternate,
                             ),
                             child: Checkbox(
-                              value: _model.checkboxValue1 ??= false,
+                              value: _model.checkboxValue1 ??= true,
                               onChanged: (newValue) async {
-                                safeSetState(
-                                    () => _model.checkboxValue1 = newValue!);
-                                if (newValue!) {
-                                  setAppLanguage(context, 'en');
-                                }
-                              },
-                              side: (FlutterFlowTheme.of(context).alternate !=
-                                      null)
+ 
+                              safeSetState(() => _model.checkboxValue1 = true);
+                              setAppLanguage(context, 'en');
+                            },
+
+                              side: (FlutterFlowTheme.of(context).alternate !=null)
                                   ? BorderSide(
                                       width: 2,
                                       color: FlutterFlowTheme.of(context)
@@ -193,185 +191,251 @@ class _LanguageWidgetState extends State<LanguageWidget> {
                     ),
                   ),
                 ),
-                Container(
-                  width: double.infinity,
-                  height: 56.0,
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: Padding(
-                    padding:
-                        EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          FFLocalizations.of(context).getText(
-                            'iih23n2v' /* Telugu */,
-                          ),
-                          style:
-                              FlutterFlowTheme.of(context).bodyMedium.override(
-                                    font: GoogleFonts.inter(
-                                      fontWeight: FontWeight.w500,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                                    fontSize: 16.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.w500,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontStyle,
-                                  ),
-                        ),
-                        Container(
-                          width: 24.0,
-                          height: 24.0,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(4.0),
-                            border: Border.all(
-                              color: Color(0xFF9E9E9E),
-                              width: 2.0,
-                            ),
-                          ),
-                          child: Theme(
-                            data: ThemeData(
-                              checkboxTheme: CheckboxThemeData(
-                                visualDensity: VisualDensity.compact,
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4.0),
-                                ),
-                              ),
-                              unselectedWidgetColor:
-                                  FlutterFlowTheme.of(context).alternate,
-                            ),
-                            child: Checkbox(
-                              value: _model.checkboxValue2 ??= false,
-                              onChanged: (newValue) async {
-                                safeSetState(
-                                    () => _model.checkboxValue2 = newValue!);
-                                if (newValue!) {
-                                  setAppLanguage(context, 'te');
-                                }
-                              },
-                              side: (FlutterFlowTheme.of(context).alternate !=
-                                      null)
-                                  ? BorderSide(
-                                      width: 2,
-                                      color: FlutterFlowTheme.of(context)
-                                          .alternate,
-                                    )
-                                  : null,
-                              activeColor: FlutterFlowTheme.of(context).primary,
-                              checkColor: FlutterFlowTheme.of(context).info,
-                            ),
-                          ),
-                        ),
-                      ],
+                // Container(
+                //   width: double.infinity,
+                //   height: 56.0,
+                //   decoration: BoxDecoration(
+                //     color: Colors.transparent,
+                //     borderRadius: BorderRadius.circular(12.0),
+                //   ),
+                //   child: Padding(
+                //     padding:
+                //         EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                //     child: Row(
+                //       mainAxisSize: MainAxisSize.max,
+                //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //       crossAxisAlignment: CrossAxisAlignment.center,
+                //       children: [
+                //         Text(
+                //           FFLocalizations.of(context).getText(
+                //             'iih23n2v' /* Telugu */,
+                //           ),
+                //           style:
+                //               FlutterFlowTheme.of(context).bodyMedium.override(
+                //                     font: GoogleFonts.inter(
+                //                       fontWeight: FontWeight.w500,
+                //                       fontStyle: FlutterFlowTheme.of(context)
+                //                           .bodyMedium
+                //                           .fontStyle,
+                //                     ),
+                //                     fontSize: 16.0,
+                //                     letterSpacing: 0.0,
+                //                     fontWeight: FontWeight.w500,
+                //                     fontStyle: FlutterFlowTheme.of(context)
+                //                         .bodyMedium
+                //                         .fontStyle,
+                //                   ),
+                //         ),
+                //         Container(
+                //           width: 24.0,
+                //           height: 24.0,
+                //           decoration: BoxDecoration(
+                //             borderRadius: BorderRadius.circular(4.0),
+                //             border: Border.all(
+                //               color: Color(0xFF9E9E9E),
+                //               width: 2.0,
+                //             ),
+                //           ),
+                //           child: Theme(
+                //             data: ThemeData(
+                //               checkboxTheme: CheckboxThemeData(
+                //                 visualDensity: VisualDensity.compact,
+                //                 materialTapTargetSize:
+                //                     MaterialTapTargetSize.shrinkWrap,
+                //                 shape: RoundedRectangleBorder(
+                //                   borderRadius: BorderRadius.circular(4.0),
+                //                 ),
+                //               ),
+                //               unselectedWidgetColor:
+                //                   FlutterFlowTheme.of(context).alternate,
+                //             ),
+                //             child: Checkbox(
+                //               value: _model.checkboxValue2 ??= false,
+                //               onChanged: (newValue) async {
+                //                 safeSetState(
+                //                     () => _model.checkboxValue2 = newValue!);
+                //                 if (newValue!) {
+                //                   setAppLanguage(context, 'te');
+                //                 }
+                //               },
+                //               side: (FlutterFlowTheme.of(context).alternate !=
+                //                       null)
+                //                   ? BorderSide(
+                //                       width: 2,
+                //                       color: FlutterFlowTheme.of(context)
+                //                           .alternate,
+                //                     )
+                //                   : null,
+                //               activeColor: FlutterFlowTheme.of(context).primary,
+                //               checkColor: FlutterFlowTheme.of(context).info,
+                //             ),
+                //           ),
+                //         ),
+                //       ],
+                //     ),
+                //   ),
+                // ),
+                Opacity(
+                opacity: 0.4, // 👈 dim effect
+                child: IgnorePointer( // 👈 disables all taps
+                  ignoring: true,
+                  child: Container(
+                    width: double.infinity,
+                    height: 56.0,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12.0),
                     ),
-                  ),
-                ),
-                Container(
-                  width: double.infinity,
-                  height: 56.0,
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: Padding(
-                    padding:
-                        EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                    child: InkWell(
-                      splashColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      onTap: () async {
-                        setAppLanguage(context, 'hi');
-                      },
+                    child: Padding(
+                      padding: EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
                       child: Row(
-                        mainAxisSize: MainAxisSize.max,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
-                            FFLocalizations.of(context).getText(
-                              '6craqhm0' /* Hindi */,
-                            ),
-                            style: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .override(
-                                  font: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w500,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontStyle,
-                                  ),
-                                  fontSize: 16.0,
-                                  letterSpacing: 0.0,
+                            FFLocalizations.of(context).getText('iih23n2v' /* Telugu */),
+                            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w500,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .fontStyle,
                                 ),
                           ),
-                          Container(
-                            width: 24.0,
-                            height: 24.0,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(4.0),
-                              border: Border.all(
-                                color: Color(0xFF9E9E9E),
-                                width: 2.0,
-                              ),
-                            ),
-                            child: Theme(
-                              data: ThemeData(
-                                checkboxTheme: CheckboxThemeData(
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4.0),
-                                  ),
-                                ),
-                                unselectedWidgetColor:
-                                    FlutterFlowTheme.of(context).alternate,
-                              ),
-                              child: Checkbox(
-                                value: _model.checkboxValue3 ??= false,
-                                onChanged: (newValue) async {
-                                  safeSetState(
-                                      () => _model.checkboxValue3 = newValue!);
-                                  if (newValue!) {
-                                    setAppLanguage(context, 'hi');
-                                  }
-                                },
-                                side: (FlutterFlowTheme.of(context).alternate !=
-                                        null)
-                                    ? BorderSide(
-                                        width: 2,
-                                        color: FlutterFlowTheme.of(context)
-                                            .alternate,
-                                      )
-                                    : null,
-                                activeColor:
-                                    FlutterFlowTheme.of(context).primary,
-                                checkColor: FlutterFlowTheme.of(context).info,
-                              ),
-                            ),
+                          Checkbox(
+                            value: false,
+                            onChanged: null, // 👈 disabled
                           ),
                         ],
                       ),
                     ),
                   ),
                 ),
+              ),
+
+                // Container(
+                //   width: double.infinity,
+                //   height: 56.0,
+                //   decoration: BoxDecoration(
+                //     color: Colors.transparent,
+                //     borderRadius: BorderRadius.circular(12.0),
+                //   ),
+                //   child: Padding(
+                //     padding:
+                //         EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                //     child: InkWell(
+                //       splashColor: Colors.transparent,
+                //       focusColor: Colors.transparent,
+                //       hoverColor: Colors.transparent,
+                //       highlightColor: Colors.transparent,
+                //       onTap: () async {
+                //         setAppLanguage(context, 'hi');
+                //       },
+                //       child: Row(
+                //         mainAxisSize: MainAxisSize.max,
+                //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //         crossAxisAlignment: CrossAxisAlignment.center,
+                //         children: [
+                //           Text(
+                //             FFLocalizations.of(context).getText(
+                //               '6craqhm0' /* Hindi */,
+                //             ),
+                //             style: FlutterFlowTheme.of(context)
+                //                 .bodyMedium
+                //                 .override(
+                //                   font: GoogleFonts.inter(
+                //                     fontWeight: FontWeight.w500,
+                //                     fontStyle: FlutterFlowTheme.of(context)
+                //                         .bodyMedium
+                //                         .fontStyle,
+                //                   ),
+                //                   fontSize: 16.0,
+                //                   letterSpacing: 0.0,
+                //                   fontWeight: FontWeight.w500,
+                //                   fontStyle: FlutterFlowTheme.of(context)
+                //                       .bodyMedium
+                //                       .fontStyle,
+                //                 ),
+                //           ),
+                //           Container(
+                //             width: 24.0,
+                //             height: 24.0,
+                //             decoration: BoxDecoration(
+                //               borderRadius: BorderRadius.circular(4.0),
+                //               border: Border.all(
+                //                 color: Color(0xFF9E9E9E),
+                //                 width: 2.0,
+                //               ),
+                //             ),
+                //             child: Theme(
+                //               data: ThemeData(
+                //                 checkboxTheme: CheckboxThemeData(
+                //                   visualDensity: VisualDensity.compact,
+                //                   materialTapTargetSize:
+                //                       MaterialTapTargetSize.shrinkWrap,
+                //                   shape: RoundedRectangleBorder(
+                //                     borderRadius: BorderRadius.circular(4.0),
+                //                   ),
+                //                 ),
+                //                 unselectedWidgetColor:
+                //                     FlutterFlowTheme.of(context).alternate,
+                //               ),
+                //               child: Checkbox(
+                //                 value: _model.checkboxValue3 ??= false,
+                //                 onChanged: (newValue) async {
+                //                   safeSetState(
+                //                       () => _model.checkboxValue3 = newValue!);
+                //                   if (newValue!) {
+                //                     setAppLanguage(context, 'hi');
+                //                   }
+                //                 },
+                //                 side: (FlutterFlowTheme.of(context).alternate !=
+                //                         null)
+                //                     ? BorderSide(
+                //                         width: 2,
+                //                         color: FlutterFlowTheme.of(context)
+                //                             .alternate,
+                //                       )
+                //                     : null,
+                //                 activeColor:
+                //                     FlutterFlowTheme.of(context).primary,
+                //                 checkColor: FlutterFlowTheme.of(context).info,
+                //               ),
+                //             ),
+                //           ),
+                //         ],
+                //       ),
+                //     ),
+                //   ),
+                // ),
+                Opacity(
+                opacity: 0.4, // 👈 dim effect
+                child: IgnorePointer(
+                  ignoring: true,
+                  child: Container(
+                    width: double.infinity,
+                    height: 56.0,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsetsDirectional.fromSTEB(16, 0, 16, 0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            FFLocalizations.of(context).getText('6craqhm0' /* Hindi */),
+                            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                          ),
+                          Checkbox(
+                            value: false,
+                            onChanged: null, // 👈 disabled
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
               ].divide(SizedBox(height: 12.0)),
             ),
           ),

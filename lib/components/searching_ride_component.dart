@@ -92,7 +92,7 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
 
           // Title
           Text(
-            'Finding your Captain',
+            'Finding your Ride',
             style: GoogleFonts.inter(
               fontSize: 22,
               fontWeight: FontWeight.w700,

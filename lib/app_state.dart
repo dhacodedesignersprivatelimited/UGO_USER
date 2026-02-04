@@ -56,6 +56,10 @@ _safeInit(() {
   _vehicleselect =
       prefs.getString('ff_vehicleselect') ?? _vehicleselect;
 });
+_safeInit(() {
+  _currentRideId = prefs.getInt('ff_currentRideId');
+});
+
 
 
 
@@ -98,6 +102,19 @@ _safeInit(() {
     _pickuplocation = value;
     notifyListeners();
   }
+  // Current Ride ID
+int? _currentRideId;
+int? get currentRideId => _currentRideId;
+set currentRideId(int? value) {
+  _currentRideId = value;
+  if (value == null) {
+    prefs.remove('ff_currentRideId');
+  } else {
+    prefs.setInt('ff_currentRideId', value);
+  }
+  notifyListeners();
+}
+
 
   double? _pickupLatitude;
   double? get pickupLatitude => _pickupLatitude;
@@ -212,6 +229,8 @@ set dropLongitude(double? value) {
   _selectedPricePerKm = 0.0;
   prefs.remove('ff_selectedBaseFare');
   prefs.remove('ff_selectedPricePerKm');
+  _currentRideId = null;
+  prefs.remove('ff_currentRideId');
     notifyListeners();
   }
 }

@@ -1274,6 +1274,59 @@ class GetAllNotificationsCall {
     r'''$.data.total''',
   ));
 }
+class SubmitRideRatingCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    required int userId,
+    required int driverId,
+    required String ratingGivenBy,
+    required int ratingScore,
+    String? ratingComment,
+  }) async {
+    final ffApiRequestBody = jsonEncode({
+      "ride_id": rideId,
+      "user_id": userId,
+      "driver_id": driverId,
+      "rating_given_by": ratingGivenBy,
+      "rating_score": ratingScore,
+      if (ratingComment != null && ratingComment.isNotEmpty)
+        "rating_comment": ratingComment,
+    });
+
+    print('📤 API Request Body: $ffApiRequestBody');
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'submitRideRating',
+      apiUrl: 'https://ugotaxi.icacorp.org/api/ratings/post',
+      callType: ApiCallType.POST,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  // Response helpers
+  static bool? success(dynamic response) =>
+      castToType<bool>(getJsonField(response, r'''$.success'''));
+
+  static int? statusCode(dynamic response) =>
+      castToType<int>(getJsonField(response, r'''$.statusCode'''));
+
+  static String? message(dynamic response) =>
+      castToType<String>(getJsonField(response, r'''$.message'''));
+
+  static int? ratingId(dynamic response) =>
+      castToType<int>(getJsonField(response, r'''$.data.id'''));
+}
 
 class GetAllVouchersCall {
   static Future<ApiCallResponse> call({String? token}) async {

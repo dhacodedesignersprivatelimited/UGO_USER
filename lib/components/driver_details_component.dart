@@ -165,7 +165,7 @@ class DriverDetailsComponent extends StatelessWidget {
                         )
                       : _buildPlaceholderAvatar(),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
 
                 // Driver Info
                 Expanded(
@@ -183,18 +183,18 @@ class DriverDetailsComponent extends StatelessWidget {
                       Row(
                         children: [
                           Icon(Icons.star, color: Colors.amber, size: 16),
-                          SizedBox(width: 4),
+                          SizedBox(width: 2),
                           Text(
                             driverRating,
                             style: GoogleFonts.inter(
-                              fontSize: 14,
+                              fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           Text(
                             ' • $vehicleNumber',
                             style: GoogleFonts.inter(
-                              fontSize: 14,
+                              fontSize: 12,
                               color: Colors.grey[600],
                             ),
                           ),

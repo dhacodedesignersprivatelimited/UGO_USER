@@ -323,13 +323,13 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   void _setAirportAsPickup() {
     final airportLocation = LatLng(17.2403, 78.4294);
     setState(() {
-      _model.pickupController.text = 'Rajiv Gandhi Airport, Shamshabad';
-      FFAppState().pickuplocation = 'Rajiv Gandhi Airport, Shamshabad';
-      FFAppState().pickupLatitude = 17.2403;
-      FFAppState().pickupLongitude = 78.4294;
-      _addPickupMarker(airportLocation);
-      pickupPredictions = [];
-      showPickupDropdown = false;
+      _model.dropController.text = 'Rajiv Gandhi Airport, Shamshabad';
+      FFAppState().droplocation = 'Rajiv Gandhi Airport, Shamshabad';
+      FFAppState().dropLatitude = 17.2403;
+      FFAppState().dropLongitude = 78.4294;
+      _addDropMarker(airportLocation);
+      dropPredictions = [];
+      showDropDropdown = false;
     });
 
     if (mapController != null) {
@@ -417,13 +417,13 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                 top: MediaQuery.of(context).padding.top + 8,
                 left: 16,
                 right: 16,
-                bottom: 12,
+                bottom: 5,
               ),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Color(0xFFFF7B10),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withOpacity(0.8),
                     blurRadius: 4,
                     offset: Offset(0, 2),
                   ),
@@ -432,7 +432,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(Icons.arrow_back, color: Colors.black),
+                    icon: Icon(Icons.arrow_back, color:  Colors.white),
                     onPressed: () => context.pop(),
                   ),
                   Expanded(
@@ -441,7 +441,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                       style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                        color: Colors.white,
                       ),
                     ),
                   ),

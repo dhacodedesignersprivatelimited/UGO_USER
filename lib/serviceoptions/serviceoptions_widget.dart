@@ -78,7 +78,7 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
               FFLocalizations.of(context).getText('rnwdwckb' /* Services */),
               style: GoogleFonts.poppins(
                 color: Colors.white,
-                fontSize: 20,
+                fontSize: 25,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -122,13 +122,21 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Text(
+        //   FFLocalizations.of(context).getText('xlfqyvqa' /* Comfortable Rides, Anytime */),
+        //   style: GoogleFonts.poppins(
+        //     fontSize: isNarrow ? 26 : 32,
+        //     fontWeight: FontWeight.w700,
+        //     color: Colors.black87,
+        //     height: 1.2,
+        //   ),
+        // ),
         Text(
-          FFLocalizations.of(context).getText('xlfqyvqa' /* Comfortable Rides, Anytime */),
-          style: GoogleFonts.poppins(
-            fontSize: isNarrow ? 26 : 32,
-            fontWeight: FontWeight.w700,
+          'Comfortable Rides Anytime',
+          style: GoogleFonts.inter(
+            fontSize: isNarrow ? 20 : 22,
+            fontWeight: FontWeight.w500,
             color: Colors.black87,
-            height: 1.2,
           ),
         ),
         SizedBox(height: 12),
@@ -147,23 +155,23 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
   Widget _buildServiceCards(bool isNarrow) {
     final serviceCards = [
       {
-        'image': 'assets/images/mwhg2d.png',
+        'image': 'assets/images/bike.png',
         'label': FFLocalizations.of(context).getText('o76sscog' /* Book a bike */),
         'color': const Color(0xFF2196F3),
-        'route': PlanYourRideWidget.routeName,
+        // 'route': PlanYourRideWidget.routeName,
       },
       {
-        'image': 'assets/images/ndppdc.png',
+        'image': 'assets/images/auto.png',
         'label': FFLocalizations.of(context).getText('p3js2d3q' /* Book a auto */),
         'color': const Color(0xFF4CAF50),
-        'route': PlanYourRideWidget.routeName,
+        // 'route': PlanYourRideWidget.routeName,
       },
       {
-        'image': null, // Use icon instead
+        'image':"assets/images/car.png" , // Use icon instead
         'label': FFLocalizations.of(context).getText('a1vegvac' /* Book a Cab */),
         'color': const Color(0xFFFF9800),
         'icon': Icons.local_taxi,
-        'route': PlanYourRideWidget.routeName,
+        // 'route': PlanYourRideWidget.routeName,
       },
     ];
 
@@ -178,7 +186,7 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
             label: card['label'] as String,
             color: card['color'] as Color,
             icon: card['icon'] as IconData?,
-            route: card['route'] as String,
+            // route: card['route'] as String,
             isNarrow: isNarrow,
           ),
         );
@@ -191,11 +199,33 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
     required String label,
     required Color color,
     IconData? icon,
-    required String route,
+    // required String route,
     required bool isNarrow,
   }) {
     return GestureDetector(
-      onTap: () => context.pushNamed(route),
+      onTap: () {
+  if (label.toLowerCase().contains('auto')) {
+    // ✅ Auto → Where to go
+    context.pushNamed(PlanYourRideWidget.routeName);
+  } else {
+    // 🚧 Bike & Car → Snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '$label rides coming soon',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+},
+
       child: Container(
         height: isNarrow ? 88 : 100,
         decoration: BoxDecoration(
@@ -242,7 +272,7 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
                   child: image != null
                       ? Image.asset(
                     image,
-                    fit: BoxFit.contain,
+                    fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Icon(
                       Icons.two_wheeler,
                       color: Colors.white,
