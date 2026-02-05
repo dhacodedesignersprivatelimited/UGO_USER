@@ -55,9 +55,19 @@ class DriverDetailsComponent extends StatelessWidget {
     }
 
     // OTP
-    String displayOtp = rideOtp ?? '----';
-    List<String> otpDigits =
-        displayOtp.padRight(4, '-').split('').take(4).toList();
+    // String displayOtp = rideOtp ?? '----';
+    // List<String> otpDigits =
+    //     displayOtp.padRight(4, '-').split('').take(4).toList();
+    List<String> otpDigits = [];
+
+if (rideOtp != null && rideOtp!.isNotEmpty) {
+  otpDigits = rideOtp!
+      .padRight(4, '-')
+      .split('')
+      .take(4)
+      .toList();
+}
+
 
     // Ride Info
     String pickup = 'Pickup Location';
@@ -102,44 +112,50 @@ class DriverDetailsComponent extends StatelessWidget {
           const SizedBox(height: 20),
 
           // OTP Section
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'OTP: ',
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                ...otpDigits.map((digit) => Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: primaryColor),
-                      ),
-                      child: Text(
-                        digit,
-                        style: GoogleFonts.inter(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: primaryColor,
-                        ),
-                      ),
-                    )),
+          // Container(
+          //   padding: EdgeInsets.all(16),
+          //   decoration: BoxDecoration(
+          //     color: primaryColor.withOpacity(0.1),
+          //     borderRadius: BorderRadius.circular(16),
+          //   ),
+          //   child: Row(
+          //     mainAxisAlignment: MainAxisAlignment.center,
+          //     children: [
+          //       Text(
+          //         'OTP: ',
+          //         style: GoogleFonts.inter(
+          //           fontSize: 18,
+          //           fontWeight: FontWeight.w600,
+          //         ),
+          //       ),
+          //       ...otpDigits.map((digit) => Container(
+          //             margin: const EdgeInsets.symmetric(horizontal: 4),
+          //             padding: const EdgeInsets.symmetric(
+          //                 horizontal: 14, vertical: 10),
+          //             decoration: BoxDecoration(
+          //               color: Colors.white,
+          //               borderRadius: BorderRadius.circular(8),
+          //               border: Border.all(color: primaryColor),
+          //             ),
+          //             child: Text(
+          //               digit,
+          //               style: GoogleFonts.inter(
+          //                 fontSize: 20,
+          //                 fontWeight: FontWeight.w700,
+          //                 color: primaryColor,
+          //               ),
+          //             ),
+          //           )),
+          //     ],
+          //   ),
+          // ),
+          // OTP Section (ONLY show if OTP exists)
+              if (otpDigits.isNotEmpty) ...[
+                _buildOtpContainer(otpDigits),
+                const SizedBox(height: 20),
               ],
-            ),
-          ),
-          const SizedBox(height: 20),
+
+          // const SizedBox(height: 20),
 
           // Driver Card
           Container(
@@ -195,7 +211,9 @@ class DriverDetailsComponent extends StatelessWidget {
                             ' • $vehicleNumber',
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: Colors.grey[600],
+                              color: Colors.black,
+                              fontWeight: FontWeight.w900,
+
                             ),
                           ),
                         ],
@@ -339,4 +357,46 @@ class DriverDetailsComponent extends StatelessWidget {
       ],
     );
   }
+  Widget _buildOtpContainer(List<String> otpDigits) {
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: primaryColor.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'OTP: ',
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        ...otpDigits.map(
+          (digit) => Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: primaryColor),
+            ),
+            child: Text(
+              digit,
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: primaryColor,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 }

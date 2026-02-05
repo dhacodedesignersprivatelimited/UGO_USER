@@ -497,6 +497,16 @@ class GetVehicleDetailsCall {
       .map((x) => castToType<String>(x))
       .withoutNulls
       .toList();
+   static List<int>? rideCategory(dynamic response) => (getJsonField(
+  response,
+  r'''$.data[:].ride_category''',
+  true,
+) as List?)
+    ?.withoutNulls
+    .map((x) => castToType<int>(x))
+    .withoutNulls
+    .toList();
+   
 }
 
 class VehicleData {

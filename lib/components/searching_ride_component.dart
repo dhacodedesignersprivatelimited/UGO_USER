@@ -120,28 +120,28 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 32),
+          // const SizedBox(height: 32),
 
-          // Tips
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.tips_and_updates_outlined, color: primaryColor, size: 20),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Tip: You can request a ride up to 30 days in advance',
-                    style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[700]),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // // Tips
+          // Container(
+          //   padding: EdgeInsets.all(16),
+          //   decoration: BoxDecoration(
+          //     color: Colors.grey[50],
+          //     borderRadius: BorderRadius.circular(12),
+          //   ),
+          //   child: Row(
+          //     children: [
+          //       Icon(Icons.tips_and_updates_outlined, color: primaryColor, size: 20),
+          //       SizedBox(width: 12),
+          //       Expanded(
+          //         child: Text(
+          //           'Tip: You can request a ride up to 30 days in advance',
+          //           style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[700]),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
           const SizedBox(height: 24),
 
           // Cancel Button

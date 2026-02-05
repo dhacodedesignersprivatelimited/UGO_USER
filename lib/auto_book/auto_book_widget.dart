@@ -494,6 +494,32 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       },
     );
   }
+  Future<bool> _onBackPressed() async {
+  // Allow back ONLY if ride is cancelled or completed
+  if (_rideStatus == STATUS_CANCELLED ||
+      _rideStatus == STATUS_COMPLETED) {
+    return true;
+  }
+
+  // Otherwise block back and show message
+  ScaffoldMessenger.of(context).clearSnackBars();
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        'Please continue the ride or cancel it first',
+        style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+      ),
+      duration: const Duration(seconds: 2),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+  );
+
+  return false; // ❌ DO NOT GO BACK
+}
+
 
   @override
   void dispose() {
@@ -511,44 +537,47 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: scaffoldKey,
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Map
-          Positioned.fill(
-            bottom: MediaQuery.of(context).size.height * 0.45,
-            child: FlutterFlowGoogleMap(
-              controller: _model.googleMapsController,
-              onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
-              initialLocation:
-                  _model.googleMapsCenter ?? const LatLng(17.385044, 78.486671),
-              markerColor: GoogleMarkerColor.orange,
-              mapType: MapType.normal,
-              initialZoom: 14.0,
-              allowInteraction: true,
-              showLocation: true,
+    return WillPopScope(
+       onWillPop: _onBackPressed,
+      child: Scaffold(
+        key: scaffoldKey,
+        backgroundColor: Colors.white,
+        body: Stack(
+          children: [
+            // Map
+            Positioned.fill(
+              bottom: MediaQuery.of(context).size.height * 0.45,
+              child: FlutterFlowGoogleMap(
+                controller: _model.googleMapsController,
+                onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
+                initialLocation:
+                    _model.googleMapsCenter ?? const LatLng(17.385044, 78.486671),
+                markerColor: GoogleMarkerColor.orange,
+                mapType: MapType.normal,
+                initialZoom: 14.0,
+                allowInteraction: true,
+                showLocation: true,
+              ),
             ),
-          ),
-
-          // Header
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: _buildHeader(),
-          ),
-
-          // Bottom Component
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: PointerInterceptor(
-              intercepting: isWeb,
-              child: _buildBottomComponent(),
+      
+            // Header
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: _buildHeader(),
             ),
-          ),
-        ],
+      
+            // Bottom Component
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: PointerInterceptor(
+                intercepting: isWeb,
+                child: _buildBottomComponent(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -573,19 +602,19 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       ),
       child: Row(
         children: [
-          InkWell(
-            onTap: () => context.pop(),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.arrow_back, size: 20),
-            ),
-          ),
-          SizedBox(width: 16),
+          // InkWell(
+          //   onTap: () => context.pop(),
+          //   child: Container(
+          //     width: 40,
+          //     height: 40,
+          //     decoration: BoxDecoration(
+          //       color: Colors.grey[100],
+          //       borderRadius: BorderRadius.circular(12),
+          //     ),
+          //     child: Icon(Icons.arrow_back, size: 20),
+          //   ),
+          // ),
+          // SizedBox(width: 16),
           Expanded(
             child: Text(
               _rideStatus == STATUS_SEARCHING

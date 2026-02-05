@@ -531,6 +531,11 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                             itemCount: jsonList.length,
                             itemBuilder: (context, index) {
                               final dataItem = jsonList[index];
+                              final int rideCategory =
+                              int.tryParse(getJsonField(dataItem, r'''$.ride_category''')?.toString() ?? '0') ?? 0;
+
+                          final bool isProRide = rideCategory == 1;
+
 
                               String? vehicleType = getJsonField(dataItem, r'''$.pricing.vehicle_id''')?.toString();
                               String? vehicleName = getJsonField(dataItem, r'''$.vehicle_name''')?.toString();
@@ -631,21 +636,43 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                                               color: Colors.grey[400],
                                             ),
                                           ),
-                                          SizedBox(width: 16),
+                                          SizedBox(width: 4),
 
                                           // Vehicle Info
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Text(
-                                                  vehicleName ?? 'UGO',
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: Colors.black,
-                                                  ),
+                                                // Text(
+                                                //   vehicleName ?? 'UGO',
+                                                //   style: GoogleFonts.inter(
+                                                //     fontSize: 16,
+                                                //     fontWeight: FontWeight.w700,
+                                                //     color: Colors.black,
+                                                //   ),
+                                                // ),
+                                                Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      vehicleName ?? 'UGO',
+                                                      style: GoogleFonts.inter(
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.w700,
+                                                        color: Colors.black,
+                                                      ),
+                                                    ),
+
+                                                    if (isProRide) ...[
+                                                      SizedBox(width: 0),
+                                                      Text(
+                                                        '👑', // you can use 👑 ⚡ 🚀 ⭐
+                                                        style: TextStyle(fontSize: 16),
+                                                      ),
+                                                    ],
+                                                  ],
                                                 ),
+
                                                 SizedBox(height: 4),
                                                 Row(
                                                   children: [
@@ -654,7 +681,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                                                       size: 14,
                                                       color: Colors.grey[600],
                                                     ),
-                                                    SizedBox(width: 4),
+                                                    SizedBox(width: 0),
                                                     Text(
                                                       '2 mins away',
                                                       style: GoogleFonts.inter(
@@ -681,31 +708,81 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                                           ),
 
                                           // Price
+                                          // Column(
+                                          //   crossAxisAlignment: CrossAxisAlignment.end,
+                                          //   children: [
+                                          //     if (isSelected && appState.discountAmount > 0 && calculatedFare > 0) ...[
+                                          //       Text(
+                                          //         '₹$calculatedFare',
+                                          //         style: GoogleFonts.inter(
+                                          //           fontSize: 13,
+                                          //           decoration: TextDecoration.lineThrough,
+                                          //           color: Colors.grey[500],
+                                          //           fontWeight: FontWeight.w500,
+                                          //         ),
+                                          //       ),
+                                          //       SizedBox(height: 2),
+                                          //     ],
+                                          //     Text(
+                                          //       displayFare > 0 ? '₹$displayFare' : '₹--',
+                                          //       style: GoogleFonts.inter(
+                                          //         fontSize: 22,
+                                          //         fontWeight: FontWeight.w900,
+                                          //         color: displayFare > 0 ? Colors.black : Colors.grey[400],
+                                          //       ),
+                                          //     ),
+                                          //   ],
+                                          // ),
                                           Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
-                                            children: [
-                                              if (isSelected && appState.discountAmount > 0 && calculatedFare > 0) ...[
-                                                Text(
-                                                  '₹$calculatedFare',
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 13,
-                                                    decoration: TextDecoration.lineThrough,
-                                                    color: Colors.grey[500],
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                SizedBox(height: 2),
-                                              ],
-                                              Text(
-                                                displayFare > 0 ? '₹$displayFare' : '₹--',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 22,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: displayFare > 0 ? Colors.black : Colors.grey[400],
-                                                ),
-                                              ),
-                                            ],
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      if (isSelected && appState.discountAmount > 0 && calculatedFare > 0) ...[
+                                        Text(
+                                          '₹$calculatedFare',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            decoration: TextDecoration.lineThrough,
+                                            color: Colors.grey[500],
+                                            fontWeight: FontWeight.w500,
                                           ),
+                                        ),
+                                        SizedBox(height: 4),
+                                      ],
+
+                                      Container(
+                                        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: displayFare > 0
+                                              ? (isSelected
+                                                  ? Color(0xFFFF7B10)
+                                                  : isProRide
+                                                      ? Color(0xFFFFF2E8)
+                                                      : Color(0xFFF5F5F5))
+                                              : Colors.grey[200],
+                                          borderRadius: BorderRadius.circular(14),
+                                          border: Border.all(
+                                            color: isSelected
+                                                ? Color(0xFFFF7B10)
+                                                : isProRide
+                                                    ? Color(0xFFFF7B10).withOpacity(0.4)
+                                                    : Colors.transparent,
+                                            width: 1.2,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          displayFare > 0 ? '₹$displayFare' : '₹--',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w900,
+                                            color: displayFare > 0
+                                                ? (isSelected ? Colors.white : Colors.black)
+                                                : Colors.grey[500],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
                                         ],
                                       ),
                                     ),
