@@ -25,6 +25,8 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
   late PushnotificationsModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+
+
   @override
   void initState() {
     super.initState();
@@ -32,6 +34,10 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _loadNotifications();
+      // Mark that user has viewed notifications at this time
+      FFAppState().lastNotificationCheckTime = DateTime.now();
+      FFAppState().update(() {});
+      debugPrint('📝 Saved last check time: ${DateTime.now()}');
     });
   }
 
@@ -48,6 +54,12 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
     _model.dispose();
     super.dispose();
   }
+
+  
+
+  
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -95,9 +107,21 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
       );
     }
 
-    final notificationsList = GetAllNotificationsCall.notifications(_model.notificationsResponse?.jsonBody);
+    final allNotifications = GetAllNotificationsCall.notifications(_model.notificationsResponse?.jsonBody);
+    
+    // Filter notifications for current user
+    final currentUserId = FFAppState().userid;
+    final userNotifications = allNotifications?.where((notification) {
+      final notificationUserId = getJsonField(notification, r'''$.user_id''');
+      // Match user_id with current user's ID
+      return notificationUserId?.toString() == currentUserId.toString();
+    }).toList();
 
-    if (notificationsList == null || notificationsList.isEmpty) {
+    debugPrint('📊 Total notifications: ${allNotifications?.length ?? 0}');
+    debugPrint('👤 Current user ID: $currentUserId');
+    debugPrint('✅ Filtered notifications for user: ${userNotifications?.length ?? 0}');
+
+    if (userNotifications == null || userNotifications.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -133,10 +157,10 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
       backgroundColor: Colors.white,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: notificationsList.length,
+        itemCount: userNotifications.length,
         separatorBuilder: (context, index) => const Divider(height: 1, indent: 72, color: Color(0xFFEEEEEE)),
         itemBuilder: (context, index) {
-          final item = notificationsList[index];
+          final item = userNotifications[index];
           return _buildNotificationItem(item);
         },
       ),
@@ -156,7 +180,7 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
     IconData iconData = Icons.notifications_rounded;
     Color iconColor = const Color(0xFFFF7B10);
 
-    if (type.contains('ride')) {
+    if (type.contains('ride') || type.contains('trip')) {
       iconData = Icons.directions_car_filled_rounded;
     } else if (type.contains('payment')) {
       iconData = Icons.account_balance_wallet_rounded;
@@ -164,6 +188,9 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
     } else if (type.contains('promo')) {
       iconData = Icons.local_offer_rounded;
       iconColor = Colors.blue;
+    } else if (type.contains('cancel')) {
+      iconData = Icons.cancel_rounded;
+      iconColor = Colors.red;
     }
 
     DateTime? date;
@@ -173,7 +200,7 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
 
     return InkWell(
       onTap: () {
-        // Handle notification tap
+        // Handle notification tap - mark as read
       },
       child: Container(
         color: isRead ? Colors.white : const Color(0xFFFFF9F5),

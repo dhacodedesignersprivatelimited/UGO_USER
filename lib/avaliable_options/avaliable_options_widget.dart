@@ -47,6 +47,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   String? googleDuration;
 
   List<dynamic>? _cachedVehicleData;
+   bool showPaymentOptions = false;
+  //  String selectedPaymentMethod = 'cash';
 
   @override
   void initState() {
@@ -809,79 +811,104 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                         children: [
                           // Payment & Coupon Row
                           Row(
-                            children: [
-                              // Payment Method
-                              InkWell(
-                                onTap: () => context.pushNamed(WalletWidget.routeName),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[100],
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.payment, size: 18, color: Colors.black87),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Cash',
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              Spacer(),
+  children: [
+    // PAYMENT OPTIONS BUTTON
+    InkWell(
+      onTap: () {
+        setState(() {
+          showPaymentOptions = !showPaymentOptions;
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.payment, size: 18),
+            const SizedBox(width: 6),
+            const Text(
+              'Payment Options',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 6),
 
-                              // Coupon
-                              InkWell(
-                                onTap: () => context.pushNamed(VoucherWidget.routeName),
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: appState.appliedCouponCode.isEmpty
-                                        ? Colors.grey[100]
-                                        : Color(0xFFFFF8F0),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: appState.appliedCouponCode.isNotEmpty
-                                        ? Border.all(color: Color(0xFFFF7B10))
-                                        : null,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        appState.appliedCouponCode.isEmpty
-                                            ? Icons.local_offer_outlined
-                                            : Icons.check_circle,
-                                        size: 16,
-                                        color: appState.appliedCouponCode.isEmpty
-                                            ? Colors.grey[700]
-                                            : Color(0xFFFF7B10),
-                                      ),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        appState.appliedCouponCode.isEmpty
-                                            ? 'Offers'
-                                            : appState.appliedCouponCode,
-                                        style: GoogleFonts.inter(
-                                          color: appState.appliedCouponCode.isEmpty
-                                              ? Colors.grey[700]
-                                              : Color(0xFFFF7B10),
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+            // ⬇️ CAP / DROPDOWN ICON
+            Icon(
+              showPaymentOptions
+                  ? Icons.keyboard_arrow_up
+                  : Icons.keyboard_arrow_down,
+              size: 20,
+            ),
+          ],
+        ),
+        
+      ),
+    ),
+
+    const Spacer(),
+
+    // OFFERS BUTTON
+    InkWell(
+      onTap: () => context.pushNamed(VoucherWidget.routeName),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: const [
+            Icon(Icons.local_offer_outlined, size: 16),
+            SizedBox(width: 6),
+            Text(
+              'Offers',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ],
+),
+if (showPaymentOptions) ...[
+  const SizedBox(height: 12),
+
+  InkWell(
+    onTap: () {
+      setState(() => showPaymentOptions = false);
+      // context.pushNamed(CashPaymentWidget.routeName);
+    },
+    child: _simpleOptionTile(
+      'Cash',
+      Icons.money,
+    ),
+  ),
+
+  const SizedBox(height: 8),
+
+  InkWell(
+    onTap: () {
+      setState(() => showPaymentOptions = false);
+      context.pushNamed(WalletWidget.routeName);
+    },
+    child: _simpleOptionTile(
+      'Wallet',
+      Icons.account_balance_wallet,
+    ),
+  ),
+],
+
 
                           SizedBox(height: 16),
 
@@ -1064,4 +1091,31 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
       if (mounted) setState(() => isLoadingRide = false);
     }
   }
+ Widget _simpleOptionTile(String text, IconData icon) {
+  return Container(
+    width: 160,
+    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: Colors.grey[100],
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.black),
+        SizedBox(width: 8),
+        Text(
+          text,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Spacer(),
+        Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+      ],
+    ),
+  );
+}
+
+
 }

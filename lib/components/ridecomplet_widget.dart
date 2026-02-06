@@ -1,3 +1,4 @@
+import 'package:ugouser/home/home_widget.dart';
 import 'package:ugouser/ride_session.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/backend/api_requests/api_calls.dart';
@@ -158,15 +159,20 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
 
       // Call API
       final response = await SubmitRideRatingCall.call(
-        rideId: rideId as int,
+        rideId: rideId,
         userId: userId,
-        driverId: driverId as int,
+        driverId: driverId,
         ratingGivenBy: 'user',
         ratingScore: _rating,
         ratingComment: ratingComment,
       );
 
-      if (response.succeeded) {
+     final isSuccess =
+    response.succeeded ||
+    SubmitRideRatingCall.success(response.jsonBody) == true ||
+    SubmitRideRatingCall.statusCode(response.jsonBody) == 201;
+
+if (isSuccess) {
         print('✅ Rating submitted successfully');
         print('   Response: ${response.jsonBody}');
 
@@ -196,11 +202,13 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
 
           // Navigate to next screen or home
           await Future.delayed(const Duration(milliseconds: 500));
-          if (widget.onNext != null) {
-            widget.onNext!();
-          } else {
-            context.goNamed('Home');
-          }
+          if (!mounted) return;
+
+// Clear ride session if needed
+            RideSession().clear();
+
+            context.pushNamed(HomeWidget.routeName);
+
         }
       } else {
         print('❌ Rating submission failed');
@@ -280,9 +288,10 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
     final vehicleType = driverData?['vehicle_type'] ?? 'Auto';
     final driverRating = driverData?['rating']?.toString() ?? '4.9';
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
+    return Container(
+      // backgroundColor: Colors.white,
+      color: Colors.white,
+      child: Column(
         children: [
           Expanded(
             child: SingleChildScrollView(

@@ -9,6 +9,8 @@ class DriverDetailsComponent extends StatelessWidget {
   final List<dynamic> ridesCache;
   final Function(String?) onCall;
   final VoidCallback onCancel;
+  final String rideStatus;
+  final double? currentRemainingDistance; // ✅ NEW: Real-time distance from parent
 
   static const Color primaryColor = Color(0xFFFF7B10);
 
@@ -20,6 +22,8 @@ class DriverDetailsComponent extends StatelessWidget {
     required this.ridesCache,
     required this.onCall,
     required this.onCancel,
+    required this.rideStatus,
+    this.currentRemainingDistance, // ✅ NEW
   }) : super(key: key);
 
   @override
@@ -43,7 +47,7 @@ class DriverDetailsComponent extends StatelessWidget {
         GetDriverDetailsCall.vehicleNumber(driverDetails) ?? 'AP28TA1234';
     final driverPhone = DriverIdfetchCall.mobileNumber(driverDetails);
 
-    // ✅ FIXED: Direct dictionary access instead of non-existent method
+    // Driver Image
     String? driverImage;
     try {
       driverImage = driverDetails?['profile_photo'] ??
@@ -54,25 +58,22 @@ class DriverDetailsComponent extends StatelessWidget {
       driverImage = null;
     }
 
-    // OTP
-    // String displayOtp = rideOtp ?? '----';
-    // List<String> otpDigits =
-    //     displayOtp.padRight(4, '-').split('').take(4).toList();
+    // ✅ OTP - Only show if status is accepted or arriving
     List<String> otpDigits = [];
+    bool showOtp = (rideStatus == 'accepted' || rideStatus == 'arrived');
+    
+    if (showOtp && rideOtp != null && rideOtp!.isNotEmpty) {
+      otpDigits = rideOtp!
+          .padRight(4, '-')
+          .split('')
+          .take(4)
+          .toList();
+    }
 
-if (rideOtp != null && rideOtp!.isNotEmpty) {
-  otpDigits = rideOtp!
-      .padRight(4, '-')
-      .split('')
-      .take(4)
-      .toList();
-}
-
-
-    // Ride Info
+    // ✅ Ride Info
     String pickup = 'Pickup Location';
     String dropoff = 'Drop Location';
-    String distance = '--km';
+    String originalDistance = '--km';
     String amount = '₹--';
 
     if (ridesCache.isNotEmpty) {
@@ -80,7 +81,7 @@ if (rideOtp != null && rideOtp!.isNotEmpty) {
       pickup = ride['pickup_location_address'] ?? pickup;
       dropoff = ride['drop_location_address'] ?? dropoff;
       amount = '₹${ride['estimated_fare'] ?? '--'}';
-      distance = '${ride['ride_distance_km'] ?? '--'}km';
+      originalDistance = '${ride['ride_distance_km'] ?? '--'}km';
     }
 
     return Container(
@@ -111,51 +112,31 @@ if (rideOtp != null && rideOtp!.isNotEmpty) {
           ),
           const SizedBox(height: 20),
 
-          // OTP Section
-          // Container(
-          //   padding: EdgeInsets.all(16),
-          //   decoration: BoxDecoration(
-          //     color: primaryColor.withOpacity(0.1),
-          //     borderRadius: BorderRadius.circular(16),
-          //   ),
-          //   child: Row(
-          //     mainAxisAlignment: MainAxisAlignment.center,
-          //     children: [
-          //       Text(
-          //         'OTP: ',
-          //         style: GoogleFonts.inter(
-          //           fontSize: 18,
-          //           fontWeight: FontWeight.w600,
-          //         ),
-          //       ),
-          //       ...otpDigits.map((digit) => Container(
-          //             margin: const EdgeInsets.symmetric(horizontal: 4),
-          //             padding: const EdgeInsets.symmetric(
-          //                 horizontal: 14, vertical: 10),
-          //             decoration: BoxDecoration(
-          //               color: Colors.white,
-          //               borderRadius: BorderRadius.circular(8),
-          //               border: Border.all(color: primaryColor),
-          //             ),
-          //             child: Text(
-          //               digit,
-          //               style: GoogleFonts.inter(
-          //                 fontSize: 20,
-          //                 fontWeight: FontWeight.w700,
-          //                 color: primaryColor,
-          //               ),
-          //             ),
-          //           )),
-          //     ],
-          //   ),
-          // ),
-          // OTP Section (ONLY show if OTP exists)
-              if (otpDigits.isNotEmpty) ...[
-                _buildOtpContainer(otpDigits),
-                const SizedBox(height: 20),
-              ],
+          // ✅ STATUS BANNER (for arriving status)
+          if (rideStatus == 'arrived') ...[
+            _buildStatusBanner(
+              icon: Icons.car_rental,
+              text: 'Driver is on the way',
+              color: Colors.blue,
+            ),
+            const SizedBox(height: 16),
+          ],
 
-          // const SizedBox(height: 20),
+          // ✅ STATUS BANNER (for picked_up status)
+          if (rideStatus == 'started') ...[
+            _buildStatusBanner(
+              icon: Icons.navigation,
+              text: 'Ride Started - En Route to Drop',
+              color: Colors.green,
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // ✅ OTP Section (ONLY show if status is accepted or arriving)
+          if (otpDigits.isNotEmpty) ...[
+            _buildOtpContainer(otpDigits),
+            const SizedBox(height: 20),
+          ],
 
           // Driver Card
           Container(
@@ -165,75 +146,123 @@ if (rideOtp != null && rideOtp!.isNotEmpty) {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey[200]!),
             ),
-            child: Row(
+            child: Column(
               children: [
-                // Driver Image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: driverImage != null && driverImage.isNotEmpty
-                      ? Image.network(
-                          driverImage,
-                          width: 70,
-                          height: 70,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _buildPlaceholderAvatar(),
-                        )
-                      : _buildPlaceholderAvatar(),
-                ),
-                const SizedBox(width: 10),
+                Row(
+                  children: [
+                    // Driver Image
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: driverImage != null && driverImage.isNotEmpty
+                          ? Image.network(
+                              driverImage,
+                              width: 70,
+                              height: 70,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) =>
+                                  _buildPlaceholderAvatar(),
+                            )
+                          : _buildPlaceholderAvatar(),
+                    ),
+                    const SizedBox(width: 10),
 
-                // Driver Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        driverName,
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Row(
+                    // Driver Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.star, color: Colors.amber, size: 16),
-                          SizedBox(width: 2),
                           Text(
-                            driverRating,
+                            driverName,
                             style: GoogleFonts.inter(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          Text(
-                            ' • $vehicleNumber',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: Colors.black,
-                              fontWeight: FontWeight.w900,
-
-                            ),
+                          SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.star, color: Colors.amber, size: 16),
+                              SizedBox(width: 2),
+                              Text(
+                                driverRating,
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                ' • $vehicleNumber',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-
-                // Call Button
-                InkWell(
-                  onTap: () => onCall(driverPhone?.toString()),
-                  child: Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: primaryColor,
-                      shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.call, color: Colors.white, size: 24),
-                  ),
+
+                    // Call Button
+                    InkWell(
+                      onTap: () => onCall(driverPhone?.toString()),
+                      child: Container(
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: primaryColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.call, color: Colors.white, size: 24),
+                      ),
+                    ),
+                  ],
                 ),
+                
+                // ✅ LIVE DISTANCE DISPLAY (when picked_up and distance available)
+                if (rideStatus == 'started' && currentRemainingDistance != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.navigation, 
+                          size: 20, 
+                          color: Colors.green[700]
+                        ),
+                        SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Distance to destination',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.green[600],
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              '${currentRemainingDistance!.toStringAsFixed(2)} km',
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.green[800],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -260,14 +289,16 @@ if (rideOtp != null && rideOtp!.isNotEmpty) {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Distance',
+                          rideStatus == 'started' 
+                            ? 'Original Distance' 
+                            : 'Distance',
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             color: Colors.grey[600],
                           ),
                         ),
                         Text(
-                          distance,
+                          originalDistance,
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -302,26 +333,58 @@ if (rideOtp != null && rideOtp!.isNotEmpty) {
           ),
           const SizedBox(height: 20),
 
-          // Cancel Button
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: OutlinedButton(
-              onPressed: onCancel,
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: Colors.red[300]!),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          // Cancel Button (hide when picked_up)
+          if (rideStatus != 'started')
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: OutlinedButton(
+                onPressed: onCancel,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: Colors.red[300]!),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Cancel Ride',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.red,
+                  ),
                 ),
               ),
-              child: Text(
-                'Cancel Ride',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.red,
-                ),
-              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ Status banner widget
+  Widget _buildStatusBanner({
+    required IconData icon,
+    required String text,
+    required Color color,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 20),
+          SizedBox(width: 8),
+          Text(
+            text,
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
         ],
@@ -357,46 +420,46 @@ if (rideOtp != null && rideOtp!.isNotEmpty) {
       ],
     );
   }
+
   Widget _buildOtpContainer(List<String> otpDigits) {
-  return Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: primaryColor.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'OTP: ',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        ...otpDigits.map(
-          (digit) => Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: primaryColor),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'OTP: ',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
             ),
-            child: Text(
-              digit,
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: primaryColor,
+          ),
+          ...otpDigits.map(
+            (digit) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: primaryColor),
+              ),
+              child: Text(
+                digit,
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: primaryColor,
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
+        ],
+      ),
+    );
+  }
 }

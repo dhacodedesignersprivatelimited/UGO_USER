@@ -1,8 +1,7 @@
 import '/flutter_flow/flutter_flow_google_map.dart';
-import '/flutter_flow/flutter_flow_icon_button.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
+
 import '/flutter_flow/flutter_flow_util.dart';
-import '/flutter_flow/flutter_flow_widgets.dart';
+
 import '/backend/api_requests/api_calls.dart';
 import '/index.dart';
 import 'dart:ui';
@@ -12,7 +11,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
-import 'package:provider/provider.dart';
+
 import 'auto_book_model.dart';
 export 'auto_book_model.dart';
 
@@ -64,6 +63,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   // Timer
   Timer? _searchTimer;
   int _searchSeconds = 0;
+  Timer? _distanceUpdateTimer; // ✅ NEW: Timer for distance updates
+
+  // Distance tracking
+  double? _currentRemainingDistance; // ✅ NEW: Store current distance
 
   // Status Constants
   static const STATUS_SEARCHING = 'searching';
@@ -93,6 +96,24 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         setState(() => _searchSeconds++);
       }
     });
+  }
+
+  // ✅ NEW: Start distance update timer when ride is picked up
+  void _startDistanceUpdateTimer() {
+    _distanceUpdateTimer?.cancel();
+    _distanceUpdateTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (mounted && _rideStatus == STATUS_PICKED_UP) {
+        _updateRemainingDistance();
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  // ✅ NEW: Stop distance update timer
+  void _stopDistanceUpdateTimer() {
+    _distanceUpdateTimer?.cancel();
+    _distanceUpdateTimer = null;
   }
 
   // ============================================================================
@@ -166,6 +187,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       print('🔄 Processing status: "$status"');
 
       bool navigateToComplete = false;
+      String previousStatus = _rideStatus; // ✅ Track previous status
 
       setState(() {
         if (ridesCache.isNotEmpty) {
@@ -186,20 +208,40 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         if (status == 'cancelled') {
           _rideStatus = STATUS_CANCELLED;
           _searchTimer?.cancel();
-        } else if (['accepted', 'arriving', 'driver_assigned']
-            .contains(status)) {
-          _rideStatus = STATUS_ACCEPTED;
+          _stopDistanceUpdateTimer(); // ✅ Stop distance timer
+        } else if (['accepted', 'driver_assigned'].contains(status)) {
+          // ✅ Show "accepted" status initially, will change to "arriving" after driver fetch
+          if (_rideStatus == STATUS_SEARCHING) {
+            _rideStatus = STATUS_ACCEPTED;
+          }
           _searchTimer?.cancel();
-        } else if (status == 'STARTED' || status == 'picked_up') {
+          _stopDistanceUpdateTimer(); // ✅ Stop distance timer
+        } else if (status == 'arriving') {
+          _rideStatus = STATUS_ARRIVING;
+          _stopDistanceUpdateTimer(); // ✅ Stop distance timer
+        } else if (status == 'started' || status == 'picked_up') {
           _rideStatus = STATUS_PICKED_UP;
+          
+          // ✅ Start distance tracking when ride is picked up
+          if (previousStatus != STATUS_PICKED_UP) {
+            print('🚗 Ride picked up - Starting distance tracking');
+            _updateRemainingDistance(); // Calculate initial distance
+            _startDistanceUpdateTimer(); // Start periodic updates
+          }
         } else if (status == 'completed' || status == 'complete') {
           if (_rideStatus != STATUS_COMPLETED) {
             _rideStatus = STATUS_COMPLETED;
             _searchTimer?.cancel();
+            _stopDistanceUpdateTimer(); // ✅ Stop distance timer
             navigateToComplete = true;
           }
         }
       });
+
+      // ✅ Update distance if already picked up
+      if (_rideStatus == STATUS_PICKED_UP) {
+        _updateRemainingDistance();
+      }
 
       // ✅ CRITICAL: Handle navigation with driver data
       if (navigateToComplete) {
@@ -219,6 +261,90 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       print("❌ Error processing ride update: $e");
       print("Stack trace: $stackTrace");
     }
+  }
+
+  // ✅ NEW: Calculate and update remaining distance
+  void _updateRemainingDistance() {
+    if (ridesCache.isEmpty) return;
+
+    try {
+      final ride = ridesCache[0];
+      final driverLat = ride['driver_latitude'];
+      final driverLng = ride['driver_longitude'];
+      final dropLat = ride['drop_latitude'];
+      final dropLng = ride['drop_longitude'];
+
+      if (driverLat != null && driverLng != null && 
+          dropLat != null && dropLng != null) {
+        
+        double newDistance = _calculateDistance(
+          double.parse(driverLat.toString()),
+          double.parse(driverLng.toString()),
+          double.parse(dropLat.toString()),
+          double.parse(dropLng.toString()),
+        );
+        
+        if (mounted) {
+          setState(() {
+            _currentRemainingDistance = newDistance;
+          });
+          print('📍 Updated remaining distance: ${newDistance.toStringAsFixed(2)}km');
+        }
+      }
+    } catch (e) {
+      print('❌ Error updating distance: $e');
+    }
+  }
+
+  // ✅ NEW: Haversine formula for distance calculation
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371; // km
+    
+    double dLat = _toRadians(lat2 - lat1);
+    double dLon = _toRadians(lon2 - lon1);
+    
+    double a = (_sin(dLat / 2) * _sin(dLat / 2)) +
+        _cos(_toRadians(lat1)) * _cos(_toRadians(lat2)) *
+        (_sin(dLon / 2) * _sin(dLon / 2));
+    
+    double c = 2 * _asin(_sqrt(a));
+    
+    return earthRadius * c;
+  }
+
+  double _toRadians(double degrees) => degrees * (3.141592653589793 / 180.0);
+
+  double _sin(double x) {
+    double result = x;
+    double term = x;
+    for (int n = 1; n <= 10; n++) {
+      term *= -x * x / ((2 * n) * (2 * n + 1));
+      result += term;
+    }
+    return result;
+  }
+
+  double _cos(double x) {
+    double result = 1;
+    double term = 1;
+    for (int n = 1; n <= 10; n++) {
+      term *= -x * x / ((2 * n - 1) * (2 * n));
+      result += term;
+    }
+    return result;
+  }
+
+  double _sqrt(double x) {
+    if (x < 0) return 0;
+    double guess = x / 2;
+    for (int i = 0; i < 10; i++) {
+      guess = (guess + x / guess) / 2;
+    }
+    return guess;
+  }
+
+  double _asin(double x) {
+    return x + (x * x * x) / 6 + (3 * x * x * x * x * x) / 40;
   }
 
   // ✅ NEW METHOD: Handle completed ride navigation with driver data
@@ -362,9 +488,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           print('   Driver: ${driverDetails?['name'] ?? driverDetails?['first_name']}');
           print('   Vehicle: ${driverDetails?['vehicle_number']}');
 
-          if (_rideStatus == STATUS_ACCEPTED ||
-              _rideStatus == STATUS_SEARCHING) {
+          // ✅ Auto-transition to ARRIVING after driver is fetched
+          if (_rideStatus == STATUS_ACCEPTED || _rideStatus == STATUS_SEARCHING) {
             _rideStatus = STATUS_ARRIVING;
+            print('🚗 Status changed to ARRIVING - Driver is on the way');
           }
         });
       } else {
@@ -404,6 +531,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           setState(() {
             _rideStatus = STATUS_CANCELLED;
             _searchTimer?.cancel();
+            _stopDistanceUpdateTimer(); // ✅ Stop distance timer
           });
 
           Future.delayed(const Duration(seconds: 2), () {
@@ -494,37 +622,38 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       },
     );
   }
+
   Future<bool> _onBackPressed() async {
-  // Allow back ONLY if ride is cancelled or completed
-  if (_rideStatus == STATUS_CANCELLED ||
-      _rideStatus == STATUS_COMPLETED) {
-    return true;
+    // Allow back ONLY if ride is cancelled or completed
+    if (_rideStatus == STATUS_CANCELLED ||
+        _rideStatus == STATUS_COMPLETED) {
+      return true;
+    }
+
+    // Otherwise block back and show message
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Please continue the ride or cancel it first',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+        ),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+
+    return false; // ❌ DO NOT GO BACK
   }
-
-  // Otherwise block back and show message
-  ScaffoldMessenger.of(context).clearSnackBars();
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        'Please continue the ride or cancel it first',
-        style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-      ),
-      duration: const Duration(seconds: 2),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-    ),
-  );
-
-  return false; // ❌ DO NOT GO BACK
-}
-
 
   @override
   void dispose() {
     print('🗑️ Disposing AutoBookWidget');
     _searchTimer?.cancel();
+    _stopDistanceUpdateTimer(); // ✅ Stop distance timer
 
     try {
       socket?.disconnect();
@@ -602,19 +731,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       ),
       child: Row(
         children: [
-          // InkWell(
-          //   onTap: () => context.pop(),
-          //   child: Container(
-          //     width: 40,
-          //     height: 40,
-          //     decoration: BoxDecoration(
-          //       color: Colors.grey[100],
-          //       borderRadius: BorderRadius.circular(12),
-          //     ),
-          //     child: Icon(Icons.arrow_back, size: 20),
-          //   ),
-          // ),
-          // SizedBox(width: 16),
           Expanded(
             child: Text(
               _rideStatus == STATUS_SEARCHING
@@ -669,7 +785,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         rideOtp: _rideOtp,
         ridesCache: ridesCache,
         onCall: _makeCall,
-        onCancel: _showCancelDialog,
+        onCancel: _showCancelDialog, 
+        rideStatus: _rideStatus, // ✅ Pass current status
+        currentRemainingDistance: _currentRemainingDistance, // ✅ NEW: Pass live distance
       );
     }
   }

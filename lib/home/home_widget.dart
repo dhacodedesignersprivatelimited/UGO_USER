@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
+import 'dart:async';  // ⬅️ ADD THIS LINE
 import 'home_model.dart';
 export 'home_model.dart';
 import '/backend/api_requests/api_calls.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
+
 
 /// Taxi Booking App Interface - Enhanced UI
 class HomeWidget extends StatefulWidget {
@@ -39,21 +41,47 @@ class _HomeWidgetState extends State<HomeWidget>
   static const Color shadowColor = Color(0x1AFF7B10);
 
   @override
-  void initState() {
-    super.initState();
-    _model = createModel(context, () => HomeModel());
+void initState() {
+  super.initState();
+  _model = createModel(context, () => HomeModel());
 
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    )..repeat(reverse: true);
+  _pulseController = AnimationController(
+    duration: const Duration(milliseconds: 1500),
+    vsync: this,
+  )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
+  _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+    CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+  );
 
-    _checkRideStatus();
-  }
+  _checkRideStatus();
+  
+  // Add this: Refresh notification count periodically
+  _startNotificationRefresh();
+}
+
+// Add this method
+Timer? _notificationTimer;
+
+void _startNotificationRefresh() {
+  _notificationTimer = Timer.periodic(
+    const Duration(seconds: 30), // Refresh every 30 seconds
+    (timer) {
+      if (mounted) {
+        setState(() {}); // Triggers FutureBuilder rebuild
+      }
+    },
+  );
+}
+
+// Update dispose method
+@override
+void dispose() {
+  _pulseController.dispose();
+  _notificationTimer?.cancel();
+  _model.dispose();
+  super.dispose();
+}
 
   Future<void> _checkRideStatus() async {
     if (_isCheckingRideStatus || FFAppState().bookingInProgress==false) return;
@@ -118,12 +146,12 @@ class _HomeWidgetState extends State<HomeWidget>
     }
   }
 
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    _model.dispose();
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   _pulseController.dispose();
+  //   _model.dispose();
+  //   super.dispose();
+  // }
 
   void _handleQRScan() async {
     if (isScanning) return;
@@ -234,7 +262,8 @@ class _HomeWidgetState extends State<HomeWidget>
         drawer: Drawer(
           elevation: 16.0,
           child: InkWell(
-            onTap: () => context.pushNamed(ServiceoptionsWidget.routeName),
+            onTap: () => {},
+            // context.pushNamed(ServiceoptionsWidget.routeName),
             child: wrapWithModel(
               model: _model.menuModel,
               updateCallback: () => safeSetState(() {}),
@@ -266,21 +295,74 @@ class _HomeWidgetState extends State<HomeWidget>
                 fit: BoxFit.contain,
               ),
               centerTitle: true,
+              // Replace the notification icon button in the AppBar actions with this:
               actions: [
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.notifications_none_rounded,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                    onPressed: () {
-                      context.pushNamed(PushnotificationsWidget.routeName);
+                  child: FutureBuilder<int>(
+                    future: _getUnreadNotificationCount(),
+                    builder: (context, snapshot) {
+                      final unreadCount = snapshot.data ?? 0;
+                      
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          IconButton(
+                            icon: const Icon(
+                              Icons.notifications_none_rounded,
+                              color: Colors.white,
+                              size: 30,
+                            ),
+                            onPressed: () {
+                              context.pushNamed(PushnotificationsWidget.routeName);
+                            },
+                          ),
+                          if (unreadCount > 0)
+                            Positioned(
+                              right: 2,
+                              top: 2,
+                              child: Container(
+                                padding: EdgeInsets.all(unreadCount > 9 ? 4 : 5),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 0,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 10,
+                                  minHeight: 10,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    unreadCount > 99 ? '99+' : unreadCount.toString(),
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontSize: unreadCount > 9 ? 10 : 11,
+                                      fontWeight: FontWeight.bold,
+                                      height: 1,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
                     },
                   ),
                 ),
               ],
+  
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
                   decoration: const BoxDecoration(
@@ -723,4 +805,51 @@ class _HomeWidgetState extends State<HomeWidget>
       ),
     );
   }
+  
+    // Add this method to _HomeWidgetState class
+Future<int> _getUnreadNotificationCount() async {
+  try {
+    final response = await GetAllNotificationsCall.call(
+      token: FFAppState().accessToken,
+    );
+    
+    if (response.succeeded) {
+      final allNotifications = GetAllNotificationsCall.notifications(response.jsonBody);
+      
+      if (allNotifications != null) {
+        final currentUserId = FFAppState().userid;
+        final lastCheckTime = FFAppState().lastNotificationCheckTime;
+        
+        // Count ONLY fresh unread notifications for current user
+        int freshUnreadCount = 0;
+        for (var notification in allNotifications) {
+          final notificationUserId = getJsonField(notification, r'''$.user_id''');
+          final isRead = getJsonField(notification, r'''$.is_read''');
+          final createdAtString = getJsonField(notification, r'''$.created_at''')?.toString();
+          
+          // Check if notification belongs to current user AND is unread
+          if (notificationUserId?.toString() == currentUserId.toString() && isRead != true) {
+            // If lastCheckTime exists, only count notifications created after that time
+            if (lastCheckTime != null && createdAtString != null) {
+              final createdAt = DateTime.tryParse(createdAtString);
+              if (createdAt != null && createdAt.isAfter(lastCheckTime)) {
+                freshUnreadCount++;
+                debugPrint('✨ Fresh notification: $createdAtString (after $lastCheckTime)');
+              }
+            } else {
+              // If no lastCheckTime, count all unread notifications
+              freshUnreadCount++;
+            }
+          }
+        }
+        
+        debugPrint('🔔 Fresh unread notifications: $freshUnreadCount');
+        return freshUnreadCount;
+      }
+    }
+  } catch (e) {
+    debugPrint('Error fetching notification count: $e');
+  }
+  return 0;
+}
 }

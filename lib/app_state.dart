@@ -211,6 +211,8 @@ set dropLongitude(double? value) {
       prefs.setDouble('ff_selectedPricePerKm', value);
       notifyListeners();
     }
+    // Add to FFAppState
+DateTime? lastNotificationCheckTime;
 
 
   // Clear ride data

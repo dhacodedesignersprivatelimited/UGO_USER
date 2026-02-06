@@ -1303,7 +1303,10 @@ class SubmitRideRatingCall {
         "rating_comment": ratingComment,
     });
 
+    final token = FFAppState().accessToken; // 👈 MUST exist
+
     print('📤 API Request Body: $ffApiRequestBody');
+    print('🔐 Auth Token: $token');
 
     return ApiManager.instance.makeApiCall(
       callName: 'submitRideRating',
@@ -1311,6 +1314,7 @@ class SubmitRideRatingCall {
       callType: ApiCallType.POST,
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token', // ✅ FIX
       },
       params: {},
       body: ffApiRequestBody,

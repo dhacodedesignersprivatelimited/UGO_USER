@@ -345,12 +345,12 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                     // Update center as user drags map
                     _currentMapCenter = position.target;
                   },
-                  onCameraIdle: () {
-                    // Update address when user stops dragging
-                    if (_currentMapCenter != null) {
-                      _updateDestinationFromMap(_currentMapCenter!);
-                    }
-                  },
+                  // onCameraIdle: () {
+                  //   // Update address when user stops dragging
+                  //   if (_currentMapCenter != null) {
+                  //     _updateDestinationFromMap(_currentMapCenter!);
+                  //   }
+                  // },
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
                   zoomControlsEnabled: false,
@@ -599,44 +599,67 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
               ),
 
               // Bottom Scanner Button
-              if (_predictions.isEmpty)
-                Positioned(
-                  bottom: 30,
-                  right: 20,
-                  child: Material(
-                    elevation: 8,
-                    borderRadius: BorderRadius.circular(16),
-                    child: InkWell(
-                      onTap: _openScanner,
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFF7B10), Color(0xFFE65100)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFFF7B10).withOpacity(0.4),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+              // ✅ Bottom action buttons (IMAGE STYLE)
+          if (_predictions.isEmpty)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 20,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 🔶 Scan to go button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: _openScanner,
+                      icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+                      label: Text(
+                        'Scan to go',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
-                        child: const Icon(
-                          Icons.qr_code_scanner,
-                          color: Colors.white,
-                          size: 32,
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF7B10),
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
                   ),
-                ),
-            ],
+
+                  const SizedBox(height: 12),
+
+                  // 🔹 Back to Home button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: () => context.goNamed(HomeWidget.routeName),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.black),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Back to Home',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+                  ],
           ),
         ),
       ),

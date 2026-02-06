@@ -245,100 +245,107 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
             ? 68.0
             : 64.0;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [gradientStart, gradientEnd]),
-        boxShadow: [
-          BoxShadow(
-            color: gradientEnd.withOpacity(0.3),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: avatarSize,
-            height: avatarSize,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
-                  blurRadius: 12,
-                ),
-              ],
+    return InkWell(
+       onTap: () {
+      Navigator.of(context).pop(); // close drawer
+      context.pushNamed(ProfileSettingWidget.routeName);
+    },
+
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [gradientStart, gradientEnd]),
+          boxShadow: [
+            BoxShadow(
+              color: gradientEnd.withOpacity(0.3),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(50),
-              child: _isLoadingUser
-                  ? Icon(Icons.person,
-                      color: gradientStart.withOpacity(0.75),
-                      size: isNarrow ? 26 : 30)
-                  : (_profileImageUrl.isNotEmpty
-                      ? Image.network(
-                          _profileImageUrl,
-                          fit: BoxFit.cover,
-                          // Shows a fallback while bytes load
-                          loadingBuilder: (context, child, progress) =>
-                              progress == null
-                                  ? child
-                                  : Icon(Icons.person,
-                                      color: gradientStart.withOpacity(0.75),
-                                      size: isNarrow ? 26 : 30),
-                          // Shows a fallback on error
-                          errorBuilder: (context, error, stackTrace) => Icon(
-                            Icons.person,
-                            color: gradientStart,
-                            size: isNarrow ? 26 : 30,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: avatarSize,
+              height: avatarSize,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 12,
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(50),
+                child: _isLoadingUser
+                    ? Icon(Icons.person,
+                        color: gradientStart.withOpacity(0.75),
+                        size: isNarrow ? 26 : 30)
+                    : (_profileImageUrl.isNotEmpty
+                        ? Image.network(
+                            _profileImageUrl,
+                            fit: BoxFit.cover,
+                            // Shows a fallback while bytes load
+                            loadingBuilder: (context, child, progress) =>
+                                progress == null
+                                    ? child
+                                    : Icon(Icons.person,
+                                        color: gradientStart.withOpacity(0.75),
+                                        size: isNarrow ? 26 : 30),
+                            // Shows a fallback on error
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.person,
+                              color: gradientStart,
+                              size: isNarrow ? 26 : 30,
+                            ),
+                          )
+                        : Icon(Icons.person,
+                            color: gradientStart, size: isNarrow ? 26 : 30)),
+              ),
+            ),
+            SizedBox(width: isNarrow ? 14 : 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Welcome Back!',
+                    style: GoogleFonts.poppins(
+                      fontSize: isNarrow ? 16 : 19,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white.withOpacity(0.95),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  _isLoadingUser
+                      ? SizedBox(
+                          width: 120,
+                          height: 14,
+                          child: LinearProgressIndicator(
+                            backgroundColor: Colors.white.withOpacity(0.3),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
-                      : Icon(Icons.person,
-                          color: gradientStart, size: isNarrow ? 26 : 30)),
-            ),
-          ),
-          SizedBox(width: isNarrow ? 14 : 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome Back!',
-                  style: GoogleFonts.poppins(
-                    fontSize: isNarrow ? 16 : 19,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white.withOpacity(0.95),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                _isLoadingUser
-                    ? SizedBox(
-                        width: 120,
-                        height: 14,
-                        child: LinearProgressIndicator(
-                          backgroundColor: Colors.white.withOpacity(0.3),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Colors.white,
+                      : Text(
+                          _userDisplayName,
+                          style: GoogleFonts.poppins(
+                            fontSize: isNarrow ? 16 : 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      )
-                    : Text(
-                        _userDisplayName,
-                        style: GoogleFonts.poppins(
-                          fontSize: isNarrow ? 16 : 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
