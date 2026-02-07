@@ -378,7 +378,7 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                                     ),
                                     child: displayVehicleImage != null && displayVehicleImage!.isNotEmpty
                                         ? Image.network(
-                                      'https://ugotaxi.icacorp.org/$displayVehicleImage',
+                                      'https://ugo-api.icacorp.org/$displayVehicleImage',
                                       fit: BoxFit.contain,
                                       errorBuilder: (context, error, stackTrace) =>
                                           Icon(Icons.directions_car, size: 40, color: Colors.grey),

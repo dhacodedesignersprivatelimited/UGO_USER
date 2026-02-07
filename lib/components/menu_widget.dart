@@ -97,7 +97,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
         final imgUrl = rawProfileImg.isNotEmpty
             ? (rawProfileImg.startsWith('http')
                 ? rawProfileImg
-                : 'https://ugotaxi.icacorp.org/$rawProfileImg')
+                : 'https://ugo-api.icacorp.org/$rawProfileImg')
             : '';
 
         setState(() {

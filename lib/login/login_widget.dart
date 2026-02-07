@@ -11,7 +11,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'login_model.dart';
 export 'login_model.dart';
 
-/// Phone Number Verification Screen
 class LoginWidget extends StatefulWidget {
   const LoginWidget({super.key});
 
@@ -24,7 +23,6 @@ class LoginWidget extends StatefulWidget {
 
 class _LoginWidgetState extends State<LoginWidget> {
   late LoginModel _model;
-
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -41,7 +39,6 @@ class _LoginWidgetState extends State<LoginWidget> {
   @override
   void dispose() {
     _model.dispose();
-
     super.dispose();
   }
 
@@ -56,211 +53,158 @@ class _LoginWidgetState extends State<LoginWidget> {
         key: scaffoldKey,
         backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: FlutterFlowTheme.of(context).primary,
+          backgroundColor: const Color(0xFFFF7B10), // Fixed: Solid Orange
           automaticallyImplyLeading: false,
-          leading: FlutterFlowIconButton(
-            borderColor: Colors.transparent,
-            borderRadius: 30.0,
-            borderWidth: 1.0,
-            buttonSize: 60.0,
-            icon: Icon(
-              Icons.arrow_back_rounded,
-              color: Colors.white,
-              size: 30.0,
-            ),
-            onPressed: () async {
-              context.pop();
-            },
-          ),
           title: Text(
-            FFLocalizations.of(context).getText(
-              'mc86snxk' /* LOGIN */,
-            ),
+            FFLocalizations.of(context).getText('mc86snxk' /* LOGIN */),
             style: FlutterFlowTheme.of(context).headlineMedium.override(
-                  font: GoogleFonts.interTight(
-                    fontWeight:
-                        FlutterFlowTheme.of(context).headlineMedium.fontWeight,
-                    fontStyle:
-                        FlutterFlowTheme.of(context).headlineMedium.fontStyle,
-                  ),
-                  color: Colors.white,
-                  fontSize: 22.0,
-                  letterSpacing: 0.0,
-                  fontWeight:
-                      FlutterFlowTheme.of(context).headlineMedium.fontWeight,
-                  fontStyle:
-                      FlutterFlowTheme.of(context).headlineMedium.fontStyle,
-                ),
+              font: GoogleFonts.interTight(),
+              color: Colors.white,
+              fontSize: 22.0,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          actions: [],
           centerTitle: true,
-          elevation: 2.0,
+          elevation: 0.0,
         ),
         body: SafeArea(
           top: true,
           child: Padding(
-            padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+            padding: const EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.max,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 30.0),
                   Text(
-                    FFLocalizations.of(context).getText(
-                      '0wqdgogt' /* Start your journey – enter you... */,
-                    ),
+                    FFLocalizations.of(context).getText('0wqdgogt' /* Start your journey... */),
                     style: FlutterFlowTheme.of(context).headlineMedium.override(
-                          font: GoogleFonts.interTight(
-                            fontWeight: FontWeight.w600,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .headlineMedium
-                                .fontStyle,
-                          ),
-                          color: Colors.black,
-                          fontSize: 24.0,
-                          letterSpacing: 0.0,
-                          fontWeight: FontWeight.w600,
-                          fontStyle: FlutterFlowTheme.of(context)
-                              .headlineMedium
-                              .fontStyle,
-                          lineHeight: 1.5,
-                        ),
+                      font: GoogleFonts.interTight(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      color: Colors.black,
+                      fontSize: 24.0,
+                      lineHeight: 1.5,
+                    ),
                   ),
                   Text(
-                    FFLocalizations.of(context).getText(
-                      'lu0ku0g6' /* We'll send you a code to verif... */,
-                    ),
+                    FFLocalizations.of(context).getText('lu0ku0g6' /* We'll send you a code... */),
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
-                          font: GoogleFonts.inter(
-                            fontWeight: FontWeight.normal,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .fontStyle,
-                          ),
-                          color: Colors.black,
-                          fontSize: 16.0,
-                          letterSpacing: 0.0,
-                          fontWeight: FontWeight.normal,
-                          fontStyle:
-                              FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-                          lineHeight: 1.5,
-                        ),
+                      font: GoogleFonts.inter(),
+                      color: Colors.grey[600],
+                      fontSize: 16.0,
+                      lineHeight: 1.5,
+                    ),
                   ),
+                  const SizedBox(height: 30.0),
                   Column(
-                    mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        FFLocalizations.of(context).getText(
-                          'kd9srmop' /* Phone number */,
-                        ),
+                        FFLocalizations.of(context).getText('kd9srmop' /* Phone number */),
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              font: GoogleFonts.inter(
-                                fontWeight: FontWeight.normal,
-                                fontStyle: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .fontStyle,
-                              ),
-                              color: Colors.transparent,
-                              fontSize: 16.0,
-                              letterSpacing: 0.0,
-                              fontWeight: FontWeight.normal,
-                              fontStyle: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .fontStyle,
-                            ),
+                          font: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          color: Colors.black,
+                          fontSize: 14.0,
+                        ),
                       ),
+                      const SizedBox(height: 8.0),
                       Container(
                         width: double.infinity,
                         child: TextFormField(
                           controller: _model.textController,
                           focusNode: _model.textFieldFocusNode,
-                          autofocus: false,
+                          autofocus: true, // UX: Auto-focus on load
                           textInputAction: TextInputAction.send,
                           obscureText: false,
                           decoration: InputDecoration(
-                            alignLabelWithHint: false,
-                            hintText: FFLocalizations.of(context).getText(
-                              '398um26d' /* ENTER YOUR NUMBER */,
+                            // UX: Added Prefix for India
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.all(14.0),
+                              child: Text(
+                                '+91',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
                             ),
+                            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                            hintText: 'Enter 10 digit number', // Clearer hint
                             enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Color(0xC7000000),
+                              borderSide: const BorderSide(
+                                color: Color(0xFFE0E0E0),
                                 width: 2.0,
                               ),
-                              borderRadius: BorderRadius.circular(8.0),
+                              borderRadius: BorderRadius.circular(12.0),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
+                              borderSide: const BorderSide(
                                 color: Color(0xFFFF7B10),
                                 width: 2.0,
                               ),
-                              borderRadius: BorderRadius.circular(8.0),
+                              borderRadius: BorderRadius.circular(12.0),
                             ),
                             errorBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Color(0x00000000),
+                              borderSide: const BorderSide(
+                                color: Colors.red,
                                 width: 2.0,
                               ),
-                              borderRadius: BorderRadius.circular(8.0),
+                              borderRadius: BorderRadius.circular(12.0),
                             ),
                             focusedErrorBorder: OutlineInputBorder(
-                              borderSide: BorderSide(
-                                color: Color(0x00000000),
+                              borderSide: const BorderSide(
+                                color: Colors.red,
                                 width: 2.0,
                               ),
-                              borderRadius: BorderRadius.circular(8.0),
+                              borderRadius: BorderRadius.circular(12.0),
                             ),
                             filled: true,
-                            fillColor: FlutterFlowTheme.of(context)
-                                .secondaryBackground,
-                            contentPadding: EdgeInsetsDirectional.fromSTEB(
-                                16.0, 16.0, 16.0, 16.0),
+                            fillColor: const Color(0xFFFAFAFA),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
                           ),
-                          style:
-                              FlutterFlowTheme.of(context).bodyMedium.override(
-                                    font: GoogleFonts.inter(
-                                      fontWeight: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                                    color: Colors.black,
-                                    fontSize: 16.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontStyle,
-                                  ),
+                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                            font: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            color: Colors.black,
+                            fontSize: 18.0, // Larger text for phone number
+                            letterSpacing: 1.0,
+                          ),
                           keyboardType: TextInputType.phone,
-                          cursorColor: Color(0x00FF7B10),
-                          validator: _model.textControllerValidator
-                              .asValidator(context),
+                          // FIX: Cursor was invisible (0x00FF7B10)
+                          cursorColor: const Color(0xFFFF7B10),
+                          validator: _model.textControllerValidator.asValidator(context),
                           inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp('[0-9]'))
+                            FilteringTextInputFormatter.allow(RegExp('[0-9]')),
+                            LengthLimitingTextInputFormatter(10), // Limit to 10 digits
                           ],
                         ),
                       ),
-                    ].divide(SizedBox(height: 16.0)),
+                    ],
                   ),
+                  const SizedBox(height: 24.0),
                   FFButtonWidget(
                     onPressed: () async {
-                      final phoneNumberVal = '+91${_model.textController.text}';
-                      if (phoneNumberVal.isEmpty ||
-                          !phoneNumberVal.startsWith('+')) {
+                      final phoneText = _model.textController.text;
+
+                      // IMPROVED VALIDATION LOGIC
+                      if (phoneText.isEmpty || phoneText.length != 10) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(
-                                'Phone Number is required and has to start with +.'),
+                            content: const Text('Please enter a valid 10-digit mobile number.'),
+                            backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                         );
                         return;
                       }
+
+                      final phoneNumberVal = '+91$phoneText';
+
                       await authManager.beginPhoneAuth(
                         context: context,
                         phoneNumber: phoneNumberVal,
@@ -270,7 +214,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                             context.mounted,
                             queryParameters: {
                               'mobile': serializeParam(
-                                int.tryParse(_model.textController.text),
+                                int.tryParse(phoneText),
                                 ParamType.int,
                               ),
                             }.withoutNulls,
@@ -279,168 +223,99 @@ class _LoginWidgetState extends State<LoginWidget> {
                         },
                       );
                     },
-                    text: FFLocalizations.of(context).getText(
-                      'm21mv0lk' /* SEND OTP */,
-                    ),
+                    text: FFLocalizations.of(context).getText('m21mv0lk' /* SEND OTP */),
                     options: FFButtonOptions(
                       width: double.infinity,
                       height: 56.0,
-                      padding: EdgeInsets.all(8.0),
-                      iconPadding:
-                          EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                      color: Color(0xFFFF7B10),
-                      textStyle:
-                          FlutterFlowTheme.of(context).titleMedium.override(
-                                font: GoogleFonts.interTight(
-                                  fontWeight: FontWeight.normal,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .titleMedium
-                                      .fontStyle,
-                                ),
-                                color: FlutterFlowTheme.of(context)
-                                    .secondaryBackground,
-                                fontSize: 24.0,
-                                letterSpacing: 0.0,
-                                fontWeight: FontWeight.normal,
-                                fontStyle: FlutterFlowTheme.of(context)
-                                    .titleMedium
-                                    .fontStyle,
-                              ),
-                      elevation: 0.0,
+                      padding: const EdgeInsets.all(8.0),
+                      color: const Color(0xFFFF7B10),
+                      textStyle: FlutterFlowTheme.of(context).titleMedium.override(
+                        font: GoogleFonts.interTight(),
+                        color: Colors.white,
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      elevation: 2.0,
                       borderRadius: BorderRadius.circular(28.0),
                     ),
                   ),
+                  const SizedBox(height: 40.0),
                   Column(
-                    mainAxisSize: MainAxisSize.max,
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Container(
-                        width: double.infinity,
-                        height: 1.0,
-                        decoration: BoxDecoration(
-                          color: Color(0x00CCCCCC),
-                        ),
-                      ),
-                      Text(
-                        FFLocalizations.of(context).getText(
-                          'hczr77o0' /* or connect with */,
-                        ),
-                        textAlign: TextAlign.center,
-                        style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              font: GoogleFonts.inter(
-                                fontWeight: FontWeight.normal,
-                                fontStyle: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .fontStyle,
-                              ),
-                              color: Colors.black,
-                              fontSize: 16.0,
-                              letterSpacing: 0.0,
-                              fontWeight: FontWeight.normal,
-                              fontStyle: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .fontStyle,
-                              lineHeight: 1.2,
-                            ),
-                      ),
                       Row(
-                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Expanded(child: Divider(color: Colors.grey[300])),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Text(
+                              FFLocalizations.of(context).getText('hczr77o0' /* or connect with */),
+                              style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                font: GoogleFonts.inter(),
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: Colors.grey[300])),
+                        ],
+                      ),
+                      const SizedBox(height: 24.0),
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          InkWell(
+                          _buildSocialButton(
+                            icon: FontAwesomeIcons.google,
+                            color: const Color(0xFF4285F4),
                             onTap: () async {
                               final user = await authManager.signInWithGoogle(context);
-                              if (user == null) {
-                                return;
-                              }
-                              // Successful login, navigate to Home
+                              if (user == null) return;
                               context.goNamedAuth(HomeWidget.routeName, context.mounted);
                             },
-                            child: Container(
-                              width: 50.0,
-                              height: 50.0,
-                              decoration: BoxDecoration(
-                                color: Color(0xFFFEFAFA),
-                                borderRadius: BorderRadius.circular(8.0),
-                                border: Border.all(
-                                  color: Color(0xFFCCCCCC),
-                                  width: 1.0,
-                                ),
-                              ),
-                              child: Align(
-                                alignment: AlignmentDirectional(0.0, 0.0),
-                                child: FaIcon(
-                                  FontAwesomeIcons.google,
-                                  color: Color(0xFF4285F4),
-                                  size: 25.0,
-                                ),
-                              ),
-                            ),
                           ),
-                          InkWell(
-                            onTap: () async {
-                              // Facebook login placeholder
-                            },
-                            child: Container(
-                              width: 50.0,
-                              height: 50.0,
-                              decoration: BoxDecoration(
-                                color: Color(0xFFFEFAFA),
-                                borderRadius: BorderRadius.circular(8.0),
-                                border: Border.all(
-                                  color: Color(0xFFCCCCCC),
-                                  width: 1.0,
-                                ),
-                              ),
-                              child: Align(
-                                alignment: AlignmentDirectional(0.0, 0.0),
-                                child: Icon(
-                                  Icons.facebook,
-                                  color: Color(0xFF1877F2),
-                                  size: 25.0,
-                                ),
-                              ),
-                            ),
-                          ),
-                          InkWell(
+                          const SizedBox(width: 20.0),
+                          _buildSocialButton(
+                            icon: Icons.apple,
+                            color: Colors.black,
                             onTap: () async {
                               final user = await authManager.signInWithApple(context);
-                              if (user == null) {
-                                return;
-                              }
+                              if (user == null) return;
                               context.goNamedAuth(HomeWidget.routeName, context.mounted);
                             },
-                            child: Container(
-                              width: 50.0,
-                              height: 50.0,
-                              decoration: BoxDecoration(
-                                color: Color(0xFFFEFAFA),
-                                borderRadius: BorderRadius.circular(8.0),
-                                border: Border.all(
-                                  color: Color(0xFFCCCCCC),
-                                  width: 1.0,
-                                ),
-                              ),
-                              child: Align(
-                                alignment: AlignmentDirectional(0.0, 0.0),
-                                child: Icon(
-                                  Icons.apple,
-                                  color: Colors.black,
-                                  size: 25.0,
-                                ),
-                              ),
-                            ),
                           ),
-                        ].divide(SizedBox(width: 16.0)),
+                        ],
                       ),
-                    ].divide(SizedBox(height: 24.0)),
+                    ],
                   ),
-                ]
-                    .divide(SizedBox(height: 24.0))
-                    .addToStart(SizedBox(height: 60.0)),
+                  const SizedBox(height: 60.0),
+                ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSocialButton({required IconData icon, required Color color, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12.0),
+      child: Container(
+        width: 60.0,
+        height: 60.0,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(color: const Color(0xFFEEEEEE), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Center(
+          child: FaIcon(icon, color: color, size: 28.0),
         ),
       ),
     );

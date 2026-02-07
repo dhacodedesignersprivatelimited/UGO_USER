@@ -5,15 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
-import 'dart:async';  // ⬅️ ADD THIS LINE
+import 'dart:async';
 import 'home_model.dart';
 export 'home_model.dart';
 import '/backend/api_requests/api_calls.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 
-
-/// Taxi Booking App Interface - Enhanced UI
 class HomeWidget extends StatefulWidget {
   const HomeWidget({super.key});
 
@@ -28,63 +25,63 @@ class _HomeWidgetState extends State<HomeWidget>
     with SingleTickerProviderStateMixin {
   late HomeModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-  bool isScanning = false;
+
+  // Animation
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+
+  // State Flags
+  bool isScanning = false;
   bool _isCheckingRideStatus = false;
 
-  // Color Constants for vibrant look
+  // Performance Optimization: Notifier for Notification Count
+  final ValueNotifier<int> _unreadCountNotifier = ValueNotifier<int>(0);
+  Timer? _notificationTimer;
+
+  // Color Constants
   static const Color primaryOrange = Color(0xFFFF7B10);
   static const Color deepOrange = Color(0xFFE65100);
   static const Color lightOrange = Color(0xFFFFAB40);
-  static const Color cardBackground = Color(0xFFFFFBF5);
-  static const Color shadowColor = Color(0x1AFF7B10);
 
   @override
-void initState() {
-  super.initState();
-  _model = createModel(context, () => HomeModel());
+  void initState() {
+    super.initState();
+    _model = createModel(context, () => HomeModel());
 
-  _pulseController = AnimationController(
-    duration: const Duration(milliseconds: 1500),
-    vsync: this,
-  )..repeat(reverse: true);
+    // 1. Setup Pulse Animation
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
 
-  _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
-    CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-  );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
-  _checkRideStatus();
-  
-  // Add this: Refresh notification count periodically
-  _startNotificationRefresh();
-}
+    // 2. IMPORTANT: Check for active rides immediately on app launch
+    _checkRideStatus();
 
-// Add this method
-Timer? _notificationTimer;
+    // 3. Start Notification polling
+    _updateNotificationCount();
+    _startNotificationRefresh();
+  }
 
-void _startNotificationRefresh() {
-  _notificationTimer = Timer.periodic(
-    const Duration(seconds: 30), // Refresh every 30 seconds
-    (timer) {
-      if (mounted) {
-        setState(() {}); // Triggers FutureBuilder rebuild
-      }
-    },
-  );
-}
+  void _startNotificationRefresh() {
+    _notificationTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (timer) {
+        if (mounted) {
+          _updateNotificationCount();
+        }
+      },
+    );
+  }
 
-// Update dispose method
-@override
-void dispose() {
-  _pulseController.dispose();
-  _notificationTimer?.cancel();
-  _model.dispose();
-  super.dispose();
-}
-
+  /// ✅ FIXED: Logic to restore active ride session
   Future<void> _checkRideStatus() async {
-    if (_isCheckingRideStatus || FFAppState().bookingInProgress==false) return;
+    // Prevent concurrent checks, but ALLOW check even if local bookingInProgress is false
+    // This ensures cross-device/restart synchronization.
+    if (_isCheckingRideStatus) return;
 
     final token = FFAppState().accessToken;
     if (token.isEmpty) return;
@@ -98,44 +95,54 @@ void dispose() {
       );
 
       _model.apiResult85c = response;
-      if (!mounted || !response.succeeded) return;
+      if (!mounted) return;
 
-      final rideList = getJsonField(
-        response.jsonBody,
-        r'''$.data.rides''',
-      );
+      if (response.succeeded) {
+        final rideList = getJsonField(response.jsonBody, r'''$.data.rides''');
 
-      final rideCount = GetRideStatus.count(response.jsonBody);
+        if (rideList != null && rideList is List && rideList.isNotEmpty) {
+          // Assuming the API returns the most recent ride first
+          final activeRide = rideList.first;
 
-      if (rideCount == null || rideCount == 0 || rideList == null) {
-        FFAppState().bookingInProgress = false;
-      } else if (rideList is List && rideList.isNotEmpty) {
-        dynamic firstRide = rideList.first;
-        dynamic rideId;
+          // Robust ID Extraction
+          final rideId = activeRide is Map ? activeRide['id'] : activeRide;
 
-        if (firstRide is Map<String, dynamic>) {
-          rideId = firstRide['id'];
-        } else if (firstRide is Map) {
-          rideId = firstRide['id'];
-        } else {
-          rideId = firstRide;
-        }
+          // Robust Status Extraction
+          final status = (activeRide is Map ? activeRide['status'] : null)
+              ?.toString()
+              .toLowerCase();
 
-        if (rideId != null) {
-          FFAppState().bookingInProgress = true;
-          if (mounted) {
-            context.pushNamed(
-              AutoBookWidget.routeName,
-              queryParameters: {
-                'rideId': rideId.toString(),
-              },
-            );
+          // Define statuses that should trigger a redirection
+          // (Exclude completed/cancelled so we don't get stuck in a loop)
+          const activeStatuses = [
+            'searching',
+            'driver_assigned',
+            'accepted',
+            'arriving',
+            'picked_up',
+            'started',
+            'in_progress'
+          ];
+
+          final isActive = status == null || activeStatuses.contains(status);
+
+          if (rideId != null && isActive) {
+            print(
+                '🚀 Active ride detected (ID: $rideId). Restoring session...');
+            FFAppState().bookingInProgress = true;
+
+            if (mounted) {
+              context.pushNamed(
+                AutoBookWidget.routeName,
+                queryParameters: {'rideId': rideId.toString()},
+              );
+            }
+          } else {
+            FFAppState().bookingInProgress = false;
           }
         } else {
           FFAppState().bookingInProgress = false;
         }
-      } else {
-        FFAppState().bookingInProgress = false;
       }
     } catch (e) {
       debugPrint('Ride status check failed: $e');
@@ -146,12 +153,58 @@ void dispose() {
     }
   }
 
-  // @override
-  // void dispose() {
-  //   _pulseController.dispose();
-  //   _model.dispose();
-  //   super.dispose();
-  // }
+  Future<void> _updateNotificationCount() async {
+    try {
+      final token = FFAppState().accessToken;
+      if (token.isEmpty) return;
+
+      final response = await GetAllNotificationsCall.call(token: token);
+
+      if (response.succeeded) {
+        final allNotifications =
+            GetAllNotificationsCall.notifications(response.jsonBody);
+
+        if (allNotifications != null) {
+          final currentUserId = FFAppState().userid;
+          final lastCheckTime = FFAppState().lastNotificationCheckTime;
+
+          int freshUnreadCount = 0;
+
+          for (var notification in allNotifications) {
+            final notificationUserId =
+                getJsonField(notification, r'''$.user_id''');
+            final isRead = getJsonField(notification, r'''$.is_read''');
+            final createdAtString =
+                getJsonField(notification, r'''$.created_at''')?.toString();
+
+            if (notificationUserId?.toString() == currentUserId.toString() &&
+                isRead != true) {
+              if (lastCheckTime != null && createdAtString != null) {
+                final createdAt = DateTime.tryParse(createdAtString);
+                if (createdAt != null && createdAt.isAfter(lastCheckTime)) {
+                  freshUnreadCount++;
+                }
+              } else {
+                freshUnreadCount++;
+              }
+            }
+          }
+          _unreadCountNotifier.value = freshUnreadCount;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching notification count: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _notificationTimer?.cancel();
+    _unreadCountNotifier.dispose();
+    _model.dispose();
+    super.dispose();
+  }
 
   void _handleQRScan() async {
     if (isScanning) return;
@@ -165,13 +218,14 @@ void dispose() {
         true,
         ScanMode.BARCODE,
       );
-      print('DEBUG: QR Scan Result: $scanResult');
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (!mounted) return;
 
       if (scanResult == '-1') {
+        setState(() => isScanning = false);
         return;
       }
+
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
 
       int? driverId;
       int? vehicleType;
@@ -179,6 +233,7 @@ void dispose() {
       double? pricePerKm;
       double? baseKmStart;
       double? baseKmEnd;
+
       try {
         if (scanResult.trim().startsWith('{')) {
           final decodedData = jsonDecode(scanResult);
@@ -186,14 +241,14 @@ void dispose() {
           vehicleType =
               int.tryParse(decodedData['vehicle_type_id']?.toString() ?? '');
 
-          baseFare = double.tryParse(decodedData['pricing']['base_fare']?.toString() ?? '0');
+          final pricing = decodedData['pricing'] ?? {};
+          baseFare = double.tryParse(pricing['base_fare']?.toString() ?? '0');
           pricePerKm =
-              double.tryParse(decodedData['pricing']['price_per_km']?.toString() ?? '0');
+              double.tryParse(pricing['price_per_km']?.toString() ?? '0');
           baseKmStart =
-              double.tryParse(decodedData['pricing']['base_km_start']?.toString() ?? '1');
+              double.tryParse(pricing['base_km_start']?.toString() ?? '1');
           baseKmEnd =
-              double.tryParse(decodedData['pricing']['base_km_end']?.toString() ?? '5');
-
+              double.tryParse(pricing['base_km_end']?.toString() ?? '5');
         } else {
           driverId = int.tryParse(scanResult);
         }
@@ -201,7 +256,7 @@ void dispose() {
         debugPrint('QR decode error: $e');
         driverId = int.tryParse(scanResult);
       }
-      print('DEBUG: Parsed QR Data - Driver ID: $driverId, Vehicle Type: $vehicleType, Base Fare: $baseFare, Price per Km: $pricePerKm, Base Km Start: $baseKmStart, Base Km End: $baseKmEnd');
+
       if (driverId != null) {
         context.pushNamed(
           DriverDetailsWidget.routeName,
@@ -216,36 +271,26 @@ void dispose() {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid QR Code'),
-            duration: Duration(seconds: 2),
-          ),
+          const SnackBar(content: Text('Invalid QR Code')),
         );
       }
     } catch (e) {
-      debugPrint('QR Scan error: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Scan failed: ${e.toString()}'),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } finally {
       if (mounted) {
-        setState(() => isScanning = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Scan failed: $e')),
+        );
       }
+    } finally {
+      if (mounted) setState(() => isScanning = false);
     }
   }
 
-  // ==================== MAIN BUILD ====================
   @override
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
       ),
     );
 
@@ -262,8 +307,7 @@ void dispose() {
         drawer: Drawer(
           elevation: 16.0,
           child: InkWell(
-            onTap: () => {},
-            // context.pushNamed(ServiceoptionsWidget.routeName),
+            onTap: () {},
             child: wrapWithModel(
               model: _model.menuModel,
               updateCallback: () => safeSetState(() {}),
@@ -273,7 +317,6 @@ void dispose() {
         ),
         body: CustomScrollView(
           slivers: [
-            // ==================== CUSTOM APP BAR ====================
             SliverAppBar(
               expandedHeight: screenHeight * 0.38,
               floating: false,
@@ -281,11 +324,8 @@ void dispose() {
               backgroundColor: primaryOrange,
               leading: Builder(
                 builder: (context) => IconButton(
-                  icon: const Icon(
-                    Icons.menu_rounded,
-                    color: Colors.white,
-                    size: 30,
-                  ),
+                  icon: const Icon(Icons.menu_rounded,
+                      color: Colors.white, size: 30),
                   onPressed: () => Scaffold.of(context).openDrawer(),
                 ),
               ),
@@ -295,15 +335,12 @@ void dispose() {
                 fit: BoxFit.contain,
               ),
               centerTitle: true,
-              // Replace the notification icon button in the AppBar actions with this:
               actions: [
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
-                  child: FutureBuilder<int>(
-                    future: _getUnreadNotificationCount(),
-                    builder: (context, snapshot) {
-                      final unreadCount = snapshot.data ?? 0;
-                      
+                  child: ValueListenableBuilder<int>(
+                    valueListenable: _unreadCountNotifier,
+                    builder: (context, unreadCount, child) {
                       return Stack(
                         clipBehavior: Clip.none,
                         children: [
@@ -314,7 +351,8 @@ void dispose() {
                               size: 30,
                             ),
                             onPressed: () {
-                              context.pushNamed(PushnotificationsWidget.routeName);
+                              context
+                                  .pushNamed(PushnotificationsWidget.routeName);
                             },
                           ),
                           if (unreadCount > 0)
@@ -322,36 +360,28 @@ void dispose() {
                               right: 2,
                               top: 2,
                               child: Container(
-                                padding: EdgeInsets.all(unreadCount > 9 ? 4 : 5),
+                                padding:
+                                    EdgeInsets.all(unreadCount > 9 ? 4 : 5),
                                 decoration: BoxDecoration(
                                   color: Colors.red,
                                   shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 0,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
+                                  border:
+                                      Border.all(color: Colors.white, width: 1),
                                 ),
                                 constraints: const BoxConstraints(
-                                  minWidth: 10,
-                                  minHeight: 10,
+                                  minWidth: 16,
+                                  minHeight: 16,
                                 ),
                                 child: Center(
                                   child: Text(
-                                    unreadCount > 99 ? '99+' : unreadCount.toString(),
+                                    unreadCount > 99
+                                        ? '99+'
+                                        : unreadCount.toString(),
                                     style: GoogleFonts.inter(
                                       color: Colors.white,
-                                      fontSize: unreadCount > 9 ? 10 : 11,
+                                      fontSize: unreadCount > 9 ? 9 : 10,
                                       fontWeight: FontWeight.bold,
-                                      height: 1,
                                     ),
-                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                               ),
@@ -362,7 +392,6 @@ void dispose() {
                   ),
                 ),
               ],
-  
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
                   decoration: const BoxDecoration(
@@ -374,11 +403,7 @@ void dispose() {
                   ),
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
-                      horizontalPadding,
-                      70,
-                      horizontalPadding,
-                      10,
-                    ),
+                        horizontalPadding, 70, horizontalPadding, 10),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -399,19 +424,14 @@ void dispose() {
                         ),
                         SizedBox(height: screenHeight * 0.015),
                         _buildActionButtonsRow(
-                          context,
-                          screenWidth,
-                          isSmallScreen,
-                        ),
-                         SizedBox(height: screenHeight * 0.02),
+                            context, screenWidth, isSmallScreen),
+                        SizedBox(height: screenHeight * 0.02),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
-
-            // ==================== BODY CONTENT ====================
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.all(horizontalPadding),
@@ -432,17 +452,21 @@ void dispose() {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildRideTypeCard(
-      image: 'assets/images/bike.png',
-      comingSoonMessage: 'Bike rides coming soon',
-    ),
-    _buildRideTypeCard(
-      image: 'assets/images/car.png',
-      comingSoonMessage: 'Car rides coming soon',
-    ),
-    _buildRideTypeCard(
-      image: 'assets/images/auto.png',
-      comingSoonMessage: 'Auto ride available Use Where to go?',
-    ),
+                          context,
+                          image: 'assets/images/bike.png',
+                          comingSoonMessage: 'Bike rides coming soon',
+                        ),
+                        _buildRideTypeCard(
+                          context,
+                          image: 'assets/images/car.png',
+                          comingSoonMessage: 'Car rides coming soon',
+                        ),
+                        _buildRideTypeCard(
+                          context,
+                          image: 'assets/images/auto.png',
+                          comingSoonMessage:
+                              'Auto ride available. Use "Where to go?"',
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -457,76 +481,72 @@ void dispose() {
     );
   }
 
-  // ==================== REUSABLE WIDGETS ====================
-  Widget _buildRideTypeCard({required String image, required String comingSoonMessage}) {
-  return Expanded(
-    child: TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: -4.0),
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeInOut,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, value),
-          child: child,
-        );
-      },
-      child: InkWell(
-        onTap: () {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Row(
-        children: [
-          const Icon(Icons.info_outline, color: Colors.white),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              comingSoonMessage,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
+  Widget _buildRideTypeCard(BuildContext context,
+      {required String image, required String comingSoonMessage}) {
+    return Expanded(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: -4.0),
+        duration: const Duration(milliseconds: 900),
+        curve: Curves.easeInOut,
+        builder: (context, value, child) {
+          return Transform.translate(
+            offset: Offset(0, value),
+            child: child,
+          );
+        },
+        child: InkWell(
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        comingSoonMessage,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: primaryOrange,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                duration: const Duration(seconds: 2),
               ),
+            );
+          },
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            height: 90,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 14,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-      backgroundColor: primaryOrange,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      duration: const Duration(seconds: 2),
-    ),
-  );
-},
-
-        borderRadius: BorderRadius.circular(18),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 6),
-          height: 90,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.12),
-                blurRadius: 14,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Image.asset(
-              image,
-              fit: BoxFit.contain,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Image.asset(image, fit: BoxFit.contain),
             ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   Widget _buildSearchBar(BuildContext context, bool isSmallScreen) {
     return InkWell(
       onTap: () => context.pushNamed(PlanYourRideWidget.routeName),
@@ -556,11 +576,8 @@ void dispose() {
                 color: primaryOrange.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
-                Icons.search_rounded,
-                color: primaryOrange,
-                size: 22,
-              ),
+              child: const Icon(Icons.search_rounded,
+                  color: primaryOrange, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -580,10 +597,7 @@ void dispose() {
   }
 
   Widget _buildActionButtonsRow(
-    BuildContext context,
-    double screenWidth,
-    bool isSmallScreen,
-  ) {
+      BuildContext context, double screenWidth, bool isSmallScreen) {
     return Row(
       children: [
         _buildActionButton(
@@ -625,10 +639,7 @@ void dispose() {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   border: isScanning
-                      ? Border.all(
-                          color: lightOrange,
-                          width: 2,
-                        )
+                      ? Border.all(color: lightOrange, width: 2)
                       : null,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
@@ -658,16 +669,12 @@ void dispose() {
                               padding: EdgeInsets.all(10),
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
-                          : const Icon(
-                              Icons.qr_code_scanner_rounded,
-                              color: Colors.white,
-                              size: 18,
-                            ),
+                          : const Icon(Icons.qr_code_scanner_rounded,
+                              color: Colors.white, size: 18),
                     ),
                     const SizedBox(width: 12),
                     Flexible(
@@ -716,11 +723,7 @@ void dispose() {
             ),
           ],
         ),
-        child: Icon(
-          icon,
-          color: iconColor,
-          size: width * 0.4,
-        ),
+        child: Icon(icon, color: iconColor, size: width * 0.4),
       ),
     );
   }
@@ -747,17 +750,11 @@ void dispose() {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.asset(
-                'assets/images/skdkzv.png',
-                fit: BoxFit.cover,
-              ),
+              Image.asset('assets/images/skdkzv.png', fit: BoxFit.cover),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.7),
-                    ],
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -781,16 +778,13 @@ void dispose() {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
+                        const Icon(Icons.arrow_forward_rounded,
+                            color: Colors.white, size: 18),
                       ],
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Upfront fares doorstep pickupd',
+                      'Upfront fares doorstep pickup',
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         color: Colors.white.withOpacity(0.85),
@@ -805,51 +799,4 @@ void dispose() {
       ),
     );
   }
-  
-    // Add this method to _HomeWidgetState class
-Future<int> _getUnreadNotificationCount() async {
-  try {
-    final response = await GetAllNotificationsCall.call(
-      token: FFAppState().accessToken,
-    );
-    
-    if (response.succeeded) {
-      final allNotifications = GetAllNotificationsCall.notifications(response.jsonBody);
-      
-      if (allNotifications != null) {
-        final currentUserId = FFAppState().userid;
-        final lastCheckTime = FFAppState().lastNotificationCheckTime;
-        
-        // Count ONLY fresh unread notifications for current user
-        int freshUnreadCount = 0;
-        for (var notification in allNotifications) {
-          final notificationUserId = getJsonField(notification, r'''$.user_id''');
-          final isRead = getJsonField(notification, r'''$.is_read''');
-          final createdAtString = getJsonField(notification, r'''$.created_at''')?.toString();
-          
-          // Check if notification belongs to current user AND is unread
-          if (notificationUserId?.toString() == currentUserId.toString() && isRead != true) {
-            // If lastCheckTime exists, only count notifications created after that time
-            if (lastCheckTime != null && createdAtString != null) {
-              final createdAt = DateTime.tryParse(createdAtString);
-              if (createdAt != null && createdAt.isAfter(lastCheckTime)) {
-                freshUnreadCount++;
-                debugPrint('✨ Fresh notification: $createdAtString (after $lastCheckTime)');
-              }
-            } else {
-              // If no lastCheckTime, count all unread notifications
-              freshUnreadCount++;
-            }
-          }
-        }
-        
-        debugPrint('🔔 Fresh unread notifications: $freshUnreadCount');
-        return freshUnreadCount;
-      }
-    }
-  } catch (e) {
-    debugPrint('Error fetching notification count: $e');
-  }
-  return 0;
-}
 }
