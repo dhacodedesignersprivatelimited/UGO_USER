@@ -1,15 +1,12 @@
 import 'dart:async';
-import 'dart:typed_data';
 import '/backend/api_requests/api_calls.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
-import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_messaging/firebase_messaging.dart'; // ✅ Add this
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'detailspage_model.dart';
 export 'detailspage_model.dart';
 
@@ -30,8 +27,7 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
   late DetailspageModel _model;
   final ImagePicker _picker = ImagePicker();
   Uint8List? _imageBytes;
-  String? _currentFcmToken; // ✅ Store FCM token here
-
+  String? _currentFcmToken;
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
@@ -39,35 +35,15 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
     super.initState();
     _model = createModel(context, () => DetailspageModel());
 
-    // ✅ Generate FCM token immediately
+    // Initialize Controllers
+    _model.textController1 ??= TextEditingController();
+    _model.textFieldFocusNode1 ??= FocusNode();
+    _model.textController2 ??= TextEditingController();
+    _model.textFieldFocusNode2 ??= FocusNode();
+    _model.textController3 ??= TextEditingController();
+    _model.textFieldFocusNode3 ??= FocusNode();
+
     _initFCMToken();
-  }
-
-  // ✅ FCM Token Generation (handles null case)
-  Future<void> _initFCMToken() async {
-    try {
-      // First try to use passed token
-      if (widget.fcmToken != null && widget.fcmToken!.isNotEmpty) {
-        _currentFcmToken = widget.fcmToken;
-        print('✅ Using passed FCM Token: $_currentFcmToken');
-        return;
-      }
-
-      // Otherwise generate new one
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null && token.isNotEmpty) {
-        setState(() => _currentFcmToken = token);
-        print('✅ FCM Token generated: $token');
-      } else {
-        print('⚠️ FCM Token is null - retrying in 2s...');
-        // Retry after 2 seconds
-        Timer(const Duration(seconds: 2), () => _initFCMToken());
-      }
-    } catch (e) {
-      print('❌ FCM Token Error: $e');
-      // Set default token to avoid backend error
-      setState(() => _currentFcmToken = 'temp_token_${widget.mobile}');
-    }
   }
 
   @override
@@ -76,35 +52,125 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
     super.dispose();
   }
 
+  Future<void> _initFCMToken() async {
+    try {
+      if (widget.fcmToken != null && widget.fcmToken!.isNotEmpty) {
+        setState(() => _currentFcmToken = widget.fcmToken);
+        return;
+      }
+      final token = await FirebaseMessaging.instance.getToken();
+      if (!mounted) return;
+
+      if (token != null && token.isNotEmpty) {
+        setState(() => _currentFcmToken = token);
+      } else {
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) _generateFallbackToken();
+      }
+    } catch (e) {
+      if (mounted) _generateFallbackToken();
+    }
+  }
+
+  void _generateFallbackToken() {
+    setState(() => _currentFcmToken =
+        'temp_token_${widget.mobile}_${DateTime.now().millisecondsSinceEpoch}');
+  }
+
   Future<void> _pickProfilePhoto() async {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 400,
-        maxHeight: 400,
-        imageQuality: 85,
+        maxWidth: 600,
+        maxHeight: 600,
+        imageQuality: 80,
       );
       if (image == null) return;
-
       final bytes = await image.readAsBytes();
-      _model.uploadedLocalFile = FFUploadedFile(
-        bytes: bytes,
-        name: 'profile_${widget.mobile}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+      if (!mounted) return;
+
+      setState(() {
+        _imageBytes = bytes;
+        _model.uploadedLocalFile = FFUploadedFile(
+          bytes: bytes,
+          name: 'profile_${widget.mobile}.jpg',
+        );
+      });
+    } catch (e) {
+      print('Image picker error: $e');
+    }
+  }
+
+  Future<void> _handleRegistration() async {
+    // 1. Validate
+    if (_model.textController1!.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('First Name is required'),
+          backgroundColor: Colors.red));
+      return;
+    }
+    if (_model.textController3!.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Email is required'), backgroundColor: Colors.red));
+      return;
+    }
+
+    // 2. Check Token
+    if (_currentFcmToken == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Initializing... please wait'),
+          backgroundColor: Colors.orange));
+      await _initFCMToken();
+      return;
+    }
+
+    // 3. Start Loading
+    setState(() => _model.isRegistering = true);
+
+    try {
+      // 4. API Call
+      _model.apiResultRegister = await CreateUserCall.call(
+        mobileNumber: widget.mobile,
+        firstName: _model.textController1!.text,
+        lastName: _model.textController2!.text,
+        email: _model.textController3!.text,
+        profileImage: _model.uploadedLocalFile.bytes != null
+            ? _model.uploadedLocalFile
+            : null,
+        fcmToken: _currentFcmToken,
       );
 
-      setState(() => _imageBytes = bytes);
+      if (!mounted) return;
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo selected'), backgroundColor: Colors.green),
-        );
+      if (_model.apiResultRegister?.succeeded ?? false) {
+        // 5. Success - Save Session
+        print('✅ Registration Successful. Saving session...');
+        final token = LoginCall.accesToken(_model.apiResultRegister?.jsonBody);
+        final userId = LoginCall.userid(_model.apiResultRegister?.jsonBody);
+
+        if (token != null) FFAppState().accessToken = token;
+        if (userId != null) FFAppState().userid = userId;
+
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Welcome to UGO!'), backgroundColor: Colors.green));
+
+        // 6. Navigate to Home
+        print('🚀 Navigating to Home...');
+        context.goNamedAuth('Home', mounted);
+      } else {
+        final errorMsg = getJsonField(
+                _model.apiResultRegister?.jsonBody, r'''$.message''') ??
+            'Registration failed';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(errorMsg.toString()), backgroundColor: Colors.red));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to pick image'), backgroundColor: Colors.red),
-        );
+            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
       }
+    } finally {
+      if (mounted) setState(() => _model.isRegistering = false);
     }
   }
 
@@ -122,7 +188,11 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
             icon: const Icon(Icons.arrow_back_ios, color: Colors.black54),
             onPressed: () => context.pop(),
           ),
-          title: Text('Complete Profile', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w600)),
+          title: Text('Complete Profile',
+              style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black)),
           centerTitle: true,
         ),
         body: SafeArea(
@@ -130,11 +200,8 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
             padding: const EdgeInsets.all(24),
             child: SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const SizedBox(height: 20),
-
-                  // Profile Photo Picker
                   GestureDetector(
                     onTap: _pickProfilePhoto,
                     child: Stack(
@@ -142,245 +209,69 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
                       children: [
                         CircleAvatar(
                           radius: 65,
-                          backgroundColor: Colors.grey[100],
-                          backgroundImage: _imageBytes != null ? MemoryImage(_imageBytes!) : null,
+                          backgroundColor: Colors.grey[200],
+                          backgroundImage: _imageBytes != null
+                              ? MemoryImage(_imageBytes!)
+                              : null,
                           child: _imageBytes == null
-                              ? const Icon(Icons.person_add, size: 50, color: Colors.grey)
+                              ? const Icon(Icons.person_add,
+                                  size: 50, color: Colors.grey)
                               : null,
                         ),
                         Positioned(
-                          right: -10,
-                          bottom: -10,
+                          right: -4,
+                          bottom: -4,
                           child: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: const BoxDecoration(color: Color(0xFFFF7B10), shape: BoxShape.circle),
-                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 24),
+                            padding: const EdgeInsets.all(10),
+                            decoration: const BoxDecoration(
+                                color: Color(0xFFFF7B10),
+                                shape: BoxShape.circle),
+                            child: const Icon(Icons.camera_alt,
+                                color: Colors.white, size: 20),
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: _imageBytes != null ? null : _pickProfilePhoto,
-                    child: Text(
-                      _imageBytes != null ? '✅ Photo ready' : 'Add profile photo (optional)',
-                      style: TextStyle(color: _imageBytes != null ? Colors.green : const Color(0xFFFF7B10), fontWeight: FontWeight.w600),
-                    ),
+                  Text(
+                    _imageBytes != null ? 'Photo selected' : 'Tap to add photo',
+                    style: TextStyle(
+                        color: _imageBytes != null
+                            ? Colors.green
+                            : Colors.grey[600],
+                        fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 40),
-
-                  // First Name
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text('First name *', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        child: TextFormField(
-                          controller: _model.textController1,
-                          focusNode: _model.textFieldFocusNode1,
-                          autofocus: false,
-                          obscureText: false,
-                          decoration: InputDecoration(
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey, width: 1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Color(0xFFFF7B10), width: 2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Colors.red),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            focusedErrorBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Colors.red),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                            hintText: 'Enter first name',
-                          ),
-                          style: GoogleFonts.inter(fontSize: 16),
-                          validator: _model.textController1Validator?.asValidator(context),
-                        ),
-                      ),
-                    ],
-                  ),
+                  _buildTextField("First name *", _model.textController1,
+                      _model.textFieldFocusNode1),
                   const SizedBox(height: 20),
-
-                  // Last Name
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Last name (optional)', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        child: TextFormField(
-                          controller: _model.textController2,
-                          focusNode: _model.textFieldFocusNode2,
-                          autofocus: false,
-                          obscureText: false,
-                          decoration: InputDecoration(
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey, width: 1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Color(0xFFFF7B10), width: 2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                            hintText: 'Enter last name',
-                          ),
-                          style: GoogleFonts.inter(fontSize: 16),
-                        ),
-                      ),
-                    ],
-                  ),
+                  _buildTextField("Last name", _model.textController2,
+                      _model.textFieldFocusNode2),
                   const SizedBox(height: 20),
-
-                  // Email
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text('Email *', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        child: TextFormField(
-                          controller: _model.textController3,
-                          focusNode: _model.textFieldFocusNode3,
-                          autofocus: false,
-                          obscureText: false,
-                          decoration: InputDecoration(
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey, width: 1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Color(0xFFFF7B10), width: 2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            errorBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Colors.red),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            focusedErrorBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(color: Colors.red),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                            hintText: 'Enter email',
-                          ),
-                          style: GoogleFonts.inter(fontSize: 16),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: _model.textController3Validator?.asValidator(context),
-                        ),
-                      ),
-                    ],
-                  ),
+                  _buildTextField("Email *", _model.textController3,
+                      _model.textFieldFocusNode3,
+                      isEmail: true),
                   const SizedBox(height: 40),
-
-                  // Register Button
                   FFButtonWidget(
-                    onPressed: (_model.isRegistering || _currentFcmToken == null) ? null : () async {
-                      final validationError = _model.validateForm();
-                      if (validationError != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(validationError), backgroundColor: Colors.red),
-                        );
-                        return;
-                      }
-
-                      // ✅ Check FCM token before proceeding
-                      if (_currentFcmToken == null || _currentFcmToken!.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Waiting for notification setup... Please try again in a moment.'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                        // Retry FCM token generation
-                        _initFCMToken();
-                        return;
-                      }
-
-                      _model.isRegistering = true;
-
-                      try {
-                        print('🔵 Registering with FCM Token: $_currentFcmToken'); // Debug log
-
-                        _model.apiResultRegister = await CreateUserCall.call(
-                          mobileNumber: widget.mobile,
-                          firstName: _model.firstName,
-                          lastName: _model.lastName,
-                          email: _model.email,
-                          profileImage: (_model.uploadedLocalFile.bytes?.isNotEmpty ?? false)
-                              ? _model.uploadedLocalFile
-                              : null,
-                          fcmToken: _currentFcmToken!, // ✅ Use generated token
-                        );
-
-                        print('API RESPONSE: ${_model.apiResultRegister?.jsonBody}'); // Debug log
-
-                        if ((_model.apiResultRegister?.succeeded ?? false) && mounted) {
-                          FFAppState().accessToken = LoginCall.accesToken(_model.apiResultRegister?.jsonBody) ?? '';
-                          FFAppState().userid = LoginCall.userid(_model.apiResultRegister?.jsonBody) ?? 0;
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Welcome to UGO!'), backgroundColor: Colors.green),
-                          );
-                          context.goNamedAuth('Home', mounted);
-                        } else if (mounted) {
-                          final errorMsg = getJsonField(_model.apiResultRegister?.jsonBody ?? '', r'''$.message''') ?? 'Registration failed';
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(errorMsg.toString()), backgroundColor: Colors.red),
-                          );
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-                          );
-                        }
-                      } finally {
-                        if (mounted) {
-                          _model.isRegistering = false;
-                        }
-                      }
-                    },
-                    text: _model.isRegistering ? 'CREATING...' :
-                    _currentFcmToken == null ? 'LOADING...' : 'Complete Registration',
+                    onPressed:
+                        (_model.isRegistering || _currentFcmToken == null)
+                            ? null
+                            : _handleRegistration,
+                    text: _model.isRegistering
+                        ? 'CREATING ACCOUNT...'
+                        : 'Complete Registration',
                     options: FFButtonOptions(
                       width: double.infinity,
                       height: 56,
                       color: const Color(0xFFFF7B10),
-                      textStyle: FlutterFlowTheme.of(context).titleMedium.override(
-                        fontFamily: 'Inter Tight',
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      textStyle: GoogleFonts.interTight(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
                       elevation: 2,
                       borderRadius: BorderRadius.circular(12),
+                      disabledColor: Colors.orange.withOpacity(0.5),
                     ),
                   ),
                 ],
@@ -389,6 +280,42 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField(
+      String label, TextEditingController? controller, FocusNode? focusNode,
+      {bool isEmail = false}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87)),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          keyboardType:
+              isEmail ? TextInputType.emailAddress : TextInputType.name,
+          decoration: InputDecoration(
+            enabledBorder: OutlineInputBorder(
+                borderSide: const BorderSide(color: Colors.grey, width: 1),
+                borderRadius: BorderRadius.circular(12)),
+            focusedBorder: OutlineInputBorder(
+                borderSide:
+                    const BorderSide(color: Color(0xFFFF7B10), width: 2),
+                borderRadius: BorderRadius.circular(12)),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          ),
+          style: GoogleFonts.inter(fontSize: 16),
+        ),
+      ],
     );
   }
 }

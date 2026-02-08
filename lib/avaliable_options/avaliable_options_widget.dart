@@ -6,12 +6,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'dart:math' show cos, sqrt, asin, sin;
 import 'dart:async';
 import 'avaliable_options_model.dart';
 export 'avaliable_options_model.dart';
-import '/payment_options/payment_options_widget.dart';
 
 // ⚠️ Ensure this API key has Directions API enabled
 const String GOOGLE_MAPS_API_KEY = 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y';
@@ -464,6 +462,11 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     final String vehicleId = getJsonField(data, r'''$.pricing.vehicle_id''')?.toString() ?? '1';
     final String name = getJsonField(data, r'''$.vehicle_name''')?.toString() ?? 'Ride';
 
+    // 1. IDENTIFY PRO RIDE
+    bool isPro = name.toLowerCase().contains('pro') ||
+        name.toLowerCase().contains('premium') ||
+        name.toLowerCase().contains('prime');
+
     // Pricing Logic
     final baseKmStart = double.tryParse(getJsonField(pricing, r'''$.base_km_start''').toString()) ?? 1;
     final baseKmEnd = double.tryParse(getJsonField(pricing, r'''$.base_km_end''').toString()) ?? 5;
@@ -482,6 +485,15 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     String? imgUrl = getJsonField(data, r'''$.vehicle_image''')?.toString();
     if (imgUrl != null && !imgUrl.startsWith('http')) imgUrl = 'https://ugo-api.icacorp.org/$imgUrl';
 
+    // Styles
+    Color backgroundColor = isSelected
+        ? (isPro ? const Color(0xFFFFF9C4) : const Color(0xFFFFF8F0))
+        : (isPro ? const Color(0xFFFAFAFA) : Colors.white);
+
+    Color borderColor = isSelected
+        ? (isPro ? const Color(0xFFFBC02D) : const Color(0xFFFF7B10))
+        : (isPro ? const Color(0xFFFFD54F) : Colors.grey[200]!);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -496,38 +508,125 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(16),
+          // Adjusted padding slightly to give the crown room at the top
+          padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFFFF8F0) : Colors.white,
+            color: backgroundColor,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? const Color(0xFFFF7B10) : Colors.grey[200]!,
-              width: isSelected ? 2 : 1,
+              color: borderColor,
+              width: isSelected ? 2 : (isPro ? 1.5 : 1),
             ),
+            boxShadow: isPro
+                ? [BoxShadow(color: Colors.amber.withOpacity(0.15), blurRadius: 8, offset: Offset(0, 4))]
+                : [],
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Image
-              SizedBox(
-                width: 60, height: 60,
-                child: imgUrl != null
-                    ? Image.network(imgUrl, fit: BoxFit.contain, errorBuilder: (_,__,___) => const Icon(Icons.directions_car))
-                    : const Icon(Icons.directions_car, size: 40, color: Colors.grey),
-              ),
+              // =========================
+              // 3. IMAGE SECTION WITH CROWN STACK
+              // =========================
+              if (isPro)
+                Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.topCenter,
+                  children: [
+                    // The Framed Image (Pushed down slightly)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10.0),
+                      child: Container(
+                        width: 68, height: 68,
+                        padding: const EdgeInsets.all(5),
+                        decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFFBC02D), width: 2),
+                            boxShadow: [
+                              BoxShadow(color: const Color(0xFFFBC02D).withOpacity(0.3), blurRadius: 4, offset: Offset(0,2))
+                            ]
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: imgUrl != null
+                              ? Image.network(imgUrl, fit: BoxFit.contain, errorBuilder: (_,__,___) => const Icon(Icons.directions_car, color: Colors.amber))
+                              : const Icon(Icons.directions_car, size: 36, color: Colors.amber),
+                        ),
+                      ),
+                    ),
+                    // The Crown Icon (Sitting on top center)
+                    // The Crown Icon (Sitting on top center)
+                    Positioned(
+                      top: -12, // Moves the crown slightly higher to "float" on the edge
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFFFBC02D), width: 1),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: Offset(0, 2))
+                          ],
+                        ),
+                        // 👑 Renders the Emoji directly
+                        child: const Text(
+                          '👑',
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+              // --- NORMAL NO FRAME ---
+                SizedBox(
+                  width: 60, height: 60,
+                  child: imgUrl != null
+                      ? Image.network(imgUrl, fit: BoxFit.contain, errorBuilder: (_,__,___) => const Icon(Icons.directions_car, color: Colors.grey))
+                      : const Icon(Icons.directions_car, size: 40, color: Colors.grey),
+                ),
+              // =========================
+              // END IMAGE SECTION
+              // =========================
+
               const SizedBox(width: 12),
               // Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(name, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Text(name, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 6),
+                        if (isPro)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(4)),
+                            child: Text('PRO', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                          ),
+                      ],
+                    ),
                     const SizedBox(height: 4),
                     Text('2 mins away', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600])),
+                    if (isPro)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text('Comfy • Top Drivers', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFFF57F17))),
+                      ),
                   ],
                 ),
               ),
               // Price
-              Text('₹$displayFare', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('₹$displayFare', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: isPro ? Colors.black : Colors.black87)),
+                  if (isPro) Icon(Icons.star, size: 16, color: Colors.amber[700])
+                ],
+              ),
             ],
           ),
         ),

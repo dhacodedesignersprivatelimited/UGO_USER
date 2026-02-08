@@ -2,9 +2,7 @@ import '/flutter_flow/flutter_flow_google_map.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/index.dart';
-import 'dart:ui';
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -22,8 +20,14 @@ import 'package:url_launcher/url_launcher.dart';
 import '/ride_session.dart';
 
 class AutoBookWidget extends StatefulWidget {
-  const AutoBookWidget({super.key, required this.rideId});
+  const AutoBookWidget({
+    super.key,
+    required this.rideId,
+    this.initialRideStatus, // ✅ Added for smooth transition
+  });
+
   final int rideId;
+  final String? initialRideStatus;
 
   static String routeName = 'auto-book';
   static String routePath = '/autoBook';
@@ -70,7 +74,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   static const STATUS_SEARCHING = 'searching';
   static const STATUS_ACCEPTED = 'accepted';
   static const STATUS_ARRIVING = 'arriving';
-  static const STATUS_PICKED_UP = 'picked_up';
+  static const STATUS_PICKED_UP = 'picked_up'; // Used for 'started'/'in_progress'
   static const STATUS_COMPLETED = 'completed';
   static const STATUS_CANCELLED = 'cancelled';
 
@@ -83,9 +87,28 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     print('🚀 AutoBookWidget: initState - Ride ID: ${widget.rideId}');
     _model = createModel(context, () => AutoBookModel());
 
+    // 1. Initialize Status from Constructor (if available) to avoid "Searching" flash
+    if (widget.initialRideStatus != null) {
+      _mapInitialStatus(widget.initialRideStatus!);
+    }
+
+    // 2. Start Timers & Socket
     _startSearchTimer();
     _initializeSocket();
+
+    // 3. ✅ CRITICAL: Always fetch fresh status on load
     _fetchInitialRideStatus();
+  }
+
+  void _mapInitialStatus(String status) {
+    status = status.toLowerCase();
+    if (status == 'started' || status == 'in_progress' || status == 'picked_up') {
+      _rideStatus = STATUS_PICKED_UP;
+    } else if (status == 'arriving') {
+      _rideStatus = STATUS_ARRIVING;
+    } else if (status == 'accepted') {
+      _rideStatus = STATUS_ACCEPTED;
+    }
   }
 
   void _startSearchTimer() {
@@ -142,16 +165,22 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   // ============================================================================
 
   Future<void> _fetchInitialRideStatus() async {
-    print('📡 Fetching initial ride status');
+    print('📡 Fetching initial ride status...');
     try {
       final response = await GetRideDetailsCall.call(
         rideId: widget.rideId,
         token: FFAppState().accessToken,
       );
       if (response.succeeded) {
-        final rideData = response.jsonBody['data'] ?? response.jsonBody;
-        print("✅ Initial Ride Data: $rideData");
-        _processRideUpdate(rideData);
+        final rideData = getJsonField(response.jsonBody, r'$.data') ?? response.jsonBody;
+        print("✅ Initial Ride Data Fetched");
+
+        // Populate Session Data
+        RideSession().rideData = rideData;
+
+        if (mounted) {
+          _processRideUpdate(rideData);
+        }
       }
     } catch (e) {
       print("❌ Error fetching initial ride status: $e");
@@ -174,7 +203,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             .disableAutoConnect()
             .enableForceNew()
             .setAuth({'token': token})
-            .setReconnectionAttempts(5) // Retry logic
+            .setReconnectionAttempts(5)
             .build(),
       );
 
@@ -184,7 +213,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         // Join the specific ride room
         socket!.emit("watch_entity", {
           "type": "ride",
-          "id": widget.rideId, // Ensure this matches backend expectation (int vs string)
+          "id": widget.rideId,
         });
       });
 
@@ -194,7 +223,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
       // 3. Listen for Updates
       socket!.on("ride_updated", (data) {
-        print("📡 Socket Event Received: ${jsonEncode(data)}");
+        print("📡 Socket Event Received");
         if (data != null) {
           _processRideUpdate(data);
         }
@@ -217,8 +246,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
       final rawStatus = updatedRide['ride_status'] ?? updatedRide['status'];
       final status = rawStatus?.toString().toLowerCase().trim();
+      updatedRide['ride_status'] = status;
 
-      print('🔄 Processing Status: "$status" | Driver Loc: ${updatedRide['driver_latitude']},${updatedRide['driver_longitude']}');
+      print('🔄 Processing Status: "$status"');
 
       bool navigateToComplete = false;
       String previousStatus = _rideStatus;
@@ -226,7 +256,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       setState(() {
         // 1. Update Cache (Trigger Map Rebuild)
         if (ridesCache.isNotEmpty) {
-          ridesCache[0] = {...ridesCache[0], ...updatedRide};
+          ridesCache = [{...ridesCache.first, ...updatedRide}];
         } else {
           ridesCache = [updatedRide];
         }
@@ -245,8 +275,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           _searchTimer?.cancel();
           _stopDistanceUpdateTimer();
         } else if (['accepted', 'driver_assigned'].contains(status)) {
-          // If searching, move to accepted.
-          // Note: If we are already in 'arriving', don't go back to 'accepted'
           if (_rideStatus == STATUS_SEARCHING) {
             _rideStatus = STATUS_ACCEPTED;
           }
@@ -255,7 +283,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           _rideStatus = STATUS_ARRIVING;
           _stopDistanceUpdateTimer();
         } else if (status == 'started' || status == 'picked_up' || status == 'in_progress') {
+          // ✅ THIS HANDLES DIRECT START
           _rideStatus = STATUS_PICKED_UP;
+          _searchTimer?.cancel(); // Stop searching timer if coming from direct start
+
           if (previousStatus != STATUS_PICKED_UP) {
             _updateRemainingDistance();
             _startDistanceUpdateTimer();
@@ -283,16 +314,15 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
       // 6. Fetch Driver Details if missing
       final driverId = updatedRide['driver_id'];
-      if (driverId != null && driverDetails == null && !isLoadingDriver) {
+      if (driverId != null && (driverDetails == null || driverDetails!['id'] != driverId) && !isLoadingDriver) {
         _fetchDriverDetails(driverId);
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       print("❌ Error processing ride update: $e");
-      print(stackTrace);
     }
   }
 
-  // ... (Keep existing _updateRemainingDistance, _calculateDistance, _sin, _cos, etc.) ...
+  // ... (Distance Math Helpers - Unchanged) ...
   void _updateRemainingDistance() {
     if (ridesCache.isEmpty) return;
     try {
@@ -325,20 +355,20 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     return earthRadius * c;
   }
 
-  // Helper Math Functions
   double _toRadians(double degrees) => degrees * (3.141592653589793 / 180.0);
   double _sin(double x) { double r = x; double t = x; for(int n=1;n<=10;n++){ t*=-x*x/((2*n)*(2*n+1)); r+=t; } return r; }
   double _cos(double x) { double r = 1; double t = 1; for(int n=1;n<=10;n++){ t*=-x*x/((2*n-1)*(2*n)); r+=t; } return r; }
   double _sqrt(double x) { if(x<0)return 0; double g=x/2; for(int i=0;i<10;i++) g=(g+x/g)/2; return g; }
   double _asin(double x) => x + (x*x*x)/6 + (3*x*x*x*x*x)/40;
 
-  // ... (Keep existing _handleCompletedRideNavigation and Fetch Driver logic) ...
+  // ... (Keep existing Navigation & Fetch Driver logic) ...
   Future<void> _handleCompletedRideNavigation(Map<String, dynamic> rideData) async {
     _stopDistanceUpdateTimer();
     socket?.off("ride_updated");
 
     RideSession().rideData = rideData;
 
+    // Ensure we have driver data before navigating
     if (driverDetails != null) {
       RideSession().driverData = driverDetails;
     } else if (rideData['driver'] != null) {
@@ -383,9 +413,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           isLoadingDriver = false;
           RideSession().driverData = driverDetails;
 
-          // Auto-transition UI if we were just 'Accepted'
-          if (_rideStatus == STATUS_ACCEPTED || _rideStatus == STATUS_SEARCHING) {
-            _rideStatus = STATUS_ARRIVING;
+          // If we are searching/accepted, and we found a driver, imply arriving
+          if (_rideStatus == STATUS_SEARCHING) {
+            _rideStatus = STATUS_ACCEPTED;
           }
         });
       } else {
@@ -396,7 +426,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     }
   }
 
-  // ... (Keep existing _cancelRide, _makeCall, _showCancelDialog, _onBackPressed) ...
   Future<void> _cancelRide(String reason) async {
     if (_isCancelling) return;
     setState(() => _isCancelling = true);
@@ -465,7 +494,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     _searchTimer?.cancel();
     _stopDistanceUpdateTimer();
     try {
-      socket?.off("ride_updated"); // Ensure listeners are removed
+      socket?.off("ride_updated");
       socket?.disconnect();
       socket?.dispose();
     } catch (_) {}
@@ -489,7 +518,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                 controller: _model.googleMapsController,
                 onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
                 initialLocation: _model.googleMapsCenter ?? const LatLng(17.385044, 78.486671),
-                markers: _getMarkers(), // ✅ Fixed: Markers now update via setState logic
+                markers: _getMarkers(),
                 markerColor: GoogleMarkerColor.orange,
                 mapType: MapType.normal,
                 initialZoom: 14.0,

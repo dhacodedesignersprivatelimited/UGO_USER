@@ -4,7 +4,6 @@ import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:convert';
 import 'dart:async';
 import 'home_model.dart';
 export 'home_model.dart';
@@ -64,12 +63,15 @@ class _HomeWidgetState extends State<HomeWidget>
     // 3. Start Notification polling
     _updateNotificationCount();
     _startNotificationRefresh();
+
+    // 4. Pre-fetch location on load to speed up "Scan to Go"
+    _initializePickupLocation();
   }
 
   void _startNotificationRefresh() {
     _notificationTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (timer) {
+          (timer) {
         if (mounted) {
           _updateNotificationCount();
         }
@@ -77,10 +79,28 @@ class _HomeWidgetState extends State<HomeWidget>
     );
   }
 
+  /// Ensure Pickup Location is set (Step 1 of Scan to Book)
+  Future<void> _initializePickupLocation() async {
+    if (FFAppState().pickupLatitude == 0.0 || FFAppState().pickupLatitude == null) {
+      try {
+        final loc = await getCurrentUserLocation(defaultLocation: const LatLng(0.0, 0.0));
+        if (mounted && loc.latitude != 0.0) {
+          setState(() {
+            FFAppState().pickupLatitude = loc.latitude;
+            FFAppState().pickupLongitude = loc.longitude;
+            // Optionally set address string if you have a reverse geocoding function
+            // FFAppState().pickuplocation = "Current Location";
+          });
+        }
+      } catch (e) {
+        debugPrint('Error getting location: $e');
+      }
+    }
+  }
+
   /// ✅ FIXED: Logic to restore active ride session
   Future<void> _checkRideStatus() async {
     // Prevent concurrent checks, but ALLOW check even if local bookingInProgress is false
-    // This ensures cross-device/restart synchronization.
     if (_isCheckingRideStatus) return;
 
     final token = FFAppState().accessToken;
@@ -101,19 +121,12 @@ class _HomeWidgetState extends State<HomeWidget>
         final rideList = getJsonField(response.jsonBody, r'''$.data.rides''');
 
         if (rideList != null && rideList is List && rideList.isNotEmpty) {
-          // Assuming the API returns the most recent ride first
           final activeRide = rideList.first;
-
-          // Robust ID Extraction
           final rideId = activeRide is Map ? activeRide['id'] : activeRide;
-
-          // Robust Status Extraction
           final status = (activeRide is Map ? activeRide['status'] : null)
               ?.toString()
               .toLowerCase();
 
-          // Define statuses that should trigger a redirection
-          // (Exclude completed/cancelled so we don't get stuck in a loop)
           const activeStatuses = [
             'searching',
             'driver_assigned',
@@ -127,8 +140,7 @@ class _HomeWidgetState extends State<HomeWidget>
           final isActive = status == null || activeStatuses.contains(status);
 
           if (rideId != null && isActive) {
-            print(
-                '🚀 Active ride detected (ID: $rideId). Restoring session...');
+            print('🚀 Active ride detected (ID: $rideId). Restoring session...');
             FFAppState().bookingInProgress = true;
 
             if (mounted) {
@@ -162,7 +174,7 @@ class _HomeWidgetState extends State<HomeWidget>
 
       if (response.succeeded) {
         final allNotifications =
-            GetAllNotificationsCall.notifications(response.jsonBody);
+        GetAllNotificationsCall.notifications(response.jsonBody);
 
         if (allNotifications != null) {
           final currentUserId = FFAppState().userid;
@@ -172,10 +184,10 @@ class _HomeWidgetState extends State<HomeWidget>
 
           for (var notification in allNotifications) {
             final notificationUserId =
-                getJsonField(notification, r'''$.user_id''');
+            getJsonField(notification, r'''$.user_id''');
             final isRead = getJsonField(notification, r'''$.is_read''');
             final createdAtString =
-                getJsonField(notification, r'''$.created_at''')?.toString();
+            getJsonField(notification, r'''$.created_at''')?.toString();
 
             if (notificationUserId?.toString() == currentUserId.toString() &&
                 isRead != true) {
@@ -206,12 +218,43 @@ class _HomeWidgetState extends State<HomeWidget>
     super.dispose();
   }
 
+  // THIS IS THE SCAN TO BOOK PROCESS (Step 3)
   void _handleQRScan() async {
     if (isScanning) return;
+
+    // 1. Validation: Ensure Destination (Green Pin) is selected
+    if (FFAppState().droplocation.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a destination (Green Pin) first.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() => isScanning = true);
 
     try {
+      // 2. Validation: Ensure Pickup (Red Pin / Current Location) is set
+      // If missing, try to fetch it now before opening camera
+      if (FFAppState().pickupLatitude == 0.0 || FFAppState().pickupLatitude == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Locating you for pickup...')),
+        );
+        await _initializePickupLocation();
+
+        // If still null after fetch attempt, abort
+        if (FFAppState().pickupLatitude == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not detect current location. Please enable GPS.')),
+          );
+          setState(() => isScanning = false);
+          return;
+        }
+      }
+
+      // 3. Start Camera Scan
       final scanResult = await FlutterBarcodeScanner.scanBarcode(
         '#FF7B10',
         'Cancel',
@@ -235,6 +278,7 @@ class _HomeWidgetState extends State<HomeWidget>
       double? baseKmEnd;
 
       try {
+        // Handle complex JSON QR or simple Driver ID QR
         if (scanResult.trim().startsWith('{')) {
           final decodedData = jsonDecode(scanResult);
           driverId = int.tryParse(decodedData['driver_id']?.toString() ?? '');
@@ -258,6 +302,7 @@ class _HomeWidgetState extends State<HomeWidget>
       }
 
       if (driverId != null) {
+        // 4. Success: Navigate to Driver Verification
         context.pushNamed(
           DriverDetailsWidget.routeName,
           queryParameters: {
@@ -361,12 +406,12 @@ class _HomeWidgetState extends State<HomeWidget>
                               top: 2,
                               child: Container(
                                 padding:
-                                    EdgeInsets.all(unreadCount > 9 ? 4 : 5),
+                                EdgeInsets.all(unreadCount > 9 ? 4 : 5),
                                 decoration: BoxDecoration(
                                   color: Colors.red,
                                   shape: BoxShape.circle,
                                   border:
-                                      Border.all(color: Colors.white, width: 1),
+                                  Border.all(color: Colors.white, width: 1),
                                 ),
                                 constraints: const BoxConstraints(
                                   minWidth: 16,
@@ -465,7 +510,7 @@ class _HomeWidgetState extends State<HomeWidget>
                           context,
                           image: 'assets/images/auto.png',
                           comingSoonMessage:
-                              'Auto ride available. Use "Where to go?"',
+                          'Auto ride available. Use "Where to go?"',
                         ),
                       ],
                     ),
@@ -618,17 +663,8 @@ class _HomeWidgetState extends State<HomeWidget>
               onTap: isScanning
                   ? null
                   : () {
-                      if (FFAppState().droplocation == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please select drop location'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                        return;
-                      }
-                      _handleQRScan();
-                    },
+                _handleQRScan();
+              },
               borderRadius: BorderRadius.circular(16),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -666,15 +702,15 @@ class _HomeWidgetState extends State<HomeWidget>
                       ),
                       child: isScanning
                           ? const Padding(
-                              padding: EdgeInsets.all(10),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
+                        padding: EdgeInsets.all(10),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
                           : const Icon(Icons.qr_code_scanner_rounded,
-                              color: Colors.white, size: 18),
+                          color: Colors.white, size: 18),
                     ),
                     const SizedBox(width: 12),
                     Flexible(

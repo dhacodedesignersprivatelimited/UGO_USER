@@ -8,7 +8,6 @@ import '/auth/base_auth_user_provider.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 
 import '/index.dart';
-import '/app_state.dart';
 
 export 'package:go_router/go_router.dart';
 export 'serialization_util.dart';
@@ -78,7 +77,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           // User authenticated with Firebase
 
           // Check if backend registration is complete (userid exists)
-          if (FFAppState().userid != null && FFAppState().userid != 0) {
+          if (FFAppState().userid != 0) {
             print('✅ User has backend ID → Going to Home');
             return HomeWidget();
           } else {
@@ -168,7 +167,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       requireAuth: true, // ✅ Require auth to access Home
       builder: (context, params) {
         // ✅ Additional check: redirect to registration if no userid
-        if (FFAppState().userid == null || FFAppState().userid == 0) {
+        if (FFAppState().userid == 0) {
           print('⚠️ Accessing Home without backend ID → Redirect to Details');
           // This shouldn't happen due to router logic, but safe fallback
           Future.microtask(() => context.go('/detailspage'));

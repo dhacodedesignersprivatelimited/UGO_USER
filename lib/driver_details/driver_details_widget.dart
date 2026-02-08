@@ -1,13 +1,11 @@
 import 'dart:math';
-
-import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import '/flutter_flow/flutter_flow_widgets.dart';
 import '/index.dart';
 import '/backend/api_requests/api_calls.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'driver_details_model.dart';
+import 'package:geolocator/geolocator.dart'; // Ensure this package is available for getCurrentPosition
 export 'driver_details_model.dart';
 
 class DriverDetailsWidget extends StatefulWidget {
@@ -43,95 +41,38 @@ class DriverDetailsWidget extends StatefulWidget {
 class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
   late DriverDetailsModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-    bool isLoadingRide = false;
+
+  // State variables
+  bool isLoadingRide = false;
   bool _isLoading = true;
   dynamic _driverData;
   int _selectedTip = 0;
-double? googleDistanceKm;
-double _calculatedDistanceKm = 0;
+  double _calculatedDistanceKm = 0;
   double _calculatedFare = 0;
+
+  // Computed total
   double get totalAmount => _calculatedFare + _selectedTip;
-Future<void> _loadDistanceAndFare() async {
-  print("widget.baseFare: ${widget.baseFare}, widget.pricePerKm: ${widget.pricePerKm}" ", widget.baseKmStart: ${widget.baseKmStart}, widget.baseKmEnd: ${widget.baseKmEnd}");
-    final appState = FFAppState();
 
-    final lat1 = appState.pickupLatitude;
-    final lon1 = appState.pickupLongitude;
-    final lat2 = appState.dropLatitude;
-    final lon2 = appState.dropLongitude;
-print(  'Calculating distance and fare with coordinates: ($lat1, $lon1) to ($lat2, $lon2)');
-    if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
-      debugPrint('❌ Missing coordinates');
-      return;
-    }
-
-    // 1️⃣ Distance from GPS
-    final distance = calculateDistance(lat1, lon1, lat2, lon2);
-
-    // 2️⃣ Pricing from widget
-    final baseKmStart = widget.baseKmStart ?? 1;
-    final baseKmEnd = widget.baseKmEnd ?? 5;
-    final baseFare = widget.baseFare ?? 0;
-    final pricePerKm = widget.pricePerKm ?? 0;
-print('✅ Distance: $distance km,');
-    // 3️⃣ Fare
-    final fare = _calculateTierFare(
-      distanceKm: distance,
-      baseKmStart: baseKmStart,
-      baseKmEnd: baseKmEnd,
-      baseFare: baseFare,
-      pricePerKm: pricePerKm,
-    );
-print(  '✅ Distance: $distance km, Fare: ₹$fare');
-    if (mounted) {
-      setState(() {
-        _calculatedDistanceKm = distance;
-        _calculatedFare = fare;
-        print(  '✅ Calculated Distance: $_calculatedDistanceKm km, Fare: ₹$_calculatedFare');
-      });
-    }
-  }
-double _calculateTierFare({
-    required double distanceKm,
-    required double baseKmStart,
-    required double baseKmEnd,
-    required double baseFare,
-    required double pricePerKm,
-  }) {
-    if (distanceKm <= 0) return 0;
-
-    if (distanceKm <= baseKmEnd) {
-      return baseFare;
-    }
-
-    final extraKm = distanceKm - baseKmEnd;
-    return baseFare + (extraKm * pricePerKm);
-  }
-
-  List<dynamic>? _cachedVehicleData;
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => DriverDetailsModel());
     _fetchDriverDetails();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+
+    // Calculate fare immediately after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDistanceAndFare();
     });
   }
-double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371;
-    double dLat = (lat2 - lat1) * (3.141592653589793 / 180);
-    double dLon = (lon2 - lon1) * (3.141592653589793 / 180);
 
-    double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * (3.141592653589793 / 180)) *
-            cos(lat2 * (3.141592653589793 / 180)) *
-            sin(dLon / 2) *
-            sin(dLon / 2);
-
-    double c = 2 * asin(sqrt(a));
-    return earthRadius * c;
+  @override
+  void dispose() {
+    _model.dispose();
+    super.dispose();
   }
+
+  // --- 1. Load Data & Calculate Fare ---
+
   Future<void> _fetchDriverDetails() async {
     try {
       final response = await GetDriverDetailsCall.call(
@@ -150,46 +91,86 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red[600],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        margin: EdgeInsets.all(16),
-      ),
-    );
-  }
-  @override
-  void dispose() {
-    _model.dispose();
-    super.dispose();
-  }
-  Future<List<dynamic>> _getVehicleData({bool forceRefresh = false}) async {
-    if (_cachedVehicleData != null && !forceRefresh) {
-      return _cachedVehicleData!;
+
+  Future<void> _loadDistanceAndFare() async {
+    final appState = FFAppState();
+
+    // 1. Validation: Ensure Pickup is set (Red Pin logic)
+    if (appState.pickupLatitude == null || appState.pickupLatitude == 0.0) {
+      debugPrint('⚠️ Pickup coordinates missing. Attempting to fetch current location...');
+      await _refreshCurrentLocation();
     }
 
-    try {
-      final response = await GetVehicleDetailsCall.call();
-      if (response.succeeded) {
-        final jsonList = (getJsonField(
-              response.jsonBody,
-              r'''$.data''',
-            ) as List?)
-                ?.toList() ??
-            [];
-        _cachedVehicleData = jsonList;
-        return jsonList;
-      }
-    } catch (e) {
-      print('❌ Error fetching vehicles: $e');
+    final lat1 = appState.pickupLatitude;
+    final lon1 = appState.pickupLongitude;
+    final lat2 = appState.dropLatitude;
+    final lon2 = appState.dropLongitude;
+
+    if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
+      debugPrint('❌ Still missing coordinates for calculation.');
+      return;
     }
-    return [];
+
+    // 2. Calculate Distance (Haversine)
+    final distance = calculateDistance(lat1, lon1, lat2, lon2);
+
+    // 3. Pricing Logic (Robust Fallback)
+    // Prioritize widget params passed from QR scan, fallback to defaults
+    final baseKmStart = widget.baseKmStart ?? 1.0;
+    final baseKmEnd = widget.baseKmEnd ?? 5.0;
+    final baseFare = widget.baseFare ?? 50.0; // Default base fare if null
+    final pricePerKm = widget.pricePerKm ?? 15.0; // Default price/km if null
+
+    // 4. Calculate Fare
+    final fare = _calculateTierFare(
+      distanceKm: distance,
+      baseKmStart: baseKmStart,
+      baseKmEnd: baseKmEnd,
+      baseFare: baseFare,
+      pricePerKm: pricePerKm,
+    );
+
+    if (mounted) {
+      setState(() {
+        _calculatedDistanceKm = distance;
+        _calculatedFare = fare;
+      });
+      debugPrint('✅ Distance: ${distance.toStringAsFixed(2)} km, Fare: ₹${fare.toStringAsFixed(2)}');
+    }
   }
-    double calculateTieredFare({
+
+  // --- Helper: Fetch Location if missing ---
+  Future<void> _refreshCurrentLocation() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      setState(() {
+        FFAppState().pickupLatitude = position.latitude;
+        FFAppState().pickupLongitude = position.longitude;
+      });
+    } catch (e) {
+      debugPrint("Error fetching location: $e");
+    }
+  }
+
+  // --- Helper: Distance Math ---
+  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371; // Radius of earth in km
+    double dLat = (lat2 - lat1) * (pi / 180);
+    double dLon = (lon2 - lon1) * (pi / 180);
+
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * (pi / 180)) *
+            cos(lat2 * (pi / 180)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+
+    double c = 2 * asin(sqrt(a));
+    return earthRadius * c;
+  }
+
+  // --- Helper: Fare Math ---
+  double _calculateTierFare({
     required double distanceKm,
     required double baseKmStart,
     required double baseKmEnd,
@@ -197,95 +178,122 @@ void _showError(String message) {
     required double pricePerKm,
   }) {
     if (distanceKm <= 0) return 0;
+
+    // Flat rate for initial KMs
     if (distanceKm <= baseKmEnd) {
       return baseFare;
     }
+
+    // Additional fare for extra KMs
     final extraKm = distanceKm - baseKmEnd;
-    final extraFare = extraKm * pricePerKm;
-    return baseFare + extraFare;
+    return baseFare + (extraKm * pricePerKm);
   }
 
-Future<void> _confirmBooking() async {
+  // --- 2. Confirm Booking (Direct Start) ---
+
+  Future<void> _confirmBooking() async {
+    if (isLoadingRide) return;
+
     final appState = FFAppState();
 
-
-   
-
+    // Safety check for location before API call
+    if (appState.pickupLatitude == null || appState.dropLatitude == null) {
+      _showError("Locations not set. Please restart booking.");
+      return;
+    }
 
     setState(() => isLoadingRide = true);
 
     try {
+      print('🚀 Starting Ride Directly (No OTP)...');
 
-      print(
-          '🚀 Creating Ride | Vehicle ID: ${widget.vehicleType} | Fare: ₹$_calculatedFare');
-
+      // Call Create Ride API with status 'started'
       final createRideRes = await CreateRideCall.call(
         token: appState.accessToken,
         userId: appState.userid,
-        pickupLocationAddress: appState.pickuplocation,
-        dropLocationAddress: appState.droplocation,
+        pickupLocationAddress: appState.pickuplocation.isNotEmpty
+            ? appState.pickuplocation
+            : "Current Location", // Fallback name
+        dropLocationAddress: appState.droplocation.isNotEmpty
+            ? appState.droplocation
+            : "Drop Location",   // Fallback name
         pickupLatitude: appState.pickupLatitude!,
         pickupLongitude: appState.pickupLongitude!,
         dropLatitude: appState.dropLatitude!,
         dropLongitude: appState.dropLongitude!,
         adminVehicleId: widget.vehicleType,
-        estimatedFare:totalAmount.toStringAsFixed(2),
-        rideStatus: 'started',
+        estimatedFare: totalAmount.toStringAsFixed(2),
+        rideStatus: 'started', // <--- KEY: Bypass OTP/Pending state
         driverId: widget.driverId,
       );
 
       if (createRideRes.succeeded) {
-        final rideId = CreateRideCall.rideId(createRideRes.jsonBody)
-                ?.toString() ??
+        // Extract Ride ID safely
+        final rideId = CreateRideCall.rideId(createRideRes.jsonBody)?.toString() ??
             getJsonField(createRideRes.jsonBody, r'''$.data.id''')?.toString();
 
-        if (rideId == null) throw Exception('No ride ID returned');
+        if (rideId != null) {
+          appState.currentRideId = int.parse(rideId);
+          appState.bookingInProgress = true; // Mark session active
+          print('✅ Ride Started Successfully. ID: $rideId');
 
-        print('✅ Ride Created: $rideId');
-
-        await context.pushNamed(
-          AutoBookWidget.routeName,
-          queryParameters: {
-            'rideId': rideId,
-            // 'vehicleType': widget.vehicleType ?? '',
-            // 'pickupLocation': appState.pickuplocation ?? '',
-            // 'dropLocation': appState.droplocation ?? '',
-            // 'estimatedFare': _calculatedFare.toStringAsFixed(2),
-            // 'estimatedDistance': _calculatedDistanceKm.toStringAsFixed(2),
-            // 'ride_status': 'started',
-            // 'driverId': widget.driverId?.toString() ?? '',
-          },
-        );
+          // Navigate to Active Ride Screen
+          if (mounted) {
+            await context.pushNamed(
+              AutoBookWidget.routeName,
+              queryParameters: {
+                'rideId': rideId,
+                // Add these if AutoBookWidget needs them to initialize UI faster
+                'status': 'started',
+              },
+            );
+          }
+        } else {
+          _showError("Ride created but ID missing.");
+        }
       } else {
-        final errorMsg =
-            CreateRideCall.getResponseMessage(createRideRes.jsonBody) ??
-                'Failed to create ride';
+        final errorMsg = CreateRideCall.getResponseMessage(createRideRes.jsonBody) ??
+            'Failed to start ride.';
         _showError(errorMsg);
       }
     } catch (e) {
       print('❌ Booking Exception: $e');
-      _showError('Booking failed: $e');
+      _showError('Connection error. Please try again.');
     } finally {
       if (mounted) setState(() => isLoadingRide = false);
     }
   }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red[600],
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // --- UI Construction ---
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator(color: Color(0xFFFF7B10))));
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator(color: Color(0xFFFF7B10))),
+      );
     }
 
-    final driverName = GetDriverDetailsCall.name(_driverData) ?? 'Sharath';
-    final vehicleNum = GetDriverDetailsCall.vehicleNumber(_driverData) ?? '1287737738';
-    final rating = GetDriverDetailsCall.rating(_driverData) ?? '4.7';
+    // Extract Driver Details
+    final driverName = GetDriverDetailsCall.name(_driverData) ?? 'Driver';
+    final vehicleNum = GetDriverDetailsCall.vehicleNumber(_driverData) ?? 'Unknown';
+    final rating = GetDriverDetailsCall.rating(_driverData) ?? '4.5';
     final profileImg = GetDriverDetailsCall.profileImage(_driverData);
-    
-    final dropLoc = widget.dropLocation ?? FFAppState().droplocation ?? 'Ameerpet';
-    final baseAmount = _calculatedFare;
-    final dropDist = '${_calculatedDistanceKm.toStringAsFixed(2)} km';
 
-    
-
+    final dropLoc = widget.dropLocation ?? FFAppState().droplocation;
+    final displayDropLoc = (dropLoc.isNotEmpty) ? dropLoc : 'Selected Destination';
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -297,19 +305,27 @@ Future<void> _confirmBooking() async {
             padding: const EdgeInsets.all(16.0),
             child: Column(
               children: [
+                // Main Info Card
                 Expanded(
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: const Color(0xFFFF7B10),
                       borderRadius: BorderRadius.circular(12.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        )
+                      ],
                     ),
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(24.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Logo
+                          // Header Logo
                           Center(
                             child: Column(
                               children: [
@@ -323,7 +339,7 @@ Future<void> _confirmBooking() async {
                                   ),
                                 ),
                                 Text(
-                                  'T  A  X  I',
+                                  'T A X I',
                                   style: GoogleFonts.poppins(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
@@ -335,14 +351,16 @@ Future<void> _confirmBooking() async {
                             ),
                           ),
                           const SizedBox(height: 30),
-                          // Driver Image
+
+                          // Driver Profile Image
                           Center(
                             child: Container(
                               width: 140,
                               height: 140,
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(70), // Circle
+                                border: Border.all(color: Colors.white, width: 4),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.1),
@@ -351,50 +369,66 @@ Future<void> _confirmBooking() async {
                                 ],
                               ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: profileImg != null 
-                                  ? Image.network(profileImg, fit: BoxFit.cover)
-                                  : Image.asset('assets/images/0l6yw6.png', fit: BoxFit.cover),
+                                borderRadius: BorderRadius.circular(70),
+                                child: profileImg != null && profileImg.isNotEmpty
+                                    ? Image.network(profileImg, fit: BoxFit.cover)
+                                    : Image.asset('assets/images/0l6yw6.png', fit: BoxFit.cover),
                               ),
                             ),
                           ),
-                          const SizedBox(height: 30),
-                          Text(
-                            'Driver details',
-                            style: GoogleFonts.poppins(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                          const SizedBox(height: 20),
+
+                          // Driver Details Title
+                          Center(
+                            child: Text(
+                              'Verified Driver',
+                              style: GoogleFonts.poppins(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 20),
-                          _buildDetailRow('Driver name', driverName),
-                          _buildDetailRow('vehicle number', vehicleNum),
-                          Row(
-                            children: [
-                              Text(
-                                'Rating : ',
-                                style: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
-                              ),
-                              const Icon(Icons.star, color: Color(0xFFFFDE14), size: 20),
-                              Text(
-                                ' $rating',
-                                style: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
-                              ),
-                            ],
+
+                          // Details List
+                          _buildDetailRow('Driver Name', driverName),
+                          _buildDetailRow('Vehicle No', vehicleNum),
+
+                          // Rating Row
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Rating : ',
+                                  style: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
+                                ),
+                                const Icon(Icons.star, color: Color(0xFFFFDE14), size: 20),
+                                Text(
+                                  ' $rating',
+                                  style: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 8),
-                          _buildDetailRow('Drop location', dropLoc),
-                          _buildDetailRow('Drop distance', dropDist),
-                          const SizedBox(height: 16),
-                          _buildDetailRow('Trip amount', '₹${baseAmount.toStringAsFixed(2)}'),
+
+                          const Divider(color: Colors.white30, height: 20),
+
+                          // Trip Details
+                          _buildDetailRow('Destination', displayDropLoc),
+                          _buildDetailRow('Distance', '${_calculatedDistanceKm.toStringAsFixed(2)} km'),
+                          _buildDetailRow('Est. Fare', '₹${_calculatedFare.toStringAsFixed(0)}'),
+
                           const SizedBox(height: 20),
+
+                          // Tipping Section
                           Text(
-                            'TIP AMOUNT',
+                            'ADD A TIP (Optional)',
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: Colors.white,
+                              color: Colors.white70,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -403,31 +437,35 @@ Future<void> _confirmBooking() async {
                             children: [
                               _buildTipButton(10),
                               _buildTipButton(20),
-                              _buildTipButton(30),
+                              _buildTipButton(50),
                             ],
                           ),
+
                           const SizedBox(height: 24),
+
+                          // Total Amount Box
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  'Total amount',
+                                  'Total Payable',
                                   style: GoogleFonts.poppins(
                                     fontSize: 16,
-                                    color: const Color(0xFF2D7E20),
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 Text(
-                                  '₹${totalAmount.toStringAsFixed(2)}',
+                                  '₹${totalAmount.toStringAsFixed(0)}',
                                   style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
                                     color: const Color(0xFF2D7E20),
                                   ),
                                 ),
@@ -440,44 +478,62 @@ Future<void> _confirmBooking() async {
                   ),
                 ),
                 const SizedBox(height: 16),
+
+                // Action Buttons
                 Row(
                   children: [
+                    // Cancel Button
                     Expanded(
                       flex: 1,
-                      child: FFButtonWidget(
-                        onPressed: () => Navigator.pop(context),
-                        text: 'Cancel',
-                        options: FFButtonOptions(
-                          height: 56,
-                          color: const Color(0xFFF01C1C),
-                          textStyle: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
+                      child: SizedBox(
+                        height: 56,
+                        child: OutlinedButton(
+                          onPressed: () => context.safePop(),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Color(0xFFF01C1C), width: 1.5),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            backgroundColor: Colors.white,
                           ),
-                          borderRadius: BorderRadius.circular(8),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFF01C1C),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
+
+                    // Continue Button
                     Expanded(
                       flex: 2,
-                      child: FFButtonWidget(
-                        onPressed: () async {
-                          _confirmBooking();
-                        
-                        },
-                        text: 'Continue',
-                        options: FFButtonOptions(
-                          height: 56,
-                          color: const Color(0xFFFF7B10),
-                          textStyle: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white,
+                      child: SizedBox(
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: isLoadingRide ? null : _confirmBooking,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF7B10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            elevation: 4,
                           ),
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Colors.white, width: 1),
+                          child: isLoadingRide
+                              ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                          )
+                              : Text(
+                            'START RIDE',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -494,14 +550,33 @@ Future<void> _confirmBooking() async {
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
-      child: RichText(
-        text: TextSpan(
-          style: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
-          children: [
-            TextSpan(text: '$label : '),
-            TextSpan(text: value, style: const TextStyle(fontWeight: FontWeight.w400)),
-          ],
-        ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              '$label :',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: Colors.white.withOpacity(0.8),
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -510,21 +585,26 @@ Future<void> _confirmBooking() async {
     final isSelected = _selectedTip == amount;
     return InkWell(
       onTap: () => setState(() => _selectedTip = isSelected ? 0 : amount),
-      child: Container(
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         width: MediaQuery.of(context).size.width * 0.23,
-        height: 50,
+        height: 45,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFF1E6) : Colors.white,
+          color: isSelected ? Colors.white : Colors.white.withOpacity(0.2),
           borderRadius: BorderRadius.circular(8),
-          border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
+          border: Border.all(
+              color: isSelected ? const Color(0xFFFF7B10) : Colors.white70,
+              width: 1.5
+          ),
         ),
         child: Center(
           child: Text(
-            amount.toString(),
+            '+ ₹$amount',
             style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: isSelected ? const Color(0xFFFF7B10) : Colors.black,
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: isSelected ? const Color(0xFFFF7B10) : Colors.white,
             ),
           ),
         ),

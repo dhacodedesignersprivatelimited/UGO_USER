@@ -138,7 +138,7 @@ packages:
     source: hosted
     version: "0.3.5+1"
   crypto:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: crypto
       sha256: c8ea0233063ba03258fbcf2ca4d6dadfefe14f02fab57702265467a19f27fadf
@@ -648,12 +648,12 @@ packages:
     source: hosted
     version: "0.5.12"
   google_maps_webservice:
-    dependency: transitive
+    dependency: "direct main"
     description:
       path: "."
       ref: HEAD
-      resolved-ref: "1588c27229ab48665635acb65c090d6a658da6fc"
-      url: "https://github.com/ShehanYjoz/google_maps_webservice.git"
+      resolved-ref: "7b10f467cfedea75de13c8c3419fdec8cd06098a"
+      url: "https://github.com/lejard-h/google_maps_webservice.git"
     source: git
     version: "0.0.20-nullsafety.5"
   google_sign_in:
@@ -713,7 +713,7 @@ packages:
     source: hosted
     version: "1.4.0"
   http_parser:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: http_parser
       sha256: "178d74305e7866013777bab2c3d8726205dc5a4dd935297175b19a23a2e66571"

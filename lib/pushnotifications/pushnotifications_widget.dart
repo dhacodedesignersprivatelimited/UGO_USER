@@ -1,8 +1,6 @@
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'pushnotifications_model.dart';
@@ -175,7 +173,7 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
                     getJsonField(item, r'''$.message''')?.toString() ?? '';
     final createdAt = getJsonField(item, r'''$.created_at''')?.toString();
     final isRead = getJsonField(item, r'''$.is_read''') == true;
-    final type = getJsonField(item, r'''$.type''')?.toString()?.toLowerCase() ?? 'info';
+    final type = getJsonField(item, r'''$.type''')?.toString().toLowerCase() ?? 'info';
 
     IconData iconData = Icons.notifications_rounded;
     Color iconColor = const Color(0xFFFF7B10);

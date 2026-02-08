@@ -1,8 +1,6 @@
 import 'package:ugouser/home/home_widget.dart';
 
-import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import 'package:flutter/material.dart';
@@ -152,7 +150,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
               ).animate(CurvedAnimation(
                 parent: _animationController,
                 curve: Interval(
-                  (index / rides!.length).clamp(0.0, 1.0),
+                  (index / rides.length).clamp(0.0, 1.0),
                   1.0,
                   curve: Curves.easeOut,
                 ),

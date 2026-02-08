@@ -1,8 +1,6 @@
 import '/backend/api_requests/api_calls.dart'; // ✅ Your fixed CancelRide API
 import '/flutter_flow/flutter_flow_icon_button.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import '/flutter_flow/flutter_flow_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -376,7 +374,7 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                                       color: Color(0xFFF8F9FA),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: displayVehicleImage != null && displayVehicleImage!.isNotEmpty
+                                    child: displayVehicleImage != null && displayVehicleImage.isNotEmpty
                                         ? Image.network(
                                       'https://ugo-api.icacorp.org/$displayVehicleImage',
                                       fit: BoxFit.contain,

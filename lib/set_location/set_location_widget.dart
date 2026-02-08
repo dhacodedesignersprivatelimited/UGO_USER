@@ -132,7 +132,7 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                   onSelect: (place) async {
                     Navigator.pop(dialogContext);
                     
-                    final selectedLatLng = place.latLng!;
+                    final selectedLatLng = place.latLng;
                     
                     // Move map to selected location
                     _model.googleMapsController.future.then((controller) {

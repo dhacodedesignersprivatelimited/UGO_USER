@@ -213,6 +213,145 @@ class UpdateProfileImageCall {
 }
 
 /// ---------------------------------------------------------------------------
+/// ADDRESS MANAGEMENT
+/// ---------------------------------------------------------------------------
+
+class SaveAddressCall {
+  static Future<ApiCallResponse> call({
+    int? userId,
+    String? addressLabel = '',
+    String? addressText = '',
+    double? latitude,
+    double? longitude,
+    String? token = '',
+  }) async {
+    final ffApiRequestBody = '''
+{
+  "user_id": ${userId},
+  "address_label": "${escapeStringForJson(addressLabel)}",
+  "address_text": "${escapeStringForJson(addressText)}",
+  "latitude": ${latitude},
+  "longitude": ${longitude}
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'SaveAddress',
+      apiUrl: 'https://ugo-api.icacorp.org/api/saved-addresses/post',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer ${token}',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  // Parse response data
+  static int? addressId(dynamic response) => castToType<int>(getJsonField(
+    response,
+    r'''$.data.id''',
+  ));
+  static String? message(dynamic response) => castToType<String>(getJsonField(
+    response,
+    r'''$.message''',
+  ));
+  static bool? success(dynamic response) => castToType<bool>(getJsonField(
+    response,
+    r'''$.success''',
+  ));
+  static String? addressType(dynamic response) =>
+      castToType<String>(getJsonField(
+        response,
+        r'''$.data.address_type''',
+      ));
+  static bool? isDefault(dynamic response) => castToType<bool>(getJsonField(
+    response,
+    r'''$.data.is_default''',
+  ));
+}
+
+class GetSavedAddressesCall {
+  static Future<ApiCallResponse> call({
+    required int userId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetSavedAddresses',
+      apiUrl: 'https://ugo-api.icacorp.org/api/saved-addresses/$userId',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  // Helpers to parse List<dynamic> from response
+  static List<int>? ids(dynamic response) => (getJsonField(
+    response,
+    r'''$.data[:].id''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<int>(x))
+      .withoutNulls
+      .toList();
+
+  static List<String>? addressTexts(dynamic response) => (getJsonField(
+    response,
+    r'''$.data[:].address_text''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<String>(x))
+      .withoutNulls
+      .toList();
+
+  static List<String>? addressTypes(dynamic response) => (getJsonField(
+    response,
+    r'''$.data[:].address_type''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<String>(x))
+      .withoutNulls
+      .toList();
+
+  static List<double>? latitudes(dynamic response) => (getJsonField(
+    response,
+    r'''$.data[:].latitude''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => double.tryParse(x.toString()))
+      .withoutNulls
+      .toList();
+
+  static List<double>? longitudes(dynamic response) => (getJsonField(
+    response,
+    r'''$.data[:].longitude''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => double.tryParse(x.toString()))
+      .withoutNulls
+      .toList();
+}
+
+/// ---------------------------------------------------------------------------
 /// RIDE HISTORY
 /// ---------------------------------------------------------------------------
 
@@ -388,10 +527,10 @@ class GetVehicleDetailsCall {
     return data;
   }
 
-  // ✅ STATIC API CALL (Required for widget)
+  // ✅ STATIC API CALL
   static Future<ApiCallResponse> call({int retryCount = 0}) async {
-    const int maxRetries = 3; // Maximum number of retries
-    const Duration delayDuration = Duration(seconds: 2); // Delay between retries
+    const int maxRetries = 3;
+    const Duration delayDuration = Duration(seconds: 2);
 
     ApiCallResponse? response;
     int currentRetry = retryCount;
@@ -399,6 +538,7 @@ class GetVehicleDetailsCall {
     while (currentRetry <= maxRetries) {
       response = await ApiManager.instance.makeApiCall(
         callName: 'GetVehicleDetails',
+        // ✅ Updated URL
         apiUrl: 'https://ugo-api.icacorp.org/api/admins/api/admins/vehicles',
         callType: ApiCallType.GET,
         headers: {},
@@ -412,7 +552,6 @@ class GetVehicleDetailsCall {
       );
 
       if (response.statusCode == 200) {
-        // Assuming 200 indicates success
         return response;
       } else {
         if (kDebugMode) {
@@ -425,10 +564,10 @@ class GetVehicleDetailsCall {
         }
       }
     }
-    return response!; // Return the last response, even if it failed
+    return response!;
   }
 
-  // ✅ STATIC HELPER METHODS (Required for widget)
+  // ✅ STATIC HELPER METHODS
   static List? data(dynamic response) => getJsonField(
     response,
     r'''$.data''',
@@ -497,16 +636,15 @@ class GetVehicleDetailsCall {
       .map((x) => castToType<String>(x))
       .withoutNulls
       .toList();
-   static List<int>? rideCategory(dynamic response) => (getJsonField(
-  response,
-  r'''$.data[:].ride_category''',
-  true,
-) as List?)
-    ?.withoutNulls
-    .map((x) => castToType<int>(x))
-    .withoutNulls
-    .toList();
-
+  static List<int>? rideCategory(dynamic response) => (getJsonField(
+    response,
+    r'''$.data[:].ride_category''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<int>(x))
+      .withoutNulls
+      .toList();
 }
 
 class VehicleData {
@@ -626,7 +764,7 @@ class GetRideStatus {
     ) as List?;
     return list
         ?.where((e) => e != null)
-        .map((e) => double.parse(e.toString()))
+        .map((e) => double.tryParse(e.toString()) ?? 0.0)
         .toList();
   }
 
@@ -635,7 +773,8 @@ class GetRideStatus {
     r'''$.data.rides[:].pickup_longitude''',
     true,
   ) as List?)
-      ?.map((x) => double.parse(x.toString()))
+      ?.where((x) => x != null)
+      .map((x) => double.tryParse(x.toString()) ?? 0.0)
       .toList();
 }
 
@@ -658,7 +797,6 @@ class GetRideDetailsCall {
   }
 }
 
-// ✅ FIXED: CreateRideCall updated to match expected API Body
 // Uses "admin_vehicle_id" (INT) instead of "ride_type"
 class CreateRideCall {
   bool? success;
@@ -704,6 +842,7 @@ class CreateRideCall {
     String? rideStatus,
     int retryCount = 0,
     int? driverId,
+    String? paymentType, // ✅ Added Payment Type (cash/online)
   }) async {
     const int maxRetries = 3;
     const Duration delayDuration = Duration(seconds: 2);
@@ -712,7 +851,6 @@ class CreateRideCall {
     int currentRetry = retryCount;
 
     while (currentRetry <= maxRetries) {
-      // ✅ Construct JSON exactly like the working cURL request
       final Map<String, dynamic> requestBody = {
         "user_id": userId,
         "pickup_location_address": pickupLocationAddress,
@@ -724,9 +862,9 @@ class CreateRideCall {
         "admin_vehicle_id": adminVehicleId, // Sending INT
         "estimated_fare": estimatedFare ?? "0",
         "ride_status": rideStatus ?? "pending",
-
+        if (paymentType != null) "payment_type": paymentType, // ✅ Optional Payment Type
       };
-if (driverId != null) {
+      if (driverId != null) {
         requestBody["driver_id"] = driverId;
       }
 
@@ -803,11 +941,11 @@ class Data {
   String? guestName;
   String? guestPhone;
   String? guestInstructions;
-  Null? otp;
-  Null? otpHash;
-  Null? otpExpiresAt;
+  Null otp;
+  Null otpHash;
+  Null otpExpiresAt;
   int? otpAttempts;
-  Null? otpVerifiedAt;
+  Null otpVerifiedAt;
 
   Data(
       {this.createdAt,
@@ -1155,140 +1293,6 @@ class GetNearbyDriversCall {
   }
 }
 
-class SaveAddressCall {
-  static Future<ApiCallResponse> call({
-    int? userId,
-    String? addressLabel = '',
-    String? addressText = '',
-    double? latitude,
-    double? longitude,
-    String? token = '',
-  }) async {
-    final ffApiRequestBody = '''
-{
-  "user_id": ${userId},
-  "address_label": "${escapeStringForJson(addressLabel)}",
-  "address_text": "${escapeStringForJson(addressText)}",
-  "latitude": ${latitude},
-  "longitude": ${longitude}
-}''';
-    return ApiManager.instance.makeApiCall(
-      callName: 'SaveAddress',
-      apiUrl: 'https://ugo-api.icacorp.org/api/saved-addresses/post',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer ${token}',
-        'Content-Type': 'application/json',
-      },
-      params: {},
-      body: ffApiRequestBody,
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
-    );
-  }
-
-  // Parse response data
-  static int? addressId(dynamic response) => castToType<int>(getJsonField(
-    response,
-    r'''$.data.id''',
-  ));
-  static String? message(dynamic response) => castToType<String>(getJsonField(
-    response,
-    r'''$.message''',
-  ));
-  static bool? success(dynamic response) => castToType<bool>(getJsonField(
-    response,
-    r'''$.success''',
-  ));
-  static String? addressType(dynamic response) =>
-      castToType<String>(getJsonField(
-        response,
-        r'''$.data.address_type''',
-      ));
-  static bool? isDefault(dynamic response) => castToType<bool>(getJsonField(
-    response,
-    r'''$.data.is_default''',
-  ));
-}
-// ✅ NEW: GET Saved Addresses Call
-class GetSavedAddressesCall {
-  static Future<ApiCallResponse> call({
-    required int userId,
-    String? token = '',
-  }) async {
-    return ApiManager.instance.makeApiCall(
-      callName: 'GetSavedAddresses',
-      apiUrl: 'https://ugotaxi.icacorp.org/api/saved-addresses/$userId',
-      callType: ApiCallType.GET,
-      headers: {
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-      },
-      params: {},
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
-    );
-  }
-
-  // Helpers to parse List<dynamic> from response
-  static List<int>? ids(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].id''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<int>(x))
-      .withoutNulls
-      .toList();
-
-  static List<String>? addressTexts(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].address_text''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
-
-  static List<String>? addressTypes(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].address_type''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
-
-  static List<double>? latitudes(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].latitude''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => double.tryParse(x.toString()))
-      .withoutNulls
-      .toList();
-
-  static List<double>? longitudes(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].longitude''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => double.tryParse(x.toString()))
-      .withoutNulls
-      .toList();
-}
 // ✅ FIXED CANCEL RIDE CALL
 class CancelRide {
   static Future<ApiCallResponse> call({
@@ -1357,6 +1361,7 @@ class GetAllNotificationsCall {
     r'''$.data.total''',
   ));
 }
+
 class SubmitRideRatingCall {
   static Future<ApiCallResponse> call({
     required int rideId,
@@ -1376,7 +1381,7 @@ class SubmitRideRatingCall {
         "rating_comment": ratingComment,
     });
 
-    final token = FFAppState().accessToken; // 👈 MUST exist
+    final token = FFAppState().accessToken;
 
     print('📤 API Request Body: $ffApiRequestBody');
     print('🔐 Auth Token: $token');
@@ -1387,7 +1392,7 @@ class SubmitRideRatingCall {
       callType: ApiCallType.POST,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token', // ✅ FIX
+        'Authorization': 'Bearer $token',
       },
       params: {},
       body: ffApiRequestBody,
@@ -1413,6 +1418,45 @@ class SubmitRideRatingCall {
 
   static int? ratingId(dynamic response) =>
       castToType<int>(getJsonField(response, r'''$.data.id'''));
+}
+
+class writeReviewCall {
+  static Future<ApiCallResponse> call({
+    String? token,
+    int? rideId,
+    int? rating,
+    String? review,
+    String? user_id,
+    String? driver_id,
+  }) async {
+    final Map<String, dynamic> requestBody = {
+      "ride_id": rideId,
+      "user_id": user_id,
+      "driver_id": driver_id,
+      "rating_given_by": "user",
+      "rating_score": rating,
+      "rating_comment": review,
+    };
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'WriteReview',
+      apiUrl: 'https://ugo-api.icacorp.org/api/ratings/post',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode(requestBody),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
 }
 
 class GetAllVouchersCall {

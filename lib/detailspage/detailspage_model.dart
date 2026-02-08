@@ -1,17 +1,13 @@
+import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import 'detailspage_widget.dart' show DetailspageWidget;
 import 'package:flutter/material.dart';
-import '/backend/api_requests/api_calls.dart';
 
 class DetailspageModel extends FlutterFlowModel<DetailspageWidget> {
   final unfocusNode = FocusNode();
-  bool _isRegistering = false;
+  final formKey = GlobalKey<FormState>();
 
-  // Profile Photo
-  bool isDataUploading = false;
-  FFUploadedFile uploadedLocalFile = FFUploadedFile(bytes: Uint8List.fromList([]));
-
-  // Text Fields
+  // State fields
   FocusNode? textFieldFocusNode1;
   TextEditingController? textController1;
   String? Function(BuildContext, String?)? textController1Validator;
@@ -24,38 +20,13 @@ class DetailspageModel extends FlutterFlowModel<DetailspageWidget> {
   TextEditingController? textController3;
   String? Function(BuildContext, String?)? textController3Validator;
 
+  // Logic fields
   ApiCallResponse? apiResultRegister;
-
-  bool get isRegistering => _isRegistering;
-  void set isRegistering(bool value) => _isRegistering = value;
-
-  String get firstName => textController1?.text.trim() ?? '';
-  String get lastName => textController2?.text.trim() ?? '';
-  String get email => textController3?.text.trim() ?? '';
+  bool isRegistering = false;
+  FFUploadedFile uploadedLocalFile = FFUploadedFile(bytes: Uint8List.fromList([]));
 
   @override
-  void initState(BuildContext context) {
-    textFieldFocusNode1 ??= FocusNode();
-    textController1 ??= TextEditingController();
-    textController1Validator = (context, value) {
-      if (value == null || value.isEmpty) return 'First name is required';
-      if (value.length < 2) return 'Name must be at least 2 characters';
-      return null;
-    };
-
-    textFieldFocusNode2 ??= FocusNode();
-    textController2 ??= TextEditingController();
-
-    textFieldFocusNode3 ??= FocusNode();
-    textController3 ??= TextEditingController();
-    textController3Validator = (context, value) {
-      if (value == null || value.isEmpty) return 'Email is required';
-      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-        return 'Please enter a valid email';
-      }
-      return null;
-    };
-  }
+  void initState(BuildContext context) {}
 
   @override
   void dispose() {
@@ -68,9 +39,10 @@ class DetailspageModel extends FlutterFlowModel<DetailspageWidget> {
     textController3?.dispose();
   }
 
+  // ✅ Validation Logic
   String? validateForm() {
-    if (firstName.isEmpty) return 'First name required';
-    if (email.isEmpty || !email.contains('@')) return 'Valid email required';
+    if (textController1?.text.isEmpty ?? true) return "First name is required";
+    if (textController3?.text.isEmpty ?? true) return "Email is required";
     return null;
   }
 }

@@ -141,7 +141,7 @@ class _RidecheckWidgetState extends State<RidecheckWidget> {
                       onChanged: (newValue) async {
                         safeSetState(() => _model.switchValue = newValue);
                       },
-                      activeColor:
+                      activeThumbColor:
                           FlutterFlowTheme.of(context).secondaryBackground,
                       activeTrackColor: FlutterFlowTheme.of(context).accent1,
                       inactiveTrackColor: FlutterFlowTheme.of(context).accent1,

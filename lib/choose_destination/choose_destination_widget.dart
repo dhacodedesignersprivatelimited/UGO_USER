@@ -1,5 +1,3 @@
-import '/flutter_flow/flutter_flow_icon_button.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +10,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'choose_destination_model.dart';
 export 'choose_destination_model.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
-
 
 class ChooseDestinationWidget extends StatefulWidget {
   const ChooseDestinationWidget({super.key});
@@ -38,7 +35,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
   gmaps.LatLng? _currentMapCenter;
   bool _isMapReady = false;
 
-  // Using the API key found in AvaliableOptionsWidget
+  // Google Maps API Key
   final String _googleMapsApiKey = 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y';
 
   @override
@@ -57,54 +54,62 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
     if (appState.pickuplocation.isNotEmpty) {
       _model.pickupLocationController?.text = appState.pickuplocation;
     }
-    if (appState.droplocation.isNotEmpty) {
-      _model.destinationLocationController?.text = appState.droplocation;
-      // Set initial map center to drop location if available
-      if (appState.dropLatitude != null && appState.dropLongitude != null) {
-        _currentMapCenter = gmaps.LatLng(appState.dropLatitude!, appState.dropLongitude!);
+
+    // Set initial map center logic
+    if (appState.dropLatitude != null && appState.dropLongitude != null && appState.dropLatitude != 0.0) {
+      // If previous drop location exists, center on that
+      _currentMapCenter = gmaps.LatLng(appState.dropLatitude!, appState.dropLongitude!);
+      if (appState.droplocation.isNotEmpty) {
+        _model.destinationLocationController?.text = appState.droplocation;
+      }
+    } else if (appState.pickupLatitude != null && appState.pickupLongitude != null && appState.pickupLatitude != 0.0) {
+      // Fallback to pickup location
+      _currentMapCenter = gmaps.LatLng(appState.pickupLatitude!, appState.pickupLongitude!);
+    }
+
+    // Post-frame callback to handle initial location setup
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _initializeLocations();
+    });
+  }
+
+  Future<void> _initializeLocations() async {
+    final appState = FFAppState();
+
+    // 1. Ensure Pickup is Set
+    if (appState.pickupLatitude == 0.0 || appState.pickupLatitude == null) {
+      await _getCurrentLocation();
+    } else if (appState.pickuplocation.isEmpty) {
+      // Reverse geocode if coordinates exist but address is empty
+      try {
+        final placemarks = await geo.placemarkFromCoordinates(
+          appState.pickupLatitude!,
+          appState.pickupLongitude!,
+        );
+        if (placemarks.isNotEmpty && mounted) {
+          final place = placemarks.first;
+          final address = "${place.name}, ${place.subLocality}, ${place.locality}";
+          setState(() {
+            _model.pickupLocationController?.text = address;
+            FFAppState().pickuplocation = address;
+          });
+        }
+      } catch (e) {
+        debugPrint("Reverse geocode failed: $e");
       }
     }
 
-    // Initialize with current location for pickup (non-editable)
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (appState.pickupLatitude != null &&
-          appState.pickupLongitude != null &&
-          appState.pickupLatitude != 0.0 &&
-          appState.pickupLongitude != 0.0) {
-        if (appState.pickuplocation.isEmpty) {
-          try {
-            final placemarks = await geo.placemarkFromCoordinates(
-              appState.pickupLatitude!,
-              appState.pickupLongitude!,
-            );
-            if (placemarks.isNotEmpty && mounted) {
-              final place = placemarks.first;
-              final address =
-                  "${place.name}, ${place.subLocality}, ${place.locality}";
-              setState(() {
-                _model.pickupLocationController?.text = address;
-                FFAppState().pickuplocation = address;
-              });
-            }
-          } catch (e) {
-            debugPrint("Reverse geocode failed: $e");
-            _getCurrentLocation();
-          }
-        }
-      } else {
-        _getCurrentLocation();
-      }
-
-      // Set default map center if no drop location
-      if (_currentMapCenter == null && appState.pickupLatitude != null) {
+    // 2. Initialize Map Center if still null
+    if (_currentMapCenter == null && mounted) {
+      if (appState.pickupLatitude != null && appState.pickupLatitude != 0.0) {
         setState(() {
-          _currentMapCenter = gmaps.LatLng(
-            appState.pickupLatitude!,
-            appState.pickupLongitude!,
-          );
+          _currentMapCenter = gmaps.LatLng(appState.pickupLatitude!, appState.pickupLongitude!);
         });
+      } else {
+        // Fallback to a default location (e.g., city center) if absolutely nothing is available
+        // For now, let's wait for _getCurrentLocation to finish
       }
-    });
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -125,25 +130,32 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
         position.longitude,
       );
 
-      if (placemarks.isNotEmpty) {
+      if (placemarks.isNotEmpty && mounted) {
         geo.Placemark place = placemarks[0];
-        String address =
-            "${place.name}, ${place.subLocality}, ${place.locality}";
+        String address = "${place.name}, ${place.subLocality}, ${place.locality}";
 
         setState(() {
           _model.pickupLocationController?.text = address;
           FFAppState().pickuplocation = address;
           FFAppState().pickupLatitude = position.latitude;
           FFAppState().pickupLongitude = position.longitude;
-          
-          // Set map center if not already set
+
           if (_currentMapCenter == null) {
             _currentMapCenter = gmaps.LatLng(position.latitude, position.longitude);
+            _moveCameraToCenter();
           }
         });
       }
     } catch (e) {
       debugPrint("Error getting current location: $e");
+    }
+  }
+
+  void _moveCameraToCenter() {
+    if (_mapController != null && _currentMapCenter != null) {
+      _mapController!.animateCamera(
+        gmaps.CameraUpdate.newLatLngZoom(_currentMapCenter!, 15),
+      );
     }
   }
 
@@ -196,53 +208,86 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
           FFAppState().droplocation = description;
           FFAppState().dropLatitude = lat;
           FFAppState().dropLongitude = lng;
-          _predictions = []; // Clear predictions
+          _predictions = []; // Clear predictions to show map
           _currentMapCenter = gmaps.LatLng(lat, lng);
         });
-        
+
         // Unfocus text field to dismiss keyboard
         FocusScope.of(context).unfocus();
 
         // Move map to selected location
-        _mapController?.animateCamera(
-          gmaps.CameraUpdate.newLatLngZoom(_currentMapCenter!, 15),
-        );
+        _moveCameraToCenter();
       }
     } catch (e) {
       debugPrint("Error fetching place details: $e");
     }
   }
 
-  // Update destination based on map center (draggable pin)
-  Future<void> _updateDestinationFromMap(gmaps.LatLng position) async {
-    setState(() {
-      _isLoadingAddress = true;
-      _currentMapCenter = position;
-      FFAppState().dropLatitude = position.latitude;
-      FFAppState().dropLongitude = position.longitude;
-    });
+  Future<void> _openScanner() async {
+    // Basic validation
+    if (FFAppState().droplocation.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a destination first.')),
+      );
+      return;
+    }
 
     try {
-      final placemarks = await geo.placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
+      final scanResult = await FlutterBarcodeScanner.scanBarcode(
+        '#FF7B10',
+        'Cancel',
+        true,
+        ScanMode.BARCODE,
       );
-      
-      if (placemarks.isNotEmpty && mounted) {
-        final place = placemarks.first;
-        final address = "${place.name}, ${place.subLocality}, ${place.locality}";
-        
-        setState(() {
-          _model.destinationLocationController?.text = address;
-          FFAppState().droplocation = address;
-          _isLoadingAddress = false;
-        });
+
+      if (!mounted || scanResult == '-1') return;
+
+      int? driverId;
+      int? vehicleType;
+      double? baseFare;
+      double? pricePerKm;
+      double? baseKmStart;
+      double? baseKmEnd;
+
+      try {
+        if (scanResult.trim().startsWith('{')) {
+          final decodedData = jsonDecode(scanResult);
+
+          driverId = int.tryParse(decodedData['driver_id']?.toString() ?? '');
+          vehicleType = int.tryParse(decodedData['vehicle_type_id']?.toString() ?? '');
+
+          final pricing = decodedData['pricing'] ?? {};
+          baseFare = double.tryParse(pricing['base_fare']?.toString() ?? '0');
+          pricePerKm = double.tryParse(pricing['price_per_km']?.toString() ?? '0');
+          baseKmStart = double.tryParse(pricing['base_km_start']?.toString() ?? '1');
+          baseKmEnd = double.tryParse(pricing['base_km_end']?.toString() ?? '5');
+        } else {
+          driverId = int.tryParse(scanResult);
+        }
+      } catch (e) {
+        debugPrint('QR decode error: $e');
+        driverId = int.tryParse(scanResult);
+      }
+
+      if (driverId != null) {
+        context.pushNamed(
+          DriverDetailsWidget.routeName,
+          queryParameters: {
+            'driverId': driverId.toString(),
+            'vehicleType': vehicleType?.toString() ?? '',
+            'baseFare': baseFare?.toString() ?? '0',
+            'pricePerKm': pricePerKm?.toString() ?? '0',
+            'baseKmStart': baseKmStart?.toString() ?? '1',
+            'baseKmEnd': baseKmEnd?.toString() ?? '5',
+          },
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid QR Code')),
+        );
       }
     } catch (e) {
-      debugPrint("Reverse geocode failed: $e");
-      if (mounted) {
-        setState(() => _isLoadingAddress = false);
-      }
+      debugPrint('QR Scan failed: $e');
     }
   }
 
@@ -252,73 +297,6 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
     _model.dispose();
     super.dispose();
   }
-
- Future<void> _openScanner() async {
-  try {
-    final scanResult = await FlutterBarcodeScanner.scanBarcode(
-      '#FF7B10',
-      'Cancel',
-      true,
-      ScanMode.BARCODE,
-    );
-
-    if (!mounted || scanResult == '-1') return;
-
-    int? driverId;
-    int? vehicleType;
-    double? baseFare;
-    double? pricePerKm;
-    double? baseKmStart;
-    double? baseKmEnd;
-
-    try {
-      if (scanResult.trim().startsWith('{')) {
-        final decodedData = jsonDecode(scanResult);
-
-        driverId =
-            int.tryParse(decodedData['driver_id']?.toString() ?? '');
-        vehicleType =
-            int.tryParse(decodedData['vehicle_type_id']?.toString() ?? '');
-
-        baseFare = double.tryParse(
-            decodedData['pricing']['base_fare']?.toString() ?? '0');
-        pricePerKm = double.tryParse(
-            decodedData['pricing']['price_per_km']?.toString() ?? '0');
-        baseKmStart = double.tryParse(
-            decodedData['pricing']['base_km_start']?.toString() ?? '1');
-        baseKmEnd = double.tryParse(
-            decodedData['pricing']['base_km_end']?.toString() ?? '5');
-      } else {
-        driverId = int.tryParse(scanResult);
-      }
-    } catch (e) {
-      debugPrint('QR decode error: $e');
-      driverId = int.tryParse(scanResult);
-    }
-
-    if (driverId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid QR Code')),
-      );
-      return;
-    }
-
-    // 🚀 SAME DESTINATION AS HOME SCREEN
-    context.pushNamed(
-      DriverDetailsWidget.routeName,
-      queryParameters: {
-        'driverId': driverId.toString(),
-        'vehicleType': vehicleType?.toString() ?? '',
-        'baseFare': baseFare?.toString() ?? '0',
-        'pricePerKm': pricePerKm?.toString() ?? '0',
-        'baseKmStart': baseKmStart?.toString() ?? '1',
-        'baseKmEnd': baseKmEnd?.toString() ?? '5',
-      },
-    );
-  } catch (e) {
-    debugPrint('QR Scan failed: $e');
-  }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -330,7 +308,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
         body: SafeArea(
           child: Stack(
             children: [
-              // Map Background
+              // 1. Google Map Background
               if (_currentMapCenter != null)
                 gmaps.GoogleMap(
                   initialCameraPosition: gmaps.CameraPosition(
@@ -342,14 +320,14 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                     setState(() => _isMapReady = true);
                   },
                   onCameraMove: (position) {
-                    // Update center as user drags map
+                    // Just track the center, don't update state yet
                     _currentMapCenter = position.target;
                   },
+                  // Optional: Enable this if you want the pin to update address on drag end
                   // onCameraIdle: () {
-                  //   // Update address when user stops dragging
-                  //   if (_currentMapCenter != null) {
-                  //     _updateDestinationFromMap(_currentMapCenter!);
-                  //   }
+                  //    if (_currentMapCenter != null && !_isSearching) {
+                  //      _updateDestinationFromMap(_currentMapCenter!);
+                  //    }
                   // },
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
@@ -357,7 +335,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                   mapToolbarEnabled: false,
                 ),
 
-              // Center Pin (fixed in center of map)
+              // 2. Center Pin (Fixed)
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -367,12 +345,12 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                       size: 48,
                       color: Color(0xFFFF7B10),
                     ),
-                    const SizedBox(height: 48), // Offset for pin bottom
+                    const SizedBox(height: 48), // Offset so pin point is center
                   ],
                 ),
               ),
 
-              // Top Header with Input Fields
+              // 3. Top Search Panel
               Column(
                 children: [
                   Container(
@@ -393,8 +371,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_back,
-                                  color: Colors.white),
+                              icon: const Icon(Icons.arrow_back, color: Colors.white),
                               onPressed: () => context.safePop(),
                             ),
                             Expanded(
@@ -407,36 +384,29 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                                 ),
                               ),
                             ),
-                            // IconButton(
-                            //   icon: const Icon(Icons.qr_code_scanner,
-                            //       color: Colors.white),
-                            //   onPressed: _openScanner,
-                            // ),
                           ],
                         ),
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            // Left Visual (Uber dots/lines)
+                            // Visual Path Line
                             Column(
                               children: [
-                                const Icon(Icons.circle,
-                                    size: 12, color: Colors.white),
+                                const Icon(Icons.circle, size: 12, color: Colors.white),
                                 Container(
                                   width: 1,
                                   height: 35,
                                   color: Colors.white.withOpacity(0.6),
                                 ),
-                                const Icon(Icons.square,
-                                    size: 12, color: Colors.white),
+                                const Icon(Icons.square, size: 12, color: Colors.white),
                               ],
                             ),
                             const SizedBox(width: 16),
-                            // TextFields
+                            // Input Fields
                             Expanded(
                               child: Column(
                                 children: [
-                                  // Pickup field (DISABLED)
+                                  // Pickup (ReadOnly)
                                   Container(
                                     height: 44,
                                     decoration: BoxDecoration(
@@ -444,23 +414,17 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: TextField(
-                                      controller:
-                                          _model.pickupLocationController,
-                                      enabled: false, // ✅ DISABLED
+                                      controller: _model.pickupLocationController,
+                                      enabled: false,
                                       decoration: InputDecoration(
                                         hintText: 'Pickup Location',
                                         hintStyle: GoogleFonts.inter(
-                                            color: Colors.grey[600],
-                                            fontSize: 14),
+                                            color: Colors.grey[600], fontSize: 14),
                                         border: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 12, vertical: 10),
-                                        prefixIcon: const Icon(
-                                          Icons.location_on,
-                                          size: 18,
-                                          color: Colors.grey,
-                                        ),
+                                        contentPadding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 10),
+                                        prefixIcon: const Icon(Icons.location_on,
+                                            size: 18, color: Colors.grey),
                                       ),
                                       style: GoogleFonts.inter(
                                           fontSize: 14,
@@ -469,24 +433,19 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                                     ),
                                   ),
                                   const SizedBox(height: 12),
-                                  // Destination field
+                                  // Destination Input
                                   Container(
                                     height: 44,
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(8),
-                                      border: _model.destinationLocationFocusNode
-                                                  ?.hasFocus ??
-                                              false
-                                          ? Border.all(
-                                              color: Colors.black, width: 1.5)
+                                      border: _model.destinationLocationFocusNode?.hasFocus ?? false
+                                          ? Border.all(color: Colors.black, width: 1.5)
                                           : null,
                                     ),
                                     child: TextField(
-                                      controller:
-                                          _model.destinationLocationController,
-                                      focusNode:
-                                          _model.destinationLocationFocusNode,
+                                      controller: _model.destinationLocationController,
+                                      focusNode: _model.destinationLocationFocusNode,
                                       decoration: InputDecoration(
                                         hintText: 'Where to?',
                                         hintStyle: GoogleFonts.inter(
@@ -494,58 +453,34 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600),
                                         border: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 12, vertical: 10),
-                                        suffixIcon: _isLoadingAddress
-                                            ? const Padding(
-                                                padding: EdgeInsets.all(12),
-                                                child: SizedBox(
-                                                  width: 16,
-                                                  height: 16,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    color: Color(0xFFFF7B10),
-                                                  ),
-                                                ),
-                                              )
-                                            : (_model
-                                                    .destinationLocationController!
-                                                    .text
-                                                    .isNotEmpty
-                                                ? IconButton(
-                                                    icon: const Icon(
-                                                        Icons.clear,
-                                                        size: 18,
-                                                        color: Colors.grey),
-                                                    onPressed: () async {
-                                                      _model
-                                                          .destinationLocationController
-                                                          ?.clear();
-                                                      FFAppState().droplocation =
-                                                          '';
-                                                      final prefs =
-                                                          FFAppState().prefs;
-                                                      await prefs.remove(
-                                                          'ff_droplocation');
-                                                      setState(() {});
-                                                    },
-                                                  )
-                                                : null),
+                                        contentPadding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 10),
+                                        suffixIcon: _model.destinationLocationController!.text.isNotEmpty
+                                            ? IconButton(
+                                          icon: const Icon(Icons.clear,
+                                              size: 18, color: Colors.grey),
+                                          onPressed: () {
+                                            _model.destinationLocationController?.clear();
+                                            FFAppState().droplocation = '';
+                                            setState(() {
+                                              _predictions = [];
+                                            });
+                                          },
+                                        )
+                                            : null,
                                       ),
                                       style: GoogleFonts.inter(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.black),
-                                      onChanged: (val) =>
-                                          _getPlacePredictions(val),
+                                      onChanged: (val) => _getPlacePredictions(val),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                             const SizedBox(width: 8),
+                            // Current Location Button
                             IconButton(
                               icon: const Icon(Icons.my_location,
                                   color: Colors.white, size: 24),
@@ -557,7 +492,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                     ),
                   ),
 
-                  // Autocomplete Results Overlay
+                  // 4. Search Predictions List (Overlay)
                   if (_predictions.isNotEmpty)
                     Expanded(
                       child: Container(
@@ -570,17 +505,14 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                               leading: const Icon(Icons.location_on_outlined,
                                   color: Color(0xFFFF7B10)),
                               title: Text(
-                                prediction['structured_formatting']
-                                    ['main_text'],
+                                prediction['structured_formatting']['main_text'],
                                 style: GoogleFonts.inter(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 15,
                                     color: Colors.black),
                               ),
                               subtitle: Text(
-                                prediction['structured_formatting']
-                                        ['secondary_text'] ??
-                                    '',
+                                prediction['structured_formatting']['secondary_text'] ?? '',
                                 style: GoogleFonts.inter(
                                     fontSize: 13, color: Colors.grey[600]),
                                 maxLines: 1,
@@ -598,68 +530,66 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                 ],
               ),
 
-              // Bottom Scanner Button
-              // ✅ Bottom action buttons (IMAGE STYLE)
-          if (_predictions.isEmpty)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 20,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 🔶 Scan to go button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      onPressed: _openScanner,
-                      icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
-                      label: Text(
-                        'Scan to go',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+              // 5. Bottom Action Buttons (Visible only when not searching)
+              if (_predictions.isEmpty)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  bottom: 20,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Scan to Go Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: _openScanner,
+                          icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+                          label: Text(
+                            'Scan to go',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF7B10),
+                            elevation: 6,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF7B10),
-                        elevation: 6,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 12),
+                      // Back Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: OutlinedButton(
+                          onPressed: () => context.goNamed(HomeWidget.routeName),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.black),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Back to Home',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-
-                  const SizedBox(height: 12),
-
-                  // 🔹 Back to Home button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: OutlinedButton(
-                      onPressed: () => context.goNamed(HomeWidget.routeName),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.black),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Back to Home',
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-                  ],
+                ),
+            ],
           ),
         ),
       ),
