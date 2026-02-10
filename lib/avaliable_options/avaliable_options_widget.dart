@@ -75,6 +75,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     _slideController.forward();
     _vehiclesFuture = _getVehicleData(); // Fetch once on init
     _initializeMap();
+    
   }
 
   // ---------------------------------------------------------------------------
@@ -307,7 +308,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         dropLongitude: appState.dropLongitude,
         adminVehicleId: int.tryParse(selectedVehicleType!) ?? 1,
         estimatedFare: finalFare.toString(),
-        // paymentType: selectedPaymentMethod.toLowerCase(),
+        paymentType: selectedPaymentMethod.toLowerCase(),
+        
       );
 
       if (createRideRes.succeeded) {
@@ -323,6 +325,10 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             },
           );
         }
+        print('response: ${createRideRes.jsonBody}');
+        print('💳 Selected Payment UI: $selectedPaymentMethod');
+print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
+
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(getJsonField(createRideRes.jsonBody, r'$.message') ?? 'Booking failed'),

@@ -49,9 +49,12 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
   int _selectedTip = 0;
   double _calculatedDistanceKm = 0;
   double _calculatedFare = 0;
+  int? _rideId;
+
 
   // Computed total
   double get totalAmount => _calculatedFare + _selectedTip;
+  final appState = FFAppState();
 
   @override
   void initState() {
@@ -62,8 +65,120 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
     // Calculate fare immediately after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDistanceAndFare();
+       _createRide();
+       print('🧪 Updating ride');
+        print('rideId = $_rideId');
+        print('token = ${FFAppState().accessToken}');
+
     });
+                 
+      
   }
+//   Future<void> _createRide() async {
+//   try {
+//     final createRideRes = await CreateRideCall.call(
+//       token: appState.accessToken,
+//       userId: appState.userid,
+//       pickupLocationAddress: appState.pickuplocation.isNotEmpty
+//           ? appState.pickuplocation
+//           : "Current Location",
+//       dropLocationAddress: appState.droplocation.isNotEmpty
+//           ? appState.droplocation
+//           : "Drop Location",
+//       pickupLatitude: appState.pickupLatitude!,
+//       pickupLongitude: appState.pickupLongitude!,
+//       dropLatitude: appState.dropLatitude!,
+//       dropLongitude: appState.dropLongitude!,
+//       adminVehicleId: widget.vehicleType ?? 1,
+//       estimatedFare: totalAmount.toStringAsFixed(2),
+//       rideStatus: 'qr_scan',
+//       // driverId: widget.driverId,
+//       // paymentMethod: selectedPaymentMethod.toLowerCase(),
+//     );
+
+//     // 🔍 Debug full response
+//     print('🟢 CreateRide response: ${createRideRes.jsonBody}');
+
+//     if (createRideRes.succeeded) {
+//       final bool status =
+//           getJsonField(createRideRes.jsonBody, r'$.status') ?? false;
+
+//       if (status) {
+//         final rideId =
+//             getJsonField(createRideRes.jsonBody, r'$.data.id');
+
+//         print('✅ Ride created successfully. Ride ID: $rideId');
+
+//         // Optional: save rideId
+//         appState.currentRideId = int.parse(rideId.toString());
+//       } else {
+//         final message =
+//             getJsonField(createRideRes.jsonBody, r'$.message') ??
+//                 'Ride creation failed';
+
+//         print('❌ Backend error: $message');
+//       }
+//     } else {
+//       print('❌ API call failed (network/server)');
+//     }
+//   } catch (e) {
+//     print('🔥 Exception while creating ride: $e');
+//   }
+// }
+Future<void> _createRide() async {
+  try {
+    print('🚕 Creating ride...');
+
+    final response = await CreateRideCall.call(
+      token: FFAppState().accessToken, // USER token is correct for create ride
+      userId: FFAppState().userid,
+      pickupLocationAddress: FFAppState().pickuplocation.isNotEmpty
+          ? FFAppState().pickuplocation
+          : "Current Location",
+      dropLocationAddress: FFAppState().droplocation.isNotEmpty
+          ? FFAppState().droplocation
+          : "Drop Location",
+      pickupLatitude: FFAppState().pickupLatitude!,
+      pickupLongitude: FFAppState().pickupLongitude!,
+      dropLatitude: FFAppState().dropLatitude!,
+      dropLongitude: FFAppState().dropLongitude!,
+      adminVehicleId: widget.vehicleType ?? 1,
+      estimatedFare: totalAmount.toStringAsFixed(2),
+      rideStatus: 'qr_scan', // IMPORTANT
+      driverId: widget.driverId,
+    );
+
+    print('🟢 CreateRide response: ${response.jsonBody}');
+
+    if (response.succeeded == true) {
+      final bool success =
+          getJsonField(response.jsonBody, r'$.success') ?? false;
+
+      if (success) {
+        final int rideId =
+            int.parse(getJsonField(response.jsonBody, r'$.data.id').toString());
+
+        // ✅ SAVE RIDE ID PROPERLY
+        _rideId = rideId;
+        // FFAppState().currentRideId = rideId;
+
+        print('✅ Ride created successfully');
+        print('🆔 rideId = $_rideId');
+
+        setState(() {});
+      } else {
+        final message =
+            getJsonField(response.jsonBody, r'$.message') ?? 'Ride creation failed';
+        print('❌ Backend error: $message');
+      }
+    } else {
+      print('❌ CreateRide API failed');
+    }
+  } catch (e) {
+    print('🔥 Exception in _createRide(): $e');
+  }
+}
+
 
   @override
   void dispose() {
@@ -191,78 +306,91 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
 
   // --- 2. Confirm Booking (Direct Start) ---
 
-  Future<void> _confirmBooking() async {
-    if (isLoadingRide) return;
+  // Future<void> _confirmBooking() async {
+  //   if (isLoadingRide) return;
 
-    final appState = FFAppState();
+  //   final appState = FFAppState();
 
-    // Safety check for location before API call
-    if (appState.pickupLatitude == null || appState.dropLatitude == null) {
-      _showError("Locations not set. Please restart booking.");
-      return;
-    }
+  //   // Safety check for location before API call
+  //   if (appState.pickupLatitude == null || appState.dropLatitude == null) {
+  //     _showError("Locations not set. Please restart booking.");
+  //     return;
+  //   }
 
-    setState(() => isLoadingRide = true);
+  //   setState(() => isLoadingRide = true);
 
-    try {
-      print('🚀 Starting Ride Directly (No OTP)...');
+  //   try {
+  //     print('🚀 Starting Ride Directly (No OTP)...');
 
       // Call Create Ride API with status 'started'
-      final createRideRes = await CreateRideCall.call(
-        token: appState.accessToken,
-        userId: appState.userid,
-        pickupLocationAddress: appState.pickuplocation.isNotEmpty
-            ? appState.pickuplocation
-            : "Current Location", // Fallback name
-        dropLocationAddress: appState.droplocation.isNotEmpty
-            ? appState.droplocation
-            : "Drop Location",   // Fallback name
-        pickupLatitude: appState.pickupLatitude!,
-        pickupLongitude: appState.pickupLongitude!,
-        dropLatitude: appState.dropLatitude!,
-        dropLongitude: appState.dropLongitude!,
-        adminVehicleId: widget.vehicleType,
-        estimatedFare: totalAmount.toStringAsFixed(2),
-        rideStatus: 'started', // <--- KEY: Bypass OTP/Pending state
-        driverId: widget.driverId,
-      );
+      // final createRideRes = await CreateRideCall.call(
+      //   token: appState.accessToken,
+      //   userId: appState.userid,
+      //   pickupLocationAddress: appState.pickuplocation.isNotEmpty
+      //       ? appState.pickuplocation
+      //       : "Current Location", // Fallback name
+      //   dropLocationAddress: appState.droplocation.isNotEmpty
+      //       ? appState.droplocation
+      //       : "Drop Location",   // Fallback name
+      //   pickupLatitude: appState.pickupLatitude!,
+      //   pickupLongitude: appState.pickupLongitude!,
+      //   dropLatitude: appState.dropLatitude!,
+      //   dropLongitude: appState.dropLongitude!,
+      //   adminVehicleId: widget.vehicleType,
+      //   estimatedFare: totalAmount.toStringAsFixed(2),
+      //   rideStatus: 'started', // <--- KEY: Bypass OTP/Pending state
+      //   driverId: widget.driverId,
+      // );
 
-      if (createRideRes.succeeded) {
-        // Extract Ride ID safely
-        final rideId = CreateRideCall.rideId(createRideRes.jsonBody)?.toString() ??
-            getJsonField(createRideRes.jsonBody, r'''$.data.id''')?.toString();
+      // if (createRideRes.succeeded) {
+      //   // Extract Ride ID safely
+      //   final rideId = CreateRideCall.rideId(createRideRes.jsonBody)?.toString() ??
+      //       getJsonField(createRideRes.jsonBody, r'''$.data.id''')?.toString();
 
-        if (rideId != null) {
-          appState.currentRideId = int.parse(rideId);
-          appState.bookingInProgress = true; // Mark session active
-          print('✅ Ride Started Successfully. ID: $rideId');
+        // if (rideId != null) {
+        //   appState.currentRideId = int.parse(rideId);
+        //   appState.bookingInProgress = true; // Mark session active
+        //   print('✅ Ride Started Successfully. ID: $rideId');
 
-          // Navigate to Active Ride Screen
-          if (mounted) {
-            await context.pushNamed(
-              AutoBookWidget.routeName,
-              queryParameters: {
-                'rideId': rideId,
-                // Add these if AutoBookWidget needs them to initialize UI faster
-                'status': 'started',
-              },
-            );
-          }
-        } else {
-          _showError("Ride created but ID missing.");
-        }
-      } else {
-        final errorMsg = CreateRideCall.getResponseMessage(createRideRes.jsonBody) ??
-            'Failed to start ride.';
-        _showError(errorMsg);
-      }
-    } catch (e) {
-      print('❌ Booking Exception: $e');
-      _showError('Connection error. Please try again.');
-    } finally {
-      if (mounted) setState(() => isLoadingRide = false);
-    }
-  }
+        //   // Navigate to Active Ride Screen
+        //   if (mounted) {
+        //     await context.pushNamed(
+        //       AutoBookWidget.routeName,
+        //       queryParameters: {
+        //         'rideId': rideId,
+        //         // Add these if AutoBookWidget needs them to initialize UI faster
+        //         'status': 'started',
+        //       },
+        //     );
+        //   }
+        // } else {
+        //   _showError("Ride created but ID missing.");
+        // }
+      // } else {
+      //   final errorMsg = CreateRideCall.getResponseMessage(createRideRes.jsonBody) ??
+      //       'Failed to start ride.';
+      //   _showError(errorMsg);
+      // }
+//       onPressed: () async {
+//   final response = await UpdateRideStatusCall.call(
+//     rideId: FFAppState().currentRideId,
+//     status: 'started',
+//     token: FFAppState().accessToken,
+//   );
+
+//   if (UpdateRideStatusCall.success(response.jsonBody) == true) {
+//     FFAppState().currentRideStatus = 'started';
+//     print('🚀 Ride started');
+//   }
+// }
+
+//     } catch (e) {
+//       print('❌ Booking Exception: $e');
+//       _showError('Connection error. Please try again.');
+//     } finally {
+//       if (mounted) setState(() => isLoadingRide = false);
+//     }
+//   }
 
   void _showError(String message) {
     if (!mounted) return;
@@ -274,6 +402,48 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
       ),
     );
   }
+  Future<void> _confirmBooking() async {
+  if (isLoadingRide) return;
+
+  setState(() => isLoadingRide = true);
+
+  try {
+    print('🚀 START RIDE pressed');
+
+    final response = await UpdateRideStatusCall.call(
+      rideId:  _rideId,
+      status: 'started',
+      token: FFAppState().accessToken,
+    );
+
+    print('🟢 UpdateRideStatus response: ${response.jsonBody}');
+
+    if (UpdateRideStatusCall.success(response.jsonBody) == true) {
+      // FFAppState().currentRideStatus = 'started';
+      print('✅ Ride status changed to STARTED');
+
+      // OPTIONAL: navigate to next screen
+      if (mounted) {
+        await context.pushNamed(
+          AutoBookWidget.routeName,
+          queryParameters: {
+            'rideId': _rideId?.toString(),
+            'status': 'started',
+          },
+        );
+      }
+    } else {
+      _showError('Failed to start ride');
+      print('🟢 response: ${response.jsonBody}');
+    }
+  } catch (e) {
+    print('❌ Start ride error: $e');
+    _showError('Something went wrong');
+  } finally {
+    if (mounted) setState(() => isLoadingRide = false);
+  }
+}
+
 
   // --- UI Construction ---
 

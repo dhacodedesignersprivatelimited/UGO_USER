@@ -862,7 +862,7 @@ class CreateRideCall {
         "admin_vehicle_id": adminVehicleId, // Sending INT
         "estimated_fare": estimatedFare ?? "0",
         "ride_status": rideStatus ?? "pending",
-        if (paymentType != null) "payment_type": paymentType, // ✅ Optional Payment Type
+        if (paymentType != null) "payment_method": paymentType, // ✅ Optional Payment Type
       };
       if (driverId != null) {
         requestBody["driver_id"] = driverId;
@@ -1485,6 +1485,78 @@ class GetAllVouchersCall {
     true,
   ) as List?;
 }
+/// ---------------------------------------------------------------------------
+/// UPDATE RIDE STATUS
+/// ---------------------------------------------------------------------------
+
+class UpdateRideStatusCall {
+  static Future<ApiCallResponse> call({
+    required int? rideId,
+    required String? status, 
+    // allowed: qr_scan | accepted | arrived | started | completed
+    String? token = '',
+    int retryCount = 0,
+  }) async {
+    const int maxRetries = 3;
+    const Duration delayDuration = Duration(seconds: 2);
+
+    ApiCallResponse? response;
+    int currentRetry = retryCount;
+
+    final Map<String, dynamic> requestBody = {
+      "ride_id": rideId,
+      "status": status,
+    };
+
+    while (currentRetry <= maxRetries) {
+      response = await ApiManager.instance.makeApiCall(
+        callName: 'UpdateRideStatus',
+        apiUrl: 'https://ugo-api.icacorp.org/api/drivers/update-ride-status',
+        callType: ApiCallType.POST,
+        headers: {
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        params: {},
+        body: jsonEncode(requestBody),
+        bodyType: BodyType.JSON,
+        returnBody: true,
+        encodeBodyUtf8: false,
+        decodeUtf8: false,
+        cache: false,
+        isStreamingApi: false,
+        alwaysAllowBody: false,
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return response;
+      } else {
+        if (kDebugMode) {
+          print(
+            'UpdateRideStatus failed (status: ${response.statusCode}). Retrying...',
+          );
+        }
+        currentRetry++;
+        if (currentRetry <= maxRetries) {
+          await Future.delayed(delayDuration);
+        }
+      }
+    }
+    return response!;
+  }
+
+  // ✅ Response helpers
+  static bool? success(dynamic response) =>
+      castToType<bool>(getJsonField(response, r'''$.success'''));
+
+  static String? updatedStatus(dynamic response) =>
+      castToType<String>(getJsonField(response, r'''$.data.status'''));
+
+  static int? rideId(dynamic response) =>
+      castToType<int>(getJsonField(response, r'''$.data.ride_id'''));
+}
+
 
 class ApiPagingParams {
   int nextPageNumber = 0;
