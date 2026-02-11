@@ -302,10 +302,11 @@ class _HomeWidgetState extends State<HomeWidget>
       }
 
       if (driverId != null) {
+        
         // 4. Success: Navigate to Driver Verification
         context.pushNamed(
           DriverDetailsWidget.routeName,
-          queryParameters: {
+        queryParameters: {
             'driverId': driverId.toString(),
             'vehicleType': vehicleType?.toString() ?? '',
             'baseFare': baseFare?.toString() ?? '0',

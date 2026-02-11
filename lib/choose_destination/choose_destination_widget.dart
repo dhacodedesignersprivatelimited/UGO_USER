@@ -324,11 +324,11 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                     _currentMapCenter = position.target;
                   },
                   // Optional: Enable this if you want the pin to update address on drag end
-                  // onCameraIdle: () {
-                  //    if (_currentMapCenter != null && !_isSearching) {
-                  //      _updateDestinationFromMap(_currentMapCenter!);
-                  //    }
-                  // },
+                  onCameraIdle: () {
+                     if (_currentMapCenter != null && !_isSearching) {
+                       _updateDestinationFromMap(_currentMapCenter!);
+                     }
+                  },
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
                   zoomControlsEnabled: false,
@@ -595,4 +595,37 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
       ),
     );
   }
+  Future<void> _updateDestinationFromMap(gmaps.LatLng latLng) async {
+  try {
+    setState(() {
+      _isLoadingAddress = true;
+    });
+
+    final placemarks = await geo.placemarkFromCoordinates(
+      latLng.latitude,
+      latLng.longitude,
+    );
+
+    if (placemarks.isNotEmpty && mounted) {
+      final place = placemarks.first;
+
+      final address =
+          "${place.name ?? ''}, ${place.subLocality ?? ''}, ${place.locality ?? ''}";
+
+      setState(() {
+        _model.destinationLocationController?.text = address;
+        FFAppState().droplocation = address;
+        FFAppState().dropLatitude = latLng.latitude;
+        FFAppState().dropLongitude = latLng.longitude;
+        _isLoadingAddress = false;
+      });
+    }
+  } catch (e) {
+    debugPrint("Reverse geocode error: $e");
+    setState(() {
+      _isLoadingAddress = false;
+    });
+  }
+}
+
 }

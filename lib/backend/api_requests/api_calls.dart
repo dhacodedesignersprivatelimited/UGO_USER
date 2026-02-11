@@ -489,6 +489,55 @@ class GetRideHistoryCall {
   static String? firstDate(dynamic response) => dates(response)?.firstOrNull;
   static String? firstTime(dynamic response) => times(response)?.firstOrNull;
 }
+/// ---------------------------------------------------------------------------
+/// WALLET MANAGEMENT
+/// ---------------------------------------------------------------------------
+
+class AddMoneyToWalletCall {
+  static Future<ApiCallResponse> call({
+    required int userId,
+    required double amount,
+    String? currency = "INR",
+    String? token = '',
+  }) async {
+    final ffApiRequestBody = jsonEncode({
+      "user_id": userId,
+      "amount": amount,
+      "currency": currency,
+    });
+
+    return ApiManager.instance.makeApiCall(
+      callName: 'AddMoneyToWallet',
+      apiUrl: 'https://ugo-api.icacorp.org/api/wallets/add',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty)
+          'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  /// Response Helpers
+  static bool? success(dynamic response) =>
+      castToType<bool>(getJsonField(response, r'''$.success'''));
+
+  static String? message(dynamic response) =>
+      castToType<String>(getJsonField(response, r'''$.message'''));
+
+  static String? walletBalance(dynamic response) =>
+      castToType<String>(getJsonField(response, r'''$.data.wallet_balance'''));
+}
+
 
 /// ---------------------------------------------------------------------------
 /// VEHICLE & RIDE MANAGEMENT
@@ -1360,6 +1409,40 @@ class GetAllNotificationsCall {
     response,
     r'''$.data.total''',
   ));
+}
+class GetwalletCall {
+  static Future<ApiCallResponse> call({
+    int? userId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getwallet',
+      apiUrl: 'https://ugo-api.icacorp.org/api/wallets/user/$userId',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty)
+          'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  /// ✅ Wallet Balance (String)
+  static String? walletBalance(dynamic response) => getJsonField(
+        response,
+        r'''$.data.wallet_balance''',
+      )?.toString();
+
+  /// Optional: Convert to double if needed
+  static double? walletBalanceDouble(dynamic response) {
+    final value = getJsonField(
+      response,
+      r'''$.data.wallet_balance''',
+    )?.toString();
+    return value != null ? double.tryParse(value) : null;
+  }
 }
 
 class SubmitRideRatingCall {
