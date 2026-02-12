@@ -74,7 +74,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   static const STATUS_SEARCHING = 'searching';
   static const STATUS_ACCEPTED = 'accepted';
   static const STATUS_ARRIVING = 'arriving';
-  static const STATUS_PICKED_UP = 'picked_up'; // Used for 'started'/'in_progress'
+  static const STATUS_PICKED_UP =
+      'picked_up'; // Used for 'started'/'in_progress'
   static const STATUS_COMPLETED = 'completed';
   static const STATUS_CANCELLED = 'cancelled';
 
@@ -102,7 +103,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
   void _mapInitialStatus(String status) {
     status = status.toLowerCase();
-    if (status == 'started' || status == 'in_progress' || status == 'picked_up') {
+    if (status == 'started' ||
+        status == 'in_progress' ||
+        status == 'picked_up') {
       _rideStatus = STATUS_PICKED_UP;
     } else if (status == 'arriving') {
       _rideStatus = STATUS_ARRIVING;
@@ -147,7 +150,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     final lng = double.tryParse(ride['driver_longitude']?.toString() ?? '');
 
     // Only show driver marker if status is relevant (Accepted/Arriving/Picked Up)
-    if (lat == null || lng == null || _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED) {
+    if (lat == null ||
+        lng == null ||
+        _rideStatus == STATUS_SEARCHING ||
+        _rideStatus == STATUS_CANCELLED) {
       return [];
     }
 
@@ -172,7 +178,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         token: FFAppState().accessToken,
       );
       if (response.succeeded) {
-        final rideData = getJsonField(response.jsonBody, r'$.data') ?? response.jsonBody;
+        final rideData =
+            getJsonField(response.jsonBody, r'$.data') ?? response.jsonBody;
         print("✅ Initial Ride Data Fetched");
 
         // Populate Session Data
@@ -217,7 +224,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         });
       });
 
-      socket!.onConnectError((data) => print("❌ Socket Connection Error: $data"));
+      socket!
+          .onConnectError((data) => print("❌ Socket Connection Error: $data"));
       socket!.onError((data) => print("❌ Socket Error: $data"));
       socket!.onDisconnect((_) => print("⚠️ Socket Disconnected"));
 
@@ -256,7 +264,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       setState(() {
         // 1. Update Cache (Trigger Map Rebuild)
         if (ridesCache.isNotEmpty) {
-          ridesCache = [{...ridesCache.first, ...updatedRide}];
+          ridesCache = [
+            {...ridesCache.first, ...updatedRide}
+          ];
         } else {
           ridesCache = [updatedRide];
         }
@@ -282,10 +292,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         } else if (status == 'arriving') {
           _rideStatus = STATUS_ARRIVING;
           _stopDistanceUpdateTimer();
-        } else if (status == 'started' || status == 'picked_up' || status == 'in_progress') {
+        } else if (status == 'started' ||
+            status == 'picked_up' ||
+            status == 'in_progress') {
           // ✅ THIS HANDLES DIRECT START
           _rideStatus = STATUS_PICKED_UP;
-          _searchTimer?.cancel(); // Stop searching timer if coming from direct start
+          _searchTimer
+              ?.cancel(); // Stop searching timer if coming from direct start
 
           if (previousStatus != STATUS_PICKED_UP) {
             _updateRemainingDistance();
@@ -314,7 +327,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
       // 6. Fetch Driver Details if missing
       final driverId = updatedRide['driver_id'];
-      if (driverId != null && (driverDetails == null || driverDetails!['id'] != driverId) && !isLoadingDriver) {
+      if (driverId != null &&
+          (driverDetails == null || driverDetails!['id'] != driverId) &&
+          !isLoadingDriver) {
         _fetchDriverDetails(driverId);
       }
     } catch (e) {
@@ -332,7 +347,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       final dropLat = ride['drop_latitude'];
       final dropLng = ride['drop_longitude'];
 
-      if (driverLat != null && driverLng != null && dropLat != null && dropLng != null) {
+      if (driverLat != null &&
+          driverLng != null &&
+          dropLat != null &&
+          dropLng != null) {
         double newDistance = _calculateDistance(
           double.parse(driverLat.toString()),
           double.parse(driverLng.toString()),
@@ -341,28 +359,57 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         );
         if (mounted) setState(() => _currentRemainingDistance = newDistance);
       }
-    } catch (e) { print('Error updating distance: $e'); }
+    } catch (e) {
+      print('Error updating distance: $e');
+    }
   }
 
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  double _calculateDistance(
+      double lat1, double lon1, double lat2, double lon2) {
     const double earthRadius = 6371; // km
     double dLat = _toRadians(lat2 - lat1);
     double dLon = _toRadians(lon2 - lon1);
     double a = (_sin(dLat / 2) * _sin(dLat / 2)) +
-        _cos(_toRadians(lat1)) * _cos(_toRadians(lat2)) *
+        _cos(_toRadians(lat1)) *
+            _cos(_toRadians(lat2)) *
             (_sin(dLon / 2) * _sin(dLon / 2));
     double c = 2 * _asin(_sqrt(a));
     return earthRadius * c;
   }
 
   double _toRadians(double degrees) => degrees * (3.141592653589793 / 180.0);
-  double _sin(double x) { double r = x; double t = x; for(int n=1;n<=10;n++){ t*=-x*x/((2*n)*(2*n+1)); r+=t; } return r; }
-  double _cos(double x) { double r = 1; double t = 1; for(int n=1;n<=10;n++){ t*=-x*x/((2*n-1)*(2*n)); r+=t; } return r; }
-  double _sqrt(double x) { if(x<0)return 0; double g=x/2; for(int i=0;i<10;i++) g=(g+x/g)/2; return g; }
-  double _asin(double x) => x + (x*x*x)/6 + (3*x*x*x*x*x)/40;
+  double _sin(double x) {
+    double r = x;
+    double t = x;
+    for (int n = 1; n <= 10; n++) {
+      t *= -x * x / ((2 * n) * (2 * n + 1));
+      r += t;
+    }
+    return r;
+  }
+
+  double _cos(double x) {
+    double r = 1;
+    double t = 1;
+    for (int n = 1; n <= 10; n++) {
+      t *= -x * x / ((2 * n - 1) * (2 * n));
+      r += t;
+    }
+    return r;
+  }
+
+  double _sqrt(double x) {
+    if (x < 0) return 0;
+    double g = x / 2;
+    for (int i = 0; i < 10; i++) g = (g + x / g) / 2;
+    return g;
+  }
+
+  double _asin(double x) => x + (x * x * x) / 6 + (3 * x * x * x * x * x) / 40;
 
   // ... (Keep existing Navigation & Fetch Driver logic) ...
-  Future<void> _handleCompletedRideNavigation(Map<String, dynamic> rideData) async {
+  Future<void> _handleCompletedRideNavigation(
+      Map<String, dynamic> rideData) async {
     _stopDistanceUpdateTimer();
     socket?.off("ride_updated");
 
@@ -378,6 +425,32 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           : Map<String, dynamic>.from(nestedDriver);
     } else if (rideData['driver_id'] != null) {
       await _fetchDriverDetailsSync(rideData['driver_id']);
+    }
+
+    // ✅ REFRESH WALLET BALANCE IF WALLET PAYMENT WAS USED
+    final paymentMethod =
+        rideData['payment_method'] ?? rideData['payment_type'];
+    if (paymentMethod != null &&
+        paymentMethod.toString().toLowerCase() == 'wallet') {
+      print(
+          '💳 Ride completed with Wallet payment, refreshing wallet balance...');
+      try {
+        final appState = FFAppState();
+        final walletRes = await GetwalletCall.call(
+          userId: appState.userid,
+          token: appState.accessToken,
+        );
+
+        if (walletRes.succeeded) {
+          final balanceStr = GetwalletCall.walletBalance(walletRes.jsonBody);
+          final double balance = double.tryParse(balanceStr ?? '0') ?? 0.0;
+          appState.walletBalance = balance;
+          print('✅ Wallet balance refreshed: ₹${balance.toStringAsFixed(2)}');
+        }
+      } catch (e) {
+        print('⚠️ Error refreshing wallet: $e');
+        // Don't fail the navigation if wallet refresh fails
+      }
     }
 
     if (mounted) {
@@ -438,7 +511,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       );
       if (mounted) {
         if (response.succeeded) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ride cancelled successfully'), backgroundColor: Colors.green));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Ride cancelled successfully'),
+              backgroundColor: Colors.green));
           setState(() {
             _rideStatus = STATUS_CANCELLED;
             _searchTimer?.cancel();
@@ -448,7 +523,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             if (mounted) context.pop();
           });
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to cancel ride.'), backgroundColor: Colors.red));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Failed to cancel ride.'),
+              backgroundColor: Colors.red));
         }
       }
     } finally {
@@ -460,8 +537,12 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     final raw = (phoneNumber ?? '').trim();
     if (raw.isEmpty || raw == 'null') return;
     String clean = raw.replaceAll(RegExp(r'[^\d+]'), '');
-    if (!clean.startsWith('+') && RegExp(r'^\d{10}$').hasMatch(clean)) clean = '+91$clean';
-    try { await launchUrl(Uri(scheme: 'tel', path: clean), mode: LaunchMode.externalApplication); } catch (_) {}
+    if (!clean.startsWith('+') && RegExp(r'^\d{10}$').hasMatch(clean))
+      clean = '+91$clean';
+    try {
+      await launchUrl(Uri(scheme: 'tel', path: clean),
+          mode: LaunchMode.externalApplication);
+    } catch (_) {}
   }
 
   void _showCancelDialog() {
@@ -469,13 +550,20 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Cancel Ride?', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          title: Text('Cancel Ride?',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
           content: const Text('Are you sure you want to cancel this ride?'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('No')),
             TextButton(
-              onPressed: () { Navigator.pop(context); _cancelRide('Customer requested cancellation'); },
-              child: const Text('Yes, Cancel', style: TextStyle(color: Colors.red)),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('No')),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _cancelRide('Customer requested cancellation');
+              },
+              child: const Text('Yes, Cancel',
+                  style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -484,8 +572,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   }
 
   Future<bool> _onBackPressed() async {
-    if (_rideStatus == STATUS_CANCELLED || _rideStatus == STATUS_COMPLETED) return true;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please continue the ride or cancel it first')));
+    if (_rideStatus == STATUS_CANCELLED || _rideStatus == STATUS_COMPLETED)
+      return true;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Please continue the ride or cancel it first')));
     return false;
   }
 
@@ -517,7 +607,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               child: FlutterFlowGoogleMap(
                 controller: _model.googleMapsController,
                 onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
-                initialLocation: _model.googleMapsCenter ?? const LatLng(17.385044, 78.486671),
+                initialLocation: _model.googleMapsCenter ??
+                    const LatLng(17.385044, 78.486671),
                 markers: _getMarkers(),
                 markerColor: GoogleMarkerColor.orange,
                 mapType: MapType.normal,
@@ -548,29 +639,44 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     return Container(
       padding: EdgeInsets.only(
         top: MediaQuery.of(context).padding.top + 12,
-        left: 16, right: 16, bottom: 16,
+        left: 16,
+        right: 16,
+        bottom: 16,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: Row(
         children: [
           Expanded(
             child: Text(
-              _rideStatus == STATUS_SEARCHING ? 'Finding your ride' : 'Your ride',
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700),
+              _rideStatus == STATUS_SEARCHING
+                  ? 'Finding your ride'
+                  : 'Your ride',
+              style:
+                  GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700),
             ),
           ),
           if (_rideStatus != STATUS_SEARCHING)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(20)),
               child: Row(
                 children: [
-                  const Icon(Icons.shield_outlined, size: 16, color: primaryColor),
+                  const Icon(Icons.shield_outlined,
+                      size: 16, color: primaryColor),
                   const SizedBox(width: 4),
-                  Text('Safety', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+                  Text('Safety',
+                      style: GoogleFonts.inter(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -581,7 +687,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
   Widget _buildBottomComponent() {
     if (_rideStatus == STATUS_SEARCHING) {
-      return SearchingRideComponent(searchSeconds: _searchSeconds, onCancel: _showCancelDialog);
+      return SearchingRideComponent(
+          searchSeconds: _searchSeconds, onCancel: _showCancelDialog);
     } else if (_rideStatus == STATUS_CANCELLED) {
       return RideCancelledComponent(onBackToHome: () => context.pop());
     } else {

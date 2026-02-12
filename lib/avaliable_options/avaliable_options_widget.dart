@@ -8,6 +8,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:math' show cos, sqrt, asin, sin;
 import 'dart:async';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'avaliable_options_model.dart';
 export 'avaliable_options_model.dart';
 
@@ -52,10 +53,20 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   bool showPaymentOptions = false;
   String selectedPaymentMethod = 'Cash'; // Default
 
+  // Razorpay & Wallet
+  late Razorpay _razorpay;
+  double? _walletBalance;
+  int? _rideAmountForPayment;
+
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => AvaliableOptionsModel());
+
+    // Initialize Razorpay
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
 
     // 1. Setup Animation
     _slideController = AnimationController(
@@ -75,7 +86,13 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     _slideController.forward();
     _vehiclesFuture = _getVehicleData(); // Fetch once on init
     _initializeMap();
-    
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    _slideController.dispose();
+    super.dispose();
   }
 
   // ---------------------------------------------------------------------------
@@ -96,7 +113,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         markers.add(Marker(
           markerId: const MarkerId('pickup'),
           position: LatLng(appState.pickupLatitude!, appState.pickupLongitude!),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         ));
         // Drop Marker
         markers.add(Marker(
@@ -110,13 +128,13 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
 
   Future<void> _getRoutePolyline() async {
     final appState = FFAppState();
-    if (appState.pickupLatitude == null || appState.dropLatitude == null) return;
+    if (appState.pickupLatitude == null || appState.dropLatitude == null)
+      return;
 
     setState(() => isCalculatingRoute = true);
 
     try {
-      final String url =
-          'https://maps.googleapis.com/maps/api/directions/json?'
+      final String url = 'https://maps.googleapis.com/maps/api/directions/json?'
           'origin=${appState.pickupLatitude},${appState.pickupLongitude}'
           '&destination=${appState.dropLatitude},${appState.dropLongitude}'
           '&key=$GOOGLE_MAPS_API_KEY';
@@ -164,8 +182,10 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     if (appState.pickupLatitude != null && appState.dropLatitude != null) {
       setState(() {
         googleDistanceKm = calculateDistance(
-          appState.pickupLatitude!, appState.pickupLongitude!,
-          appState.dropLatitude!, appState.dropLongitude!,
+          appState.pickupLatitude!,
+          appState.pickupLongitude!,
+          appState.dropLatitude!,
+          appState.dropLongitude!,
         );
         googleDuration = 'Estimated';
         isCalculatingRoute = false;
@@ -194,7 +214,9 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     try {
       final response = await GetVehicleDetailsCall.call();
       if (response.succeeded) {
-        return (getJsonField(response.jsonBody, r'''$.data''') as List?)?.toList() ?? [];
+        return (getJsonField(response.jsonBody, r'''$.data''') as List?)
+                ?.toList() ??
+            [];
       }
     } catch (e) {
       print('❌ Error fetching vehicles: $e');
@@ -210,7 +232,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     double a = sin(dLat / 2) * sin(dLat / 2) +
         cos(lat1 * (3.141592653589793 / 180)) *
             cos(lat2 * (3.141592653589793 / 180)) *
-            sin(dLon / 2) * sin(dLon / 2);
+            sin(dLon / 2) *
+            sin(dLon / 2);
     return earthRadius * 2 * asin(sqrt(a));
   }
 
@@ -258,7 +281,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     }
 
     mapController?.animateCamera(CameraUpdate.newLatLngBounds(
-      LatLngBounds(southwest: LatLng(minLat, minLng), northeast: LatLng(maxLat, maxLng)),
+      LatLngBounds(
+          southwest: LatLng(minLat, minLng), northeast: LatLng(maxLat, maxLng)),
       80, // Padding
     ));
   }
@@ -271,32 +295,45 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     final appState = FFAppState();
 
     if (selectedVehicleType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a vehicle type')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a vehicle type')));
       return;
     }
 
     setState(() => isLoadingRide = true);
 
     try {
-      double distance = googleDistanceKm ?? calculateDistance(
-        appState.pickupLatitude!, appState.pickupLongitude!,
-        appState.dropLatitude!, appState.dropLongitude!,
-      );
+      double distance = googleDistanceKm ??
+          calculateDistance(
+            appState.pickupLatitude!,
+            appState.pickupLongitude!,
+            appState.dropLatitude!,
+            appState.dropLongitude!,
+          );
 
-      // Re-fetch logic to find pricing for selected ID would go here,
-      // but we assume appState.selectedBaseFare was set during tap.
-
-      // Calculate Final Fare again for safety
+      // Calculate Final Fare
       final double rawFare = calculateTieredFare(
         distanceKm: distance,
-        baseKmStart: 1, // Default, ideally fetched from vehicle data
+        baseKmStart: 1,
         baseKmEnd: 5,
         baseFare: appState.selectedBaseFare ?? 0,
         pricePerKm: appState.selectedPricePerKm ?? 0,
       );
 
-      final int finalFare = (rawFare - appState.discountAmount).round().clamp(0, 999999);
+      final int finalFare =
+          (rawFare - appState.discountAmount).round().clamp(0, 999999);
 
+      // ✅ WALLET PAYMENT LOGIC
+      if (selectedPaymentMethod == 'Wallet') {
+        final walletCheckResult =
+            await _handleWalletPayment(appState, finalFare);
+        if (!walletCheckResult) {
+          if (mounted) setState(() => isLoadingRide = false);
+          return; // Payment failed, exit
+        }
+      }
+
+      // 🔴 CREATE RIDE CALL
       final createRideRes = await CreateRideCall.call(
         token: appState.accessToken,
         userId: appState.userid,
@@ -309,14 +346,14 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         adminVehicleId: int.tryParse(selectedVehicleType!) ?? 1,
         estimatedFare: finalFare.toString(),
         paymentType: selectedPaymentMethod.toLowerCase(),
-        
       );
 
       if (createRideRes.succeeded) {
-        final rideId = getJsonField(createRideRes.jsonBody, r'''$.data.id''')?.toString();
+        final rideId =
+            getJsonField(createRideRes.jsonBody, r'''$.data.id''')?.toString();
         if (rideId != null) {
           appState.currentRideId = int.parse(rideId);
-          appState.bookingInProgress = true; // Mark as active
+          appState.bookingInProgress = true;
 
           context.pushNamed(
             AutoBookWidget.routeName,
@@ -325,21 +362,169 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             },
           );
         }
-        print('response: ${createRideRes.jsonBody}');
-        print('💳 Selected Payment UI: $selectedPaymentMethod');
-print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
-
+        print('✅ Ride Created: $rideId');
+        print('💳 Payment Method: ${selectedPaymentMethod.toLowerCase()}');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(getJsonField(createRideRes.jsonBody, r'$.message') ?? 'Booking failed'),
+          content: Text(getJsonField(createRideRes.jsonBody, r'$.message') ??
+              'Booking failed'),
           backgroundColor: Colors.red,
         ));
       }
     } catch (e) {
-      print('Booking Error: $e');
+      print('❌ Booking Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Error: ${e.toString()}'),
+        backgroundColor: Colors.red,
+      ));
     } finally {
       if (mounted) setState(() => isLoadingRide = false);
     }
+  }
+
+  // ✅ WALLET PAYMENT HANDLING
+  Future<bool> _handleWalletPayment(FFAppState appState, int rideAmount) async {
+    print('💳 Starting Wallet Payment Process...');
+    print('🚗 Ride Amount: ₹$rideAmount');
+
+    try {
+      // 1️⃣ FETCH WALLET BALANCE
+      final walletRes = await GetwalletCall.call(
+        userId: appState.userid,
+        token: appState.accessToken,
+      );
+
+      if (!walletRes.succeeded) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Failed to fetch wallet balance'),
+          backgroundColor: Colors.red,
+        ));
+        return false;
+      }
+
+      final walletBalanceStr = GetwalletCall.walletBalance(walletRes.jsonBody);
+      final double walletBalance =
+          double.tryParse(walletBalanceStr ?? '0') ?? 0.0;
+      _walletBalance = walletBalance;
+
+      print('💰 Wallet Balance: ₹$walletBalance');
+      print('💰 Difference: ₹${rideAmount - walletBalance}');
+
+      // 2️⃣ CHECK IF WALLET HAS SUFFICIENT BALANCE
+      if (walletBalance >= rideAmount) {
+        print('✅ Wallet has sufficient balance');
+        // Direct wallet deduction - proceed to CreateRideCall
+        return true;
+      }
+
+      // 3️⃣ INSUFFICIENT BALANCE - CALCULATE DIFFERENCE
+      final int differenceAmount = (rideAmount - walletBalance.toInt()).abs();
+      print(
+          '🔴 Insufficient balance, opening Razorpay for: ₹$differenceAmount');
+
+      _rideAmountForPayment = rideAmount;
+
+      // 4️⃣ OPEN RAZORPAY FOR DIFFERENCE
+      _openRazorpayForWallet(differenceAmount, appState);
+
+      // Return true after opening Razorpay (actual verification happens in callback)
+      return true;
+    } catch (e) {
+      print('❌ Wallet Payment Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Wallet Error: ${e.toString()}'),
+        backgroundColor: Colors.red,
+      ));
+      return false;
+    }
+  }
+
+  void _openRazorpayForWallet(int amountInRupees, FFAppState appState) {
+    var options = {
+      'key': 'rzp_test_SAvHgTPEoPnNo7',
+      'amount': (amountInRupees * 100), // Convert to paise
+      'name': 'Ugo App',
+      'description': 'Wallet Top-up for Ride',
+      'prefill': {
+        'contact': '9885881832',
+        'email': 'test@email.com',
+      },
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      print('❌ Razorpay Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Payment Error: ${e.toString()}'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    print('✅ Payment Success: ${response.paymentId}');
+
+    final appState = FFAppState();
+    final amountToAdd = (_rideAmountForPayment ?? 0).toDouble();
+
+    if (amountToAdd <= 0) {
+      print('❌ Invalid amount');
+      return;
+    }
+
+    try {
+      // 5️⃣ ADD MONEY TO WALLET
+      final addMoneyRes = await AddMoneyToWalletCall.call(
+        userId: appState.userid,
+        amount: amountToAdd,
+        currency: 'INR',
+        token: appState.accessToken,
+      );
+
+      if (addMoneyRes.succeeded) {
+        print('✅ Money added to wallet successfully');
+
+        // 6️⃣ FETCH UPDATED WALLET BALANCE
+        final walletRes = await GetwalletCall.call(
+          userId: appState.userid,
+          token: appState.accessToken,
+        );
+
+        if (walletRes.succeeded) {
+          final newBalance = GetwalletCall.walletBalance(walletRes.jsonBody);
+          print('✅ Updated Wallet Balance: ₹$newBalance');
+          setState(() {
+            _walletBalance = double.tryParse(newBalance ?? '0') ?? 0.0;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('✅ Payment successful! Wallet updated.'),
+            backgroundColor: Colors.green,
+          ));
+        }
+      } else {
+        print('❌ Failed to add money to wallet');
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('❌ Failed to update wallet'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    } catch (e) {
+      print('❌ Error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Error: ${e.toString()}'),
+        backgroundColor: Colors.red,
+      ));
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    print('❌ Payment Error: ${response.message}');
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('❌ Payment Failed: ${response.message}'),
+      backgroundColor: Colors.red,
+    ));
   }
 
   // ---------------------------------------------------------------------------
@@ -364,7 +549,8 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                 if (markers.isNotEmpty) _initializeMap();
               },
               initialCameraPosition: CameraPosition(
-                target: LatLng(appState.pickupLatitude ?? 17.3850, appState.pickupLongitude ?? 78.4867),
+                target: LatLng(appState.pickupLatitude ?? 17.3850,
+                    appState.pickupLongitude ?? 78.4867),
                 zoom: 14,
               ),
               markers: markers,
@@ -373,18 +559,27 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
               myLocationEnabled: true,
               myLocationButtonEnabled: false,
               // IMPORTANT: Add padding to map so Google logo and route stay above bottom sheet
-              padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.55),
+              padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).size.height * 0.55),
             ),
           ),
 
           // 2. Top Bar
           Positioned(
-            top: 0, left: 0, right: 0,
+            top: 0,
+            left: 0,
+            right: 0,
             child: Container(
-              padding: EdgeInsets.fromLTRB(16, MediaQuery.of(context).padding.top + 12, 16, 16),
+              padding: EdgeInsets.fromLTRB(
+                  16, MediaQuery.of(context).padding.top + 12, 16, 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2))],
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 8,
+                      offset: Offset(0, 2))
+                ],
               ),
               child: Row(
                 children: [
@@ -392,7 +587,9 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                     onTap: () => context.pop(),
                     child: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
+                      decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12)),
                       child: const Icon(Icons.arrow_back, size: 20),
                     ),
                   ),
@@ -400,9 +597,13 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Choose a ride', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text('${currentDistance.toStringAsFixed(1)} km • ${googleDuration ?? "Calculating..."}',
-                          style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600])),
+                      Text('Choose a ride',
+                          style: GoogleFonts.inter(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(
+                          '${currentDistance.toStringAsFixed(1)} km • ${googleDuration ?? "Calculating..."}',
+                          style: GoogleFonts.inter(
+                              fontSize: 13, color: Colors.grey[600])),
                     ],
                   ),
                 ],
@@ -419,16 +620,25 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                 height: MediaQuery.of(context).size.height * 0.58,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -4))],
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 20,
+                        offset: Offset(0, -4))
+                  ],
                 ),
                 child: Column(
                   children: [
                     // Drag Handle
                     Container(
                       margin: const EdgeInsets.only(top: 12, bottom: 8),
-                      width: 40, height: 4,
-                      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2)),
                     ),
 
                     // List
@@ -436,15 +646,20 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                       child: FutureBuilder<List<dynamic>>(
                         future: _vehiclesFuture, // Uses cached future
                         builder: (context, snapshot) {
-                          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: Color(0xFFFF7B10)));
+                          if (!snapshot.hasData)
+                            return const Center(
+                                child: CircularProgressIndicator(
+                                    color: Color(0xFFFF7B10)));
                           final vehicles = snapshot.data!;
 
                           return ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
                             itemCount: vehicles.length,
                             itemBuilder: (context, index) {
                               final vehicle = vehicles[index];
-                              return _buildVehicleCard(vehicle, currentDistance, appState);
+                              return _buildVehicleCard(
+                                  vehicle, currentDistance, appState);
                             },
                           );
                         },
@@ -465,8 +680,10 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
 
   Widget _buildVehicleCard(dynamic data, double distance, FFAppState appState) {
     final pricing = getJsonField(data, r'''$.pricing''');
-    final String vehicleId = getJsonField(data, r'''$.pricing.vehicle_id''')?.toString() ?? '1';
-    final String name = getJsonField(data, r'''$.vehicle_name''')?.toString() ?? 'Ride';
+    final String vehicleId =
+        getJsonField(data, r'''$.pricing.vehicle_id''')?.toString() ?? '1';
+    final String name =
+        getJsonField(data, r'''$.vehicle_name''')?.toString() ?? 'Ride';
 
     // 1. IDENTIFY PRO RIDE
     bool isPro = name.toLowerCase().contains('pro') ||
@@ -474,22 +691,35 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
         name.toLowerCase().contains('prime');
 
     // Pricing Logic
-    final baseKmStart = double.tryParse(getJsonField(pricing, r'''$.base_km_start''').toString()) ?? 1;
-    final baseKmEnd = double.tryParse(getJsonField(pricing, r'''$.base_km_end''').toString()) ?? 5;
-    final baseFare = double.tryParse(getJsonField(pricing, r'''$.base_fare''').toString()) ?? 0;
-    final pricePerKm = double.tryParse(getJsonField(pricing, r'''$.price_per_km''').toString()) ?? 0;
+    final baseKmStart = double.tryParse(
+            getJsonField(pricing, r'''$.base_km_start''').toString()) ??
+        1;
+    final baseKmEnd = double.tryParse(
+            getJsonField(pricing, r'''$.base_km_end''').toString()) ??
+        5;
+    final baseFare =
+        double.tryParse(getJsonField(pricing, r'''$.base_fare''').toString()) ??
+            0;
+    final pricePerKm = double.tryParse(
+            getJsonField(pricing, r'''$.price_per_km''').toString()) ??
+        0;
 
     final calculatedFare = calculateTieredFare(
-      distanceKm: distance, baseKmStart: baseKmStart, baseKmEnd: baseKmEnd,
-      baseFare: baseFare, pricePerKm: pricePerKm,
+      distanceKm: distance,
+      baseKmStart: baseKmStart,
+      baseKmEnd: baseKmEnd,
+      baseFare: baseFare,
+      pricePerKm: pricePerKm,
     ).round();
 
     final isSelected = selectedVehicleType == vehicleId;
-    final displayFare = (calculatedFare - appState.discountAmount).clamp(0, 999999).toInt();
+    final displayFare =
+        (calculatedFare - appState.discountAmount).clamp(0, 999999).toInt();
 
     // Image Handling
     String? imgUrl = getJsonField(data, r'''$.vehicle_image''')?.toString();
-    if (imgUrl != null && !imgUrl.startsWith('http')) imgUrl = 'https://ugo-api.icacorp.org/$imgUrl';
+    if (imgUrl != null && !imgUrl.startsWith('http'))
+      imgUrl = 'https://ugo-api.icacorp.org/$imgUrl';
 
     // Styles
     Color backgroundColor = isSelected
@@ -524,7 +754,12 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
               width: isSelected ? 2 : (isPro ? 1.5 : 1),
             ),
             boxShadow: isPro
-                ? [BoxShadow(color: Colors.amber.withOpacity(0.15), blurRadius: 8, offset: Offset(0, 4))]
+                ? [
+                    BoxShadow(
+                        color: Colors.amber.withOpacity(0.15),
+                        blurRadius: 8,
+                        offset: Offset(0, 4))
+                  ]
                 : [],
           ),
           child: Row(
@@ -542,36 +777,51 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                     Padding(
                       padding: const EdgeInsets.only(top: 10.0),
                       child: Container(
-                        width: 68, height: 68,
+                        width: 68,
+                        height: 68,
                         padding: const EdgeInsets.all(5),
                         decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFFFBC02D), width: 2),
+                            border: Border.all(
+                                color: const Color(0xFFFBC02D), width: 2),
                             boxShadow: [
-                              BoxShadow(color: const Color(0xFFFBC02D).withOpacity(0.3), blurRadius: 4, offset: Offset(0,2))
-                            ]
-                        ),
+                              BoxShadow(
+                                  color:
+                                      const Color(0xFFFBC02D).withOpacity(0.3),
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2))
+                            ]),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(10),
                           child: imgUrl != null
-                              ? Image.network(imgUrl, fit: BoxFit.contain, errorBuilder: (_,__,___) => const Icon(Icons.directions_car, color: Colors.amber))
-                              : const Icon(Icons.directions_car, size: 36, color: Colors.amber),
+                              ? Image.network(imgUrl,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.directions_car,
+                                      color: Colors.amber))
+                              : const Icon(Icons.directions_car,
+                                  size: 36, color: Colors.amber),
                         ),
                       ),
                     ),
                     // The Crown Icon (Sitting on top center)
                     // The Crown Icon (Sitting on top center)
                     Positioned(
-                      top: -12, // Moves the crown slightly higher to "float" on the edge
+                      top:
+                          -12, // Moves the crown slightly higher to "float" on the edge
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFFBC02D), width: 1),
+                          border: Border.all(
+                              color: const Color(0xFFFBC02D), width: 1),
                           boxShadow: [
-                            BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: Offset(0, 2))
+                            BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: Offset(0, 2))
                           ],
                         ),
                         // 👑 Renders the Emoji directly
@@ -584,12 +834,18 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                   ],
                 )
               else
-              // --- NORMAL NO FRAME ---
+                // --- NORMAL NO FRAME ---
                 SizedBox(
-                  width: 60, height: 60,
+                  width: 60,
+                  height: 60,
                   child: imgUrl != null
-                      ? Image.network(imgUrl, fit: BoxFit.contain, errorBuilder: (_,__,___) => const Icon(Icons.directions_car, color: Colors.grey))
-                      : const Icon(Icons.directions_car, size: 40, color: Colors.grey),
+                      ? Image.network(imgUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                              Icons.directions_car,
+                              color: Colors.grey))
+                      : const Icon(Icons.directions_car,
+                          size: 40, color: Colors.grey),
                 ),
               // =========================
               // END IMAGE SECTION
@@ -604,22 +860,35 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                   children: [
                     Row(
                       children: [
-                        Text(name, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
+                        Text(name,
+                            style: GoogleFonts.inter(
+                                fontSize: 16, fontWeight: FontWeight.bold)),
                         const SizedBox(width: 6),
                         if (isPro)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(4)),
-                            child: Text('PRO', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                                color: Colors.orange,
+                                borderRadius: BorderRadius.circular(4)),
+                            child: Text('PRO',
+                                style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white)),
                           ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text('2 mins away', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600])),
+                    Text('2 mins away',
+                        style: GoogleFonts.inter(
+                            fontSize: 12, color: Colors.grey[600])),
                     if (isPro)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
-                        child: Text('Comfy • Top Drivers', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFFF57F17))),
+                        child: Text('Comfy • Top Drivers',
+                            style: GoogleFonts.inter(
+                                fontSize: 10, color: const Color(0xFFF57F17))),
                       ),
                   ],
                 ),
@@ -629,8 +898,13 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('₹$displayFare', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: isPro ? Colors.black : Colors.black87)),
-                  if (isPro) Icon(Icons.star, size: 16, color: Colors.amber[700])
+                  Text('₹$displayFare',
+                      style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isPro ? Colors.black : Colors.black87)),
+                  if (isPro)
+                    Icon(Icons.star, size: 16, color: Colors.amber[700])
                 ],
               ),
             ],
@@ -642,7 +916,8 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
 
   Widget _buildBottomActions(FFAppState appState) {
     return Container(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 16),
+      padding: EdgeInsets.fromLTRB(
+          16, 12, 16, MediaQuery.of(context).padding.bottom + 16),
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.grey[200]!)),
@@ -657,7 +932,8 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
               InkWell(
                 onTap: () async {
                   // Navigate to Payment Screen & Wait for Result
-                  final result = await context.pushNamed(PaymentOptionsWidget.routeName);
+                  final result =
+                      await context.pushNamed(PaymentOptionsWidget.routeName);
 
                   if (result != null && result is String) {
                     setState(() {
@@ -667,7 +943,8 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                 },
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(8),
@@ -676,21 +953,22 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                   child: Row(
                     children: [
                       Icon(
-                          selectedPaymentMethod == 'Cash' ? Icons.money :
-                          selectedPaymentMethod == 'Wallet' ? Icons.account_balance_wallet : Icons.qr_code,
+                          selectedPaymentMethod == 'Cash'
+                              ? Icons.money
+                              : selectedPaymentMethod == 'Wallet'
+                                  ? Icons.account_balance_wallet
+                                  : Icons.qr_code,
                           size: 18,
-                          color: const Color(0xFF1B5E20)
-                      ),
+                          color: const Color(0xFF1B5E20)),
                       const SizedBox(width: 8),
                       Text(
                         selectedPaymentMethod,
                         style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600
-                        ),
+                            fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(width: 4),
-                      const Icon(Icons.keyboard_arrow_right, size: 18, color: Colors.grey),
+                      const Icon(Icons.keyboard_arrow_right,
+                          size: 18, color: Colors.grey),
                     ],
                   ),
                 ),
@@ -703,15 +981,13 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
                 onTap: () => context.pushNamed(VoucherWidget.routeName),
                 child: Row(
                   children: [
-                    const Icon(Icons.local_offer, size: 18, color: Color(0xFFFF7B10)),
+                    const Icon(Icons.local_offer,
+                        size: 18, color: Color(0xFFFF7B10)),
                     const SizedBox(width: 4),
-                    Text(
-                        'Offers',
+                    Text('Offers',
                         style: GoogleFonts.inter(
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFFFF7B10)
-                        )
-                    ),
+                            color: const Color(0xFFFF7B10))),
                   ],
                 ),
               ),
@@ -725,23 +1001,30 @@ print('💳 Sent to API: ${selectedPaymentMethod.toLowerCase()}');
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: isLoadingRide || selectedVehicleType == null ? null : _confirmBooking,
+              onPressed: isLoadingRide || selectedVehicleType == null
+                  ? null
+                  : _confirmBooking,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF7B10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 elevation: 2,
               ),
               child: isLoadingRide
-                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                  : Text(
-                  'Confirm Booking',
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)
-              ),
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 3))
+                  : Text('Confirm Booking',
+                      style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white)),
             ),
           ),
         ],
       ),
     );
   }
-
 }
