@@ -146,6 +146,7 @@ Future<void> _createRide() async {
       estimatedFare: totalAmount.toStringAsFixed(2),
       rideStatus: 'qr_scan', // IMPORTANT
       driverId: widget.driverId,
+      paymentType: "cash", // Assuming cash for now; adjust as needed
     );
 
     print('🟢 CreateRide response: ${response.jsonBody}');

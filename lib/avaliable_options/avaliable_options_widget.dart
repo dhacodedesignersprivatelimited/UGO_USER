@@ -57,6 +57,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   late Razorpay _razorpay;
   double? _walletBalance;
   int? _rideAmountForPayment;
+  int? _pendingFinalFare;
+  String? _pendingVehicleType;
 
   @override
   void initState() {
@@ -325,52 +327,14 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
 
       // ✅ WALLET PAYMENT LOGIC
       if (selectedPaymentMethod == 'Wallet') {
-        final walletCheckResult =
-            await _handleWalletPayment(appState, finalFare);
-        if (!walletCheckResult) {
+        final proceedToCreate = await _handleWalletPayment(appState, finalFare);
+        if (!proceedToCreate) {
           if (mounted) setState(() => isLoadingRide = false);
-          return; // Payment failed, exit
+          return; // Wait for Razorpay success callback
         }
       }
 
-      // 🔴 CREATE RIDE CALL
-      final createRideRes = await CreateRideCall.call(
-        token: appState.accessToken,
-        userId: appState.userid,
-        pickupLocationAddress: appState.pickuplocation,
-        dropLocationAddress: appState.droplocation,
-        pickupLatitude: appState.pickupLatitude,
-        pickupLongitude: appState.pickupLongitude,
-        dropLatitude: appState.dropLatitude,
-        dropLongitude: appState.dropLongitude,
-        adminVehicleId: int.tryParse(selectedVehicleType!) ?? 1,
-        estimatedFare: finalFare.toString(),
-        paymentType: selectedPaymentMethod.toLowerCase(),
-      );
-
-      if (createRideRes.succeeded) {
-        final rideId =
-            getJsonField(createRideRes.jsonBody, r'''$.data.id''')?.toString();
-        if (rideId != null) {
-          appState.currentRideId = int.parse(rideId);
-          appState.bookingInProgress = true;
-
-          context.pushNamed(
-            AutoBookWidget.routeName,
-            queryParameters: {
-              'rideId': rideId,
-            },
-          );
-        }
-        print('✅ Ride Created: $rideId');
-        print('💳 Payment Method: ${selectedPaymentMethod.toLowerCase()}');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(getJsonField(createRideRes.jsonBody, r'$.message') ??
-              'Booking failed'),
-          backgroundColor: Colors.red,
-        ));
-      }
+      await _createRideAndNavigate(finalFare);
     } catch (e) {
       print('❌ Booking Error: $e');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -423,12 +387,14 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
           '🔴 Insufficient balance, opening Razorpay for: ₹$differenceAmount');
 
       _rideAmountForPayment = rideAmount;
+      _pendingFinalFare = rideAmount;
+      _pendingVehicleType = selectedVehicleType;
 
       // 4️⃣ OPEN RAZORPAY FOR DIFFERENCE
       _openRazorpayForWallet(differenceAmount, appState);
 
-      // Return true after opening Razorpay (actual verification happens in callback)
-      return true;
+      // Return false to wait for Razorpay success callback
+      return false;
     } catch (e) {
       print('❌ Wallet Payment Error: $e');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -503,12 +469,21 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             backgroundColor: Colors.green,
           ));
         }
+
+        // Proceed to create ride after wallet top-up
+        if (_pendingFinalFare != null) {
+          if (mounted) setState(() => isLoadingRide = true);
+          await _createRideAndNavigate(_pendingFinalFare!);
+          _pendingFinalFare = null;
+          _pendingVehicleType = null;
+        }
       } else {
         print('❌ Failed to add money to wallet');
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('❌ Failed to update wallet'),
           backgroundColor: Colors.red,
         ));
+        return;
       }
     } catch (e) {
       print('❌ Error: $e');
@@ -517,6 +492,52 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         backgroundColor: Colors.red,
       ));
     }
+  }
+
+  Future<void> _createRideAndNavigate(int finalFare) async {
+    final appState = FFAppState();
+    final String vehicleTypeToUse =
+        _pendingVehicleType ?? selectedVehicleType ?? '1';
+
+    final createRideRes = await CreateRideCall.call(
+      token: appState.accessToken,
+      userId: appState.userid,
+      pickupLocationAddress: appState.pickuplocation,
+      dropLocationAddress: appState.droplocation,
+      pickupLatitude: appState.pickupLatitude,
+      pickupLongitude: appState.pickupLongitude,
+      dropLatitude: appState.dropLatitude,
+      dropLongitude: appState.dropLongitude,
+      adminVehicleId: int.tryParse(vehicleTypeToUse) ?? 1,
+      estimatedFare: finalFare.toString(),
+      paymentType: selectedPaymentMethod.toLowerCase(),
+    );
+
+    if (createRideRes.succeeded) {
+      final rideId =
+          getJsonField(createRideRes.jsonBody, r'''$.data.id''')?.toString();
+      if (rideId != null) {
+        appState.currentRideId = int.parse(rideId);
+        appState.bookingInProgress = true;
+
+        context.pushNamed(
+          AutoBookWidget.routeName,
+          queryParameters: {
+            'rideId': rideId,
+          },
+        );
+      }
+      print('✅ Ride Created: $rideId');
+      print('💳 Payment Method: ${selectedPaymentMethod.toLowerCase()}');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(getJsonField(createRideRes.jsonBody, r'$.message') ??
+            'Booking failed'),
+        backgroundColor: Colors.red,
+      ));
+    }
+
+    if (mounted) setState(() => isLoadingRide = false);
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
