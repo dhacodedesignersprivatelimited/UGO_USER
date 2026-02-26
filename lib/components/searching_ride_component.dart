@@ -50,7 +50,7 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha:0.1),
             blurRadius: 20,
             offset: Offset(0, -4),
           ),
@@ -78,7 +78,7 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
+                color: primaryColor.withValues(alpha:0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(

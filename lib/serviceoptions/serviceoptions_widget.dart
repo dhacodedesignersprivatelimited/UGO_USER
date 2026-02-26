@@ -35,12 +35,18 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-       onWillPop: () async {
-      // Navigate to Home instead of exiting
-      context.pushNamed(HomeWidget.routeName);
-      return false; // Prevent default pop (exit)
-    },
+    return PopScope(
+      // canPop: false prevents the system from popping the route automatically,
+      // which allows us to handle the navigation manually in onPopInvokedWithResult.
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        // If the pop has already happened (didPop is true), we do nothing.
+        if (didPop) {
+          return;
+        }
+        // Navigate to Home instead of exiting the app.
+        context.pushNamed(HomeWidget.routeName);
+      },
       child: GestureDetector(
         onTap: () {
           FocusScope.of(context).unfocus();
@@ -59,17 +65,16 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
                 borderRadius: 30.0,
                 borderWidth: 1.0,
                 buttonSize: 44.0,
-                fillColor: Colors.white.withOpacity(0.2), // ✅ Fixed background
+                // Note: withValues(alpha:) is available in very recent Flutter versions.
+                // If you face issues, use .withOpacity(0.2) instead.
+                fillColor: Colors.white.withValues(alpha: 0.2),
                 icon: const Icon(
-                  Icons.arrow_back_rounded, // ✅ Fixed Icon widget
+                  Icons.arrow_back_rounded,
                   color: Colors.white,
                   size: 24.0,
                 ),
                 onPressed: () async {
                   context.pushNamed(HomeWidget.routeName);
-        //                if (Navigator.of(context).canPop()) {
-        //   Navigator.of(context).pop();
-        // }
                 },
               ),
             ),
@@ -81,7 +86,7 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
                 fontWeight: FontWeight.w700,
               ),
             ),
-            actions: [],
+            actions: const [],
             centerTitle: true,
             elevation: 0,
             shadowColor: Colors.transparent,
@@ -116,7 +121,6 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
       ),
     );
   }
-
   Widget _buildHeroHeader(bool isNarrow) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,19 +235,19 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
           gradient: LinearGradient(
             colors: [
               Colors.white,
-              color.withOpacity(0.05),
+              color.withValues(alpha:0.05),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha:0.3),
             width: 2,
           ),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha:0.15),
               blurRadius: 15,
               offset: const Offset(0, 6),
             ),
@@ -262,7 +266,7 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
                 height: isNarrow ? 52 : 60,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [color, color.withOpacity(0.8)],
+                    colors: [color, color.withValues(alpha:0.8)],
                   ),
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -322,7 +326,7 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(

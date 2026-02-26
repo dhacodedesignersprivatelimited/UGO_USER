@@ -3,7 +3,7 @@ description: this is taxi project for flutter app.
 
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.0+3
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -131,6 +131,7 @@ dependencies:
   google_maps_webservice: any
   crypto: any
   http_parser: any
+  razorpay_flutter: ^1.4.1
 
 dependency_overrides:
   google_api_headers: 4.5.3

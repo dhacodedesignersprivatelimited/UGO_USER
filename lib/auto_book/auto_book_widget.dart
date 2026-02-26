@@ -594,8 +594,24 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onBackPressed,
+    return PopScope(
+      // canPop: false prevents the user from leaving unless you manually trigger it
+      // canPop: true allows the back button to work naturally
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        // If the system already handled the pop, do nothing
+        if (didPop) {
+          return;
+        }
+
+        // Call your existing _onBackPressed function
+        final shouldPop = await _onBackPressed();
+
+        // If your logic says "yes, let's leave", trigger the pop manually
+        if (shouldPop && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
       child: Scaffold(
         key: scaffoldKey,
         backgroundColor: Colors.white,
@@ -647,7 +663,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha:0.05),
               blurRadius: 8,
               offset: const Offset(0, 2))
         ],

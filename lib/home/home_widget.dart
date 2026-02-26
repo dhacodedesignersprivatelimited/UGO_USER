@@ -577,7 +577,7 @@ class _HomeWidgetState extends State<HomeWidget>
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
+                  color: Colors.black.withValues(alpha:0.12),
                   blurRadius: 14,
                   offset: const Offset(0, 8),
                 ),
@@ -608,7 +608,7 @@ class _HomeWidgetState extends State<HomeWidget>
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha:0.1),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -619,7 +619,7 @@ class _HomeWidgetState extends State<HomeWidget>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: primaryOrange.withOpacity(0.1),
+                color: primaryOrange.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.search_rounded,
@@ -681,7 +681,7 @@ class _HomeWidgetState extends State<HomeWidget>
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha:0.08),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -754,7 +754,7 @@ class _HomeWidgetState extends State<HomeWidget>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha:0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -776,7 +776,7 @@ class _HomeWidgetState extends State<HomeWidget>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: primaryOrange.withOpacity(0.2),
+              color: primaryOrange.withValues(alpha:0.2),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -791,7 +791,7 @@ class _HomeWidgetState extends State<HomeWidget>
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                    colors: [Colors.transparent, Colors.black.withValues(alpha:0.7)],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -824,7 +824,7 @@ class _HomeWidgetState extends State<HomeWidget>
                       'Upfront fares doorstep pickup',
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: Colors.white.withOpacity(0.85),
+                        color: Colors.white.withValues(alpha:0.85),
                       ),
                     ),
                   ],

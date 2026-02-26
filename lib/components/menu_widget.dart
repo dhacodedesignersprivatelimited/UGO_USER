@@ -256,7 +256,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
           gradient: const LinearGradient(colors: [gradientStart, gradientEnd]),
           boxShadow: [
             BoxShadow(
-              color: gradientEnd.withOpacity(0.3),
+              color: gradientEnd.withValues(alpha:0.3),
               blurRadius: 24,
               offset: const Offset(0, 12),
             ),
@@ -272,7 +272,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.12),
+                    color: Colors.black.withValues(alpha:0.12),
                     blurRadius: 12,
                   ),
                 ],
@@ -281,7 +281,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(50),
                 child: _isLoadingUser
                     ? Icon(Icons.person,
-                        color: gradientStart.withOpacity(0.75),
+                        color: gradientStart.withValues(alpha:0.75),
                         size: isNarrow ? 26 : 30)
                     : (_profileImageUrl.isNotEmpty
                         ? Image.network(
@@ -292,7 +292,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                                 progress == null
                                     ? child
                                     : Icon(Icons.person,
-                                        color: gradientStart.withOpacity(0.75),
+                                        color: gradientStart.withValues(alpha:0.75),
                                         size: isNarrow ? 26 : 30),
                             // Shows a fallback on error
                             errorBuilder: (context, error, stackTrace) => Icon(
@@ -315,7 +315,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                     style: GoogleFonts.poppins(
                       fontSize: isNarrow ? 16 : 19,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withValues(alpha:0.95),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -324,7 +324,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                           width: 120,
                           height: 14,
                           child: LinearProgressIndicator(
-                            backgroundColor: Colors.white.withOpacity(0.3),
+                            backgroundColor: Colors.white.withValues(alpha:0.3),
                             valueColor: const AlwaysStoppedAnimation<Color>(
                               Colors.white,
                             ),
@@ -370,20 +370,20 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
 
           },
           borderRadius: BorderRadius.circular(20),
-          splashColor: iconColor.withOpacity(0.15),
+          splashColor: iconColor.withValues(alpha:0.15),
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
               color:
-                  isActive ? iconColor.withOpacity(0.12) : Colors.transparent,
+                  isActive ? iconColor.withValues(alpha:0.12) : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
               border: isActive
-                  ? Border.all(color: iconColor.withOpacity(0.4), width: 2)
+                  ? Border.all(color: iconColor.withValues(alpha:0.4), width: 2)
                   : null,
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: iconColor.withOpacity(0.2),
+                        color: iconColor.withValues(alpha:0.2),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       )
@@ -398,8 +398,8 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        iconColor.withOpacity(0.2),
-                        iconColor.withOpacity(0.08)
+                        iconColor.withValues(alpha:0.2),
+                        iconColor.withValues(alpha:0.08)
                       ],
                     ),
                     borderRadius: BorderRadius.circular(18),
@@ -421,7 +421,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                 ),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: iconColor.withOpacity(isActive ? 1.0 : 0.5),
+                  color: iconColor.withValues(alpha:isActive ? 1.0 : 0.5),
                   size: iconSize * 0.65,
                 ),
               ],
@@ -461,10 +461,10 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey.withOpacity(0.15), width: 1.5),
+          border: Border.all(color: Colors.grey.withValues(alpha:0.15), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha:0.06),
               blurRadius: 12,
               offset: const Offset(0, 4),
             )

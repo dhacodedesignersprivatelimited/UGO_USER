@@ -282,7 +282,7 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
                         border: Border.all(color: Colors.grey.shade200),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
+                            color: Colors.black.withValues(alpha:0.03),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           )
@@ -293,7 +293,7 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: color.withOpacity(0.1),
+                              color: color.withValues(alpha:0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(icon, color: color, size: 24),
@@ -374,7 +374,7 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color),
       ),

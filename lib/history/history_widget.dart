@@ -1,5 +1,4 @@
 import 'package:ugouser/home/home_widget.dart';
-
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
@@ -46,7 +45,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
 
   Future<void> _loadHistory() async {
     debugPrint('🔄 Fetching ride history for userId: ${FFAppState().userid}');
-    final response = await _model.fetchRideHistory();
+    await _model.fetchRideHistory();
     if (mounted) {
       setState(() {});
     }
@@ -61,12 +60,13 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-       onWillPop: () async {
-      // Navigate to Home instead of exiting
-      context.pushNamed(HomeWidget.routeName);
-      return false; // Prevent default pop (exit)
-    },
+    return PopScope(
+      canPop: false, // Prevents default back behavior to handle custom navigation
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        // Navigate to Home instead of exiting
+        context.pushNamed(HomeWidget.routeName);
+      },
       child: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Scaffold(
@@ -80,16 +80,15 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
                 FlutterFlowIconButton(
                   borderRadius: 12,
                   buttonSize: 40,
-                  fillColor: Colors.white.withOpacity(0.2),
+                  fillColor: Colors.white.withValues(alpha:0.2),
                   icon: const Icon(
                     Icons.arrow_back_ios_new_rounded,
                     color: Colors.white,
                     size: 18,
                   ),
-                   onPressed: () async {
-                  context.pushNamed(HomeWidget.routeName);
-        
-                },
+                  onPressed: () async {
+                    context.pushNamed(HomeWidget.routeName);
+                  },
                 ),
                 const SizedBox(width: 16),
                 Text(
@@ -128,7 +127,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
     }
 
     var rides = getJsonField(_model.rideHistoryResponse?.jsonBody, r'''$.data.rides''') as List?;
-    
+
     if (rides == null || rides.isEmpty) {
       return _buildEmptyState(constraints.maxHeight);
     }
@@ -179,7 +178,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 20)],
               ),
               child: const Icon(Icons.history_rounded, size: 48, color: Color(0xFFFF7B10)),
             ),
@@ -196,7 +195,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
             ),
             const SizedBox(height: 32),
             FFButtonWidget(
-              onPressed: () => context.pushNamed('home'),
+              onPressed: () => context.pushNamed(HomeWidget.routeName),
               text: 'Book a ride',
               options: FFButtonOptions(
                 width: 180,
@@ -219,8 +218,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
     final dateStr = getJsonField(rideItem, r'''$.date''')?.toString() ?? '';
     final timeStr = getJsonField(rideItem, r'''$.time''')?.toString() ?? '';
     final amount = getJsonField(rideItem, r'''$.amount''')?.toString() ?? '0';
-    
-    // Exact keys from your request: cancelled, completed, Searching in
+
     final status = getJsonField(rideItem, r'''$.ride_status''')?.toString() ?? 'Completed';
     final statusColor = _getStatusColor(status);
 
@@ -231,7 +229,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha:0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -258,9 +256,9 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
-                          status.toLowerCase().contains('cancel') 
-                            ? Icons.close_rounded 
-                            : status.toLowerCase().contains('search')
+                          status.toLowerCase().contains('cancel')
+                              ? Icons.close_rounded
+                              : status.toLowerCase().contains('search')
                               ? Icons.search_rounded
                               : Icons.directions_car_filled_rounded,
                           color: statusColor,
@@ -298,7 +296,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
+                              color: statusColor.withValues(alpha:0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -377,7 +375,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
                 Text('Ride Details', style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w800, color: Colors.black)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: _getStatusColor(status).withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+                  decoration: BoxDecoration(color: _getStatusColor(status).withValues(alpha:0.1), borderRadius: BorderRadius.circular(20)),
                   child: Text(status.toUpperCase(), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: _getStatusColor(status))),
                 ),
               ],
@@ -425,7 +423,19 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
               ),
             ),
             const SizedBox(height: 24),
-            SizedBox(width: double.infinity, height: 56, child: ElevatedButton(onPressed: () => Navigator.pop(context), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF7B10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0), child: Text('DONE', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)))),
+            SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF7B10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0
+                    ),
+                    child: Text('DONE', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white))
+                )
+            ),
           ],
         ),
       ),

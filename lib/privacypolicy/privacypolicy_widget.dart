@@ -61,7 +61,7 @@ class _PrivacypolicyWidgetState extends State<PrivacypolicyWidget> {
                     children: [
                       _buildSectionTitle('1. Introduction'),
                       _buildBodyText(
-                          'Welcome to UGO-USER. We value your privacy and are committed to protecting your personal data. This policy explains how we handle your information when you use our taxi booking services.'),
+                          'Welcome to Ugo User. We value your privacy and are committed to protecting your personal data. This policy explains how we handle your information when you use our taxi booking services.'),
                       const SizedBox(height: 16),
                       _buildSectionTitle('2. Data Collection'),
                       _buildBodyText(
@@ -69,7 +69,7 @@ class _PrivacypolicyWidgetState extends State<PrivacypolicyWidget> {
                       const SizedBox(height: 16),
                       _buildSectionTitle('3. Location Usage'),
                       _buildBodyText(
-                          'UGO-USER collects precise location data to facilitate ride requests, matching riders with nearby drivers, and providing navigation for the trip. This data is collected even when the app is in the background if a trip is active.'),
+                          'Ugo User collects precise location data to facilitate ride requests, matching riders with nearby drivers, and providing navigation for the trip. This data is collected even when the app is in the background if a trip is active.'),
                       const SizedBox(height: 16),
                       _buildSectionTitle('4. Third-Party Services'),
                       _buildBodyText(

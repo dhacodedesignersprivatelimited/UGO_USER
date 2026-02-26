@@ -271,7 +271,7 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
                           fontWeight: FontWeight.bold),
                       elevation: 2,
                       borderRadius: BorderRadius.circular(12),
-                      disabledColor: Colors.orange.withOpacity(0.5),
+                      disabledColor: Colors.orange.withValues(alpha:0.5),
                     ),
                   ),
                 ],

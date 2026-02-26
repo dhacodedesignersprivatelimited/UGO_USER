@@ -9,7 +9,6 @@ import 'package:http/http.dart' as http;
 import 'dart:math' show cos, sqrt, asin, sin;
 import 'dart:async';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'avaliable_options_model.dart';
 export 'avaliable_options_model.dart';
 
 // ⚠️ Ensure this API key has Directions API enabled
@@ -27,7 +26,6 @@ class AvaliableOptionsWidget extends StatefulWidget {
 
 class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     with TickerProviderStateMixin {
-  late AvaliableOptionsModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Animation
@@ -55,7 +53,6 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
 
   // Razorpay & Wallet
   late Razorpay _razorpay;
-  double? _walletBalance;
   int? _rideAmountForPayment;
   int? _pendingFinalFare;
   String? _pendingVehicleType;
@@ -63,7 +60,6 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   @override
   void initState() {
     super.initState();
-    _model = createModel(context, () => AvaliableOptionsModel());
 
     // Initialize Razorpay
     _razorpay = Razorpay();
@@ -318,8 +314,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         distanceKm: distance,
         baseKmStart: 1,
         baseKmEnd: 5,
-        baseFare: appState.selectedBaseFare ?? 0,
-        pricePerKm: appState.selectedPricePerKm ?? 0,
+        baseFare: appState.selectedBaseFare,
+        pricePerKm: appState.selectedPricePerKm,
       );
 
       final int finalFare =
@@ -369,7 +365,6 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
       final walletBalanceStr = GetwalletCall.walletBalance(walletRes.jsonBody);
       final double walletBalance =
           double.tryParse(walletBalanceStr ?? '0') ?? 0.0;
-      _walletBalance = walletBalance;
 
       print('💰 Wallet Balance: ₹$walletBalance');
       print('💰 Difference: ₹${rideAmount - walletBalance}');
@@ -461,7 +456,6 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
           final newBalance = GetwalletCall.walletBalance(walletRes.jsonBody);
           print('✅ Updated Wallet Balance: ₹$newBalance');
           setState(() {
-            _walletBalance = double.tryParse(newBalance ?? '0') ?? 0.0;
           });
 
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -777,7 +771,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             boxShadow: isPro
                 ? [
                     BoxShadow(
-                        color: Colors.amber.withOpacity(0.15),
+                        color: Colors.amber.withValues(alpha:0.15),
                         blurRadius: 8,
                         offset: Offset(0, 4))
                   ]
@@ -809,7 +803,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                             boxShadow: [
                               BoxShadow(
                                   color:
-                                      const Color(0xFFFBC02D).withOpacity(0.3),
+                                      const Color(0xFFFBC02D).withValues(alpha:0.3),
                                   blurRadius: 4,
                                   offset: Offset(0, 2))
                             ]),
@@ -840,7 +834,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                               color: const Color(0xFFFBC02D), width: 1),
                           boxShadow: [
                             BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha:0.1),
                                 blurRadius: 4,
                                 offset: Offset(0, 2))
                           ],

@@ -258,8 +258,17 @@ Future<void> _createRide() async {
   // --- Helper: Fetch Location if missing ---
   Future<void> _refreshCurrentLocation() async {
     try {
+      // 1. Define the LocationSettings (replacing desiredAccuracy)
+      const LocationSettings locationSettings = LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10, // Optional: distance in meters before updates occur
+      );
+
+      // 2. Pass the settings into getCurrentPosition
       Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
+        locationSettings: locationSettings,
+      );
+
       setState(() {
         FFAppState().pickupLatitude = position.latitude;
         FFAppState().pickupLongitude = position.longitude;
@@ -268,7 +277,6 @@ Future<void> _createRide() async {
       debugPrint("Error fetching location: $e");
     }
   }
-
   // --- Helper: Distance Math ---
   double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     const double earthRadius = 6371; // Radius of earth in km
@@ -485,7 +493,7 @@ Future<void> _createRide() async {
                       borderRadius: BorderRadius.circular(12.0),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha:0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
                         )
@@ -534,7 +542,7 @@ Future<void> _createRide() async {
                                 border: Border.all(color: Colors.white, width: 4),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
+                                    color: Colors.black.withValues(alpha:0.1),
                                     blurRadius: 10,
                                   )
                                 ],
@@ -556,7 +564,7 @@ Future<void> _createRide() async {
                               style: GoogleFonts.poppins(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.white.withValues(alpha:0.9),
                               ),
                             ),
                           ),
@@ -730,7 +738,7 @@ Future<void> _createRide() async {
               '$label :',
               style: GoogleFonts.poppins(
                 fontSize: 16,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha:0.8),
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -762,7 +770,7 @@ Future<void> _createRide() async {
         width: MediaQuery.of(context).size.width * 0.23,
         height: 45,
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.white.withOpacity(0.2),
+          color: isSelected ? Colors.white : Colors.white.withValues(alpha:0.2),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
               color: isSelected ? const Color(0xFFFF7B10) : Colors.white70,

@@ -43,8 +43,6 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
     _scrollController.addListener(() {
       setState(() {
         if (_scrollController.hasClients) {
-          final maxScroll = _scrollController.position.maxScrollExtent;
-          final currentScroll = _scrollController.position.pixels;
           // Update scroll progress for UI
         }
       });
@@ -153,10 +151,9 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
     context.watch<FFAppState>();
 
     // Use parsed parameters or fallbacks
-    final displayVehicleType = vehicleType ?? FFAppState().vehicleselect ?? 'Auto';
-    final displayPickupLocation = pickupLocation ?? FFAppState().pickuplocation ?? 'Pickup';
-    final displayDropLocation = dropLocation ?? FFAppState().droplocation ?? 'Drop';
-    final displayEstimatedFare = estimatedFare ?? 0.0;
+    final displayVehicleType = vehicleType ?? FFAppState().vehicleselect;
+    final displayPickupLocation = pickupLocation ?? FFAppState().pickuplocation;
+    final displayDropLocation = dropLocation ?? FFAppState().droplocation;
     final displayVehicleImage = vehicleImage;
 
     return GestureDetector(

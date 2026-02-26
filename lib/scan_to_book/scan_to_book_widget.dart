@@ -168,7 +168,7 @@ class _ScanToBookWidgetState extends State<ScanToBookWidget> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF3E0),
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFFF7B10).withOpacity(0.3), width: 2),
+                    border: Border.all(color: const Color(0xFFFF7B10).withValues(alpha:0.3), width: 2),
                   ),
                   child: const Center(
                     child: Icon(

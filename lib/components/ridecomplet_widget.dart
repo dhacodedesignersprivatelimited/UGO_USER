@@ -110,12 +110,10 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
 
       // Safely get ride and user IDs
       final rawRideData = RideSession().rideData;
-      Map<String, dynamic>? rideDetails;
 
       if (rawRideData != null) {
         final dataField = rawRideData['data'];
         if (dataField != null && dataField is Map) {
-          rideDetails = dataField as Map<String, dynamic>;
         }
       }
 
@@ -567,7 +565,7 @@ if (isSuccess) {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha:0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -2),
                 ),
@@ -581,7 +579,7 @@ if (isSuccess) {
                   onPressed: _isSubmitting ? null : _submitRating,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryOrange,
-                    disabledBackgroundColor: primaryOrange.withOpacity(0.6),
+                    disabledBackgroundColor: primaryOrange.withValues(alpha:0.6),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -630,7 +628,7 @@ if (isSuccess) {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
           color:
-          isSelected ? primaryOrange.withOpacity(0.1) : Color(0xFFF5F5F5),
+          isSelected ? primaryOrange.withValues(alpha:0.1) : Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected ? primaryOrange : Color(0xFFE0E0E0),

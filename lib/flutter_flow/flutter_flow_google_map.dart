@@ -158,9 +158,8 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
           .addListener(ImageStreamListener((img, _) async {
         final bytes = await img.image.toByteData(format: ImageByteFormat.png);
         if (bytes != null && mounted) {
-          _markerDescriptor = BitmapDescriptor.fromBytes(
+          _markerDescriptor = BitmapDescriptor.bytes(
             bytes.buffer.asUint8List(),
-            size: markerImageSize,
           );
           setState(() {});
         }
@@ -197,9 +196,11 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
     final googleMapWidget = AbsorbPointer(
       absorbing: !widget.allowInteraction,
       child: GoogleMap(
+        // FIX: Set the map style directly here instead of using the controller
+        style: googleMapStyleStrings[widget.style],
         onMapCreated: (controller) async {
           _controller.complete(controller);
-          await controller.setMapStyle(googleMapStyleStrings[widget.style]);
+          // Removed: await controller.setMapStyle(...)
         },
         onCameraIdle: onCameraIdle,
         onCameraMove: (position) => currentMapCenter = position.target,
@@ -217,22 +218,24 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
         markers: widget.markers
             .map(
               (m) => Marker(
-                markerId: MarkerId(m.markerId),
-                position: m.location.toGoogleMaps(),
-                icon: _markerDescriptor ?? BitmapDescriptor.defaultMarker,
-                onTap: () async {
-                  if (widget.centerMapOnMarkerTap) {
-                    final controller = await _controller.future;
-                    await controller.animateCamera(
-                      CameraUpdate.newLatLng(m.location.toGoogleMaps()),
-                    );
-                    currentMapCenter = m.location.toGoogleMaps();
-                    onCameraIdle();
-                  }
-                  await m.onTap?.call();
-                },
-              ),
-            )
+            markerId: MarkerId(m.markerId),
+            position: m.location.toGoogleMaps(),
+            // FIX: If you are creating _markerDescriptor from bytes elsewhere,
+            // use BitmapDescriptor.bytes(yourBytes) instead of fromBytes.
+            icon: _markerDescriptor ?? BitmapDescriptor.defaultMarker,
+            onTap: () async {
+              if (widget.centerMapOnMarkerTap) {
+                final controller = await _controller.future;
+                await controller.animateCamera(
+                  CameraUpdate.newLatLng(m.location.toGoogleMaps()),
+                );
+                currentMapCenter = m.location.toGoogleMaps();
+                onCameraIdle();
+              }
+              await m.onTap?.call();
+            },
+          ),
+        )
             .toSet(),
         gestureRecognizers: {
           if (mapHasGesturePreference)
@@ -241,7 +244,7 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
             ),
         },
         webGestureHandling:
-            mapHasGesturePreference ? WebGestureHandling.cooperative : null,
+        mapHasGesturePreference ? WebGestureHandling.cooperative : null,
       ),
     );
 

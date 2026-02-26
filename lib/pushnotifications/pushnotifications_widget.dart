@@ -211,7 +211,7 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha:0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(iconData, color: iconColor, size: 22),

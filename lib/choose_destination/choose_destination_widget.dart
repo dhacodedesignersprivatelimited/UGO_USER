@@ -28,12 +28,10 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
 
   List<dynamic> _predictions = [];
   bool _isSearching = false;
-  bool _isLoadingAddress = false;
 
   // Map controller and location
   gmaps.GoogleMapController? _mapController;
   gmaps.LatLng? _currentMapCenter;
-  bool _isMapReady = false;
 
   // Google Maps API Key
   final String _googleMapsApiKey = 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y';
@@ -317,7 +315,6 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                   ),
                   onMapCreated: (controller) {
                     _mapController = controller;
-                    setState(() => _isMapReady = true);
                   },
                   onCameraMove: (position) {
                     // Just track the center, don't update state yet
@@ -359,7 +356,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                       color: const Color(0xFFFF7B10),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha:0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -396,7 +393,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                                 Container(
                                   width: 1,
                                   height: 35,
-                                  color: Colors.white.withOpacity(0.6),
+                                  color: Colors.white.withValues(alpha:0.6),
                                 ),
                                 const Icon(Icons.square, size: 12, color: Colors.white),
                               ],
@@ -598,7 +595,6 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
   Future<void> _updateDestinationFromMap(gmaps.LatLng latLng) async {
   try {
     setState(() {
-      _isLoadingAddress = true;
     });
 
     final placemarks = await geo.placemarkFromCoordinates(
@@ -617,13 +613,11 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
         FFAppState().droplocation = address;
         FFAppState().dropLatitude = latLng.latitude;
         FFAppState().dropLongitude = latLng.longitude;
-        _isLoadingAddress = false;
       });
     }
   } catch (e) {
     debugPrint("Reverse geocode error: $e");
     setState(() {
-      _isLoadingAddress = false;
     });
   }
 }

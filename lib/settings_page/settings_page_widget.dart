@@ -206,7 +206,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: theme.primary.withOpacity(0.12),
+                color: theme.primary.withValues(alpha:0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: theme.primary),

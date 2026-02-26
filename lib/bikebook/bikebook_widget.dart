@@ -124,7 +124,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withOpacity(0.3),
+                        Colors.black.withValues(alpha:0.3),
                         Colors.transparent,
                       ],
                     ),
@@ -138,7 +138,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha:0.1),
                               blurRadius: 8,
                               offset: Offset(0, 2),
                             ),
@@ -156,7 +156,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha:0.1),
                               blurRadius: 8,
                               offset: Offset(0, 2),
                             ),
@@ -177,7 +177,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: Colors.black.withValues(alpha:0.1),
                               blurRadius: 8,
                               offset: Offset(0, 2),
                             ),
@@ -209,7 +209,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Color(0xFF3D8033).withOpacity(0.4),
+                        color: Color(0xFF3D8033).withValues(alpha:0.4),
                         blurRadius: 8,
                       ),
                     ],
@@ -229,7 +229,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
+                        color: Colors.black.withValues(alpha:0.15),
                         blurRadius: 8,
                         offset: Offset(0, 2),
                       ),
@@ -255,7 +255,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Color(0xFF3D8033).withOpacity(0.4),
+                        color: Color(0xFF3D8033).withValues(alpha:0.4),
                         blurRadius: 12,
                         offset: Offset(0, 4),
                       ),
@@ -280,7 +280,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Color(0xFFFF7B10).withOpacity(0.5),
+                        color: Color(0xFFFF7B10).withValues(alpha:0.5),
                         blurRadius: 12,
                         offset: Offset(0, 4),
                       ),
@@ -317,7 +317,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha:0.1),
                         blurRadius: 20,
                         offset: Offset(0, -5),
                       ),
@@ -345,7 +345,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                             Container(
                               padding: EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Color(0xFF3D8033).withOpacity(0.1),
+                                color: Color(0xFF3D8033).withValues(alpha:0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
@@ -394,13 +394,13 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              Color(0xFF3D8033).withOpacity(0.05),
-                              Color(0xFF5CB847).withOpacity(0.05),
+                              Color(0xFF3D8033).withValues(alpha:0.05),
+                              Color(0xFF5CB847).withValues(alpha:0.05),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Color(0xFF3D8033).withOpacity(0.2),
+                            color: Color(0xFF3D8033).withValues(alpha:0.2),
                             width: 1,
                           ),
                         ),
@@ -418,7 +418,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                                     borderRadius: BorderRadius.circular(12),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
+                                        color: Colors.black.withValues(alpha:0.05),
                                         blurRadius: 8,
                                         offset: Offset(0, 2),
                                       ),
@@ -458,7 +458,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                                               borderRadius: BorderRadius.circular(20),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Color(0xFF3D8033).withOpacity(0.3),
+                                                  color: Color(0xFF3D8033).withValues(alpha:0.3),
                                                   blurRadius: 8,
                                                   offset: Offset(0, 2),
                                                 ),
@@ -673,7 +673,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                                   backgroundColor: Color(0xFFFF7B10),
                                   foregroundColor: Colors.white,
                                   elevation: 4,
-                                  shadowColor: Color(0xFFFF7B10).withOpacity(0.3),
+                                  shadowColor: Color(0xFFFF7B10).withValues(alpha:0.3),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),

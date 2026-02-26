@@ -31,7 +31,6 @@ class _VisionWidgetState extends State<VisionWidget> {
   @override
   void dispose() {
     _model.dispose();
-
     super.dispose();
   }
 
@@ -53,7 +52,7 @@ class _VisionWidgetState extends State<VisionWidget> {
             borderRadius: 30.0,
             borderWidth: 1.0,
             buttonSize: 60.0,
-            icon: Icon(
+            icon: const Icon(
               Icons.arrow_back_rounded,
               color: Colors.white,
               size: 30.0,
@@ -67,26 +66,22 @@ class _VisionWidgetState extends State<VisionWidget> {
               'tmb60xz8' /* Vision */,
             ),
             style: FlutterFlowTheme.of(context).titleMedium.override(
-                  font: GoogleFonts.interTight(
-                    fontWeight: FontWeight.w500,
-                    fontStyle:
-                        FlutterFlowTheme.of(context).titleMedium.fontStyle,
-                  ),
-                  color: FlutterFlowTheme.of(context).secondaryBackground,
-                  fontSize: 16.0,
-                  letterSpacing: 0.0,
-                  fontWeight: FontWeight.w500,
-                  fontStyle: FlutterFlowTheme.of(context).titleMedium.fontStyle,
-                ),
+              font: GoogleFonts.interTight(
+                fontWeight: FontWeight.w500,
+              ),
+              color: FlutterFlowTheme.of(context).secondaryBackground,
+              fontSize: 16.0,
+              letterSpacing: 0.0,
+            ),
           ),
-          actions: [],
+          actions: const [],
           centerTitle: true,
           elevation: 2.0,
         ),
         body: SafeArea(
           top: true,
           child: Padding(
-            padding: EdgeInsetsDirectional.fromSTEB(20.0, 0.0, 20.0, 0.0),
+            padding: const EdgeInsetsDirectional.fromSTEB(20.0, 0.0, 20.0, 0.0),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.max,
@@ -106,25 +101,20 @@ class _VisionWidgetState extends State<VisionWidget> {
                       'l7hiz6yp' /* Let drivers and couriers know ... */,
                     ),
                     style: FlutterFlowTheme.of(context).titleLarge.override(
-                          font: GoogleFonts.interTight(
-                            fontWeight: FontWeight.normal,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .titleLarge
-                                .fontStyle,
-                          ),
-                          color: FlutterFlowTheme.of(context).accent1,
-                          fontSize: 16.0,
-                          letterSpacing: 0.0,
-                          fontWeight: FontWeight.normal,
-                          fontStyle:
-                              FlutterFlowTheme.of(context).titleLarge.fontStyle,
-                          lineHeight: 1.5,
-                        ),
+                      font: GoogleFonts.interTight(
+                        fontWeight: FontWeight.normal,
+                      ),
+                      color: FlutterFlowTheme.of(context).accent1,
+                      fontSize: 16.0,
+                      letterSpacing: 0.0,
+                      lineHeight: 1.5,
+                    ),
                   ),
                   Column(
                     mainAxisSize: MainAxisSize.max,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // --- Blind Option ---
                       Row(
                         mainAxisSize: MainAxisSize.max,
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -133,11 +123,10 @@ class _VisionWidgetState extends State<VisionWidget> {
                             width: 24.0,
                             height: 24.0,
                             decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context)
-                                  .secondaryBackground,
+                              color: FlutterFlowTheme.of(context).secondaryBackground,
                               borderRadius: BorderRadius.circular(4.0),
                               border: Border.all(
-                                color: Color(0xFF3B3B3B),
+                                color: const Color(0xFF3B3B3B),
                                 width: 1.0,
                               ),
                             ),
@@ -145,59 +134,43 @@ class _VisionWidgetState extends State<VisionWidget> {
                               data: ThemeData(
                                 checkboxTheme: CheckboxThemeData(
                                   visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(4.0),
                                   ),
                                 ),
-                                unselectedWidgetColor:
-                                    FlutterFlowTheme.of(context).alternate,
+                                unselectedWidgetColor: FlutterFlowTheme.of(context).alternate,
                               ),
                               child: Checkbox(
                                 value: _model.checkboxValue1 ??= true,
                                 onChanged: (newValue) async {
-                                  safeSetState(
-                                      () => _model.checkboxValue1 = newValue!);
+                                  safeSetState(() => _model.checkboxValue1 = newValue!);
                                 },
-                                side: (FlutterFlowTheme.of(context).alternate !=
-                                        null)
-                                    ? BorderSide(
-                                        width: 2,
-                                        color: FlutterFlowTheme.of(context)
-                                            .alternate,
-                                      )
-                                    : null,
-                                activeColor:
-                                    FlutterFlowTheme.of(context).primary,
+                                side: BorderSide(
+                                  width: 2,
+                                  color: FlutterFlowTheme.of(context).alternate,
+                                ),
+                                activeColor: FlutterFlowTheme.of(context).primary,
                                 checkColor: FlutterFlowTheme.of(context).info,
                               ),
                             ),
                           ),
                           Text(
                             FFLocalizations.of(context).getText(
-                              '3zrdl7j9' /* I;m blind */,
+                              '3zrdl7j9' /* I'm blind */,
                             ),
-                            style: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .override(
-                                  font: GoogleFonts.inter(
-                                    fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontStyle,
-                                  ),
-                                  color: Color(0xFF3B3B3B),
-                                  fontSize: 14.0,
-                                  letterSpacing: 0.0,
-                                  fontWeight: FontWeight.normal,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .fontStyle,
-                                ),
+                            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                              font: GoogleFonts.inter(
+                                fontWeight: FontWeight.normal,
+                              ),
+                              color: const Color(0xFF3B3B3B),
+                              fontSize: 14.0,
+                              letterSpacing: 0.0,
+                            ),
                           ),
-                        ].divide(SizedBox(width: 12.0)),
+                        ].divide(const SizedBox(width: 12.0)),
                       ),
+                      // --- Low Vision Option ---
                       Row(
                         mainAxisSize: MainAxisSize.max,
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -206,11 +179,10 @@ class _VisionWidgetState extends State<VisionWidget> {
                             width: 24.0,
                             height: 24.0,
                             decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context)
-                                  .secondaryBackground,
+                              color: FlutterFlowTheme.of(context).secondaryBackground,
                               borderRadius: BorderRadius.circular(4.0),
                               border: Border.all(
-                                color: Color(0xFF3B3B3B),
+                                color: const Color(0xFF3B3B3B),
                                 width: 1.0,
                               ),
                             ),
@@ -218,59 +190,43 @@ class _VisionWidgetState extends State<VisionWidget> {
                               data: ThemeData(
                                 checkboxTheme: CheckboxThemeData(
                                   visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(4.0),
                                   ),
                                 ),
-                                unselectedWidgetColor:
-                                    FlutterFlowTheme.of(context).alternate,
+                                unselectedWidgetColor: FlutterFlowTheme.of(context).alternate,
                               ),
                               child: Checkbox(
                                 value: _model.checkboxValue2 ??= true,
                                 onChanged: (newValue) async {
-                                  safeSetState(
-                                      () => _model.checkboxValue2 = newValue!);
+                                  safeSetState(() => _model.checkboxValue2 = newValue!);
                                 },
-                                side: (FlutterFlowTheme.of(context).alternate !=
-                                        null)
-                                    ? BorderSide(
-                                        width: 2,
-                                        color: FlutterFlowTheme.of(context)
-                                            .alternate,
-                                      )
-                                    : null,
-                                activeColor:
-                                    FlutterFlowTheme.of(context).primary,
+                                side: BorderSide(
+                                  width: 2,
+                                  color: FlutterFlowTheme.of(context).alternate,
+                                ),
+                                activeColor: FlutterFlowTheme.of(context).primary,
                                 checkColor: FlutterFlowTheme.of(context).info,
                               ),
                             ),
                           ),
                           Text(
                             FFLocalizations.of(context).getText(
-                              'rdyxxwt6' /* I;m low vision */,
+                              'rdyxxwt6' /* I'm low vision */,
                             ),
-                            style: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .override(
-                                  font: GoogleFonts.inter(
-                                    fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontStyle,
-                                  ),
-                                  color: Color(0xFF3B3B3B),
-                                  fontSize: 14.0,
-                                  letterSpacing: 0.0,
-                                  fontWeight: FontWeight.normal,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .fontStyle,
-                                ),
+                            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                              font: GoogleFonts.inter(
+                                fontWeight: FontWeight.normal,
+                              ),
+                              color: const Color(0xFF3B3B3B),
+                              fontSize: 14.0,
+                              letterSpacing: 0.0,
+                            ),
                           ),
-                        ].divide(SizedBox(width: 12.0)),
+                        ].divide(const SizedBox(width: 12.0)),
                       ),
+                      // --- Not Blind/Low Vision Option ---
                       Row(
                         mainAxisSize: MainAxisSize.max,
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -285,64 +241,45 @@ class _VisionWidgetState extends State<VisionWidget> {
                               data: ThemeData(
                                 checkboxTheme: CheckboxThemeData(
                                   visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(4.0),
                                   ),
                                 ),
-                                unselectedWidgetColor:
-                                    FlutterFlowTheme.of(context).alternate,
+                                unselectedWidgetColor: FlutterFlowTheme.of(context).alternate,
                               ),
                               child: Checkbox(
                                 value: _model.checkboxValue3 ??= true,
                                 onChanged: (newValue) async {
-                                  safeSetState(
-                                      () => _model.checkboxValue3 = newValue!);
+                                  safeSetState(() => _model.checkboxValue3 = newValue!);
                                 },
-                                side: (FlutterFlowTheme.of(context).alternate !=
-                                        null)
-                                    ? BorderSide(
-                                        width: 2,
-                                        color: FlutterFlowTheme.of(context)
-                                            .alternate,
-                                      )
-                                    : null,
-                                activeColor:
-                                    FlutterFlowTheme.of(context).primary,
+                                side: BorderSide(
+                                  width: 2,
+                                  color: FlutterFlowTheme.of(context).alternate,
+                                ),
+                                activeColor: FlutterFlowTheme.of(context).primary,
                                 checkColor: FlutterFlowTheme.of(context).info,
                               ),
                             ),
                           ),
                           Text(
                             FFLocalizations.of(context).getText(
-                              'kx5zxhf5' /* I;m not blind or low vision */,
+                              'kx5zxhf5' /* I'm not blind or low vision */,
                             ),
-                            style: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .override(
-                                  font: GoogleFonts.inter(
-                                    fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontStyle,
-                                  ),
-                                  color: Color(0xFF3B3B3B),
-                                  fontSize: 14.0,
-                                  letterSpacing: 0.0,
-                                  fontWeight: FontWeight.normal,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .bodyMedium
-                                      .fontStyle,
-                                ),
+                            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                              font: GoogleFonts.inter(
+                                fontWeight: FontWeight.normal,
+                              ),
+                              color: const Color(0xFF3B3B3B),
+                              fontSize: 14.0,
+                              letterSpacing: 0.0,
+                            ),
                           ),
-                        ].divide(SizedBox(width: 12.0)),
+                        ].divide(const SizedBox(width: 12.0)),
                       ),
-                    ].divide(SizedBox(height: 16.0)),
+                    ].divide(const SizedBox(height: 16.0)),
                   ),
-                ]
-                    .divide(SizedBox(height: 24.0))
-                    .addToStart(SizedBox(height: 24.0)),
+                ].divide(const SizedBox(height: 24.0)).addToStart(const SizedBox(height: 24.0)),
               ),
             ),
           ),

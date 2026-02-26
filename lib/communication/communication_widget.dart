@@ -70,18 +70,18 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
                   'n7e8f01i' /* Communication */,
                 ),
                 style: FlutterFlowTheme.of(context).titleLarge.override(
-                      font: GoogleFonts.interTight(
-                        fontWeight: FontWeight.w500,
-                        fontStyle:
-                            FlutterFlowTheme.of(context).titleLarge.fontStyle,
-                      ),
-                      color: FlutterFlowTheme.of(context).secondaryBackground,
-                      fontSize: 16.0,
-                      letterSpacing: 0.0,
-                      fontWeight: FontWeight.w500,
-                      fontStyle:
-                          FlutterFlowTheme.of(context).titleLarge.fontStyle,
-                    ),
+                  font: GoogleFonts.interTight(
+                    fontWeight: FontWeight.w500,
+                    fontStyle:
+                    FlutterFlowTheme.of(context).titleLarge.fontStyle,
+                  ),
+                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                  fontSize: 16.0,
+                  letterSpacing: 0.0,
+                  fontWeight: FontWeight.w500,
+                  fontStyle:
+                  FlutterFlowTheme.of(context).titleLarge.fontStyle,
+                ),
               ),
             ].divide(SizedBox(width: 12.0)),
           ),
@@ -105,40 +105,40 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
                         'ko3qsi6f' /* Contact preference */,
                       ),
                       style: FlutterFlowTheme.of(context).titleLarge.override(
-                            font: GoogleFonts.interTight(
-                              fontWeight: FontWeight.w500,
-                              fontStyle: FlutterFlowTheme.of(context)
-                                  .titleLarge
-                                  .fontStyle,
-                            ),
-                            color: FlutterFlowTheme.of(context).accent1,
-                            fontSize: 16.0,
-                            letterSpacing: 0.0,
-                            fontWeight: FontWeight.w500,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .titleLarge
-                                .fontStyle,
-                          ),
+                        font: GoogleFonts.interTight(
+                          fontWeight: FontWeight.w500,
+                          fontStyle: FlutterFlowTheme.of(context)
+                              .titleLarge
+                              .fontStyle,
+                        ),
+                        color: FlutterFlowTheme.of(context).accent1,
+                        fontSize: 16.0,
+                        letterSpacing: 0.0,
+                        fontWeight: FontWeight.w500,
+                        fontStyle: FlutterFlowTheme.of(context)
+                            .titleLarge
+                            .fontStyle,
+                      ),
                     ),
                     Text(
                       FFLocalizations.of(context).getText(
                         'uljo7or2' /* Choose how you want drivers o ... */,
                       ),
                       style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            font: GoogleFonts.inter(
-                              fontWeight: FontWeight.normal,
-                              fontStyle: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .fontStyle,
-                            ),
-                            color: Color(0xFF7A7676),
-                            fontSize: 14.0,
-                            letterSpacing: 0.0,
-                            fontWeight: FontWeight.normal,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .fontStyle,
-                          ),
+                        font: GoogleFonts.inter(
+                          fontWeight: FontWeight.normal,
+                          fontStyle: FlutterFlowTheme.of(context)
+                              .bodyMedium
+                              .fontStyle,
+                        ),
+                        color: Color(0xFF7A7676),
+                        fontSize: 14.0,
+                        letterSpacing: 0.0,
+                        fontWeight: FontWeight.normal,
+                        fontStyle: FlutterFlowTheme.of(context)
+                            .bodyMedium
+                            .fontStyle,
+                      ),
                     ),
                   ].divide(SizedBox(height: 8.0)),
                 ),
@@ -166,20 +166,20 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
                               style: FlutterFlowTheme.of(context)
                                   .bodyMedium
                                   .override(
-                                    font: GoogleFonts.inter(
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                                    color: FlutterFlowTheme.of(context).accent1,
-                                    fontSize: 14.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontStyle,
-                                  ),
+                                font: GoogleFonts.inter(
+                                  fontWeight: FontWeight.normal,
+                                  fontStyle: FlutterFlowTheme.of(context)
+                                      .bodyMedium
+                                      .fontStyle,
+                                ),
+                                color: FlutterFlowTheme.of(context).accent1,
+                                fontSize: 14.0,
+                                letterSpacing: 0.0,
+                                fontWeight: FontWeight.normal,
+                                fontStyle: FlutterFlowTheme.of(context)
+                                    .bodyMedium
+                                    .fontStyle,
+                              ),
                             ),
                           ].divide(SizedBox(width: 12.0)),
                         ),
@@ -198,28 +198,24 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
                               checkboxTheme: CheckboxThemeData(
                                 visualDensity: VisualDensity.compact,
                                 materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
+                                MaterialTapTargetSize.shrinkWrap,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(4.0),
                                 ),
                               ),
                               unselectedWidgetColor:
-                                  FlutterFlowTheme.of(context).alternate,
+                              FlutterFlowTheme.of(context).alternate,
                             ),
                             child: Checkbox(
                               value: _model.checkboxValue1 ??= true,
                               onChanged: (newValue) async {
                                 safeSetState(
-                                    () => _model.checkboxValue1 = newValue!);
+                                        () => _model.checkboxValue1 = newValue!);
                               },
-                              side: (FlutterFlowTheme.of(context).alternate !=
-                                      null)
-                                  ? BorderSide(
-                                      width: 2,
-                                      color: FlutterFlowTheme.of(context)
-                                          .alternate,
-                                    )
-                                  : null,
+                              side: BorderSide(
+                                width: 2.0,
+                                color: FlutterFlowTheme.of(context).alternate,
+                              ),
                               activeColor: FlutterFlowTheme.of(context).primary,
                               checkColor: FlutterFlowTheme.of(context).info,
                             ),
@@ -252,20 +248,20 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
                               style: FlutterFlowTheme.of(context)
                                   .bodyMedium
                                   .override(
-                                    font: GoogleFonts.inter(
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                                    color: FlutterFlowTheme.of(context).accent1,
-                                    fontSize: 14.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontStyle,
-                                  ),
+                                font: GoogleFonts.inter(
+                                  fontWeight: FontWeight.normal,
+                                  fontStyle: FlutterFlowTheme.of(context)
+                                      .bodyMedium
+                                      .fontStyle,
+                                ),
+                                color: FlutterFlowTheme.of(context).accent1,
+                                fontSize: 14.0,
+                                letterSpacing: 0.0,
+                                fontWeight: FontWeight.normal,
+                                fontStyle: FlutterFlowTheme.of(context)
+                                    .bodyMedium
+                                    .fontStyle,
+                              ),
                             ),
                           ].divide(SizedBox(width: 12.0)),
                         ),
@@ -284,28 +280,24 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
                               checkboxTheme: CheckboxThemeData(
                                 visualDensity: VisualDensity.compact,
                                 materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
+                                MaterialTapTargetSize.shrinkWrap,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(4.0),
                                 ),
                               ),
                               unselectedWidgetColor:
-                                  FlutterFlowTheme.of(context).alternate,
+                              FlutterFlowTheme.of(context).alternate,
                             ),
                             child: Checkbox(
                               value: _model.checkboxValue2 ??= true,
                               onChanged: (newValue) async {
                                 safeSetState(
-                                    () => _model.checkboxValue2 = newValue!);
+                                        () => _model.checkboxValue2 = newValue!);
                               },
-                              side: (FlutterFlowTheme.of(context).alternate !=
-                                      null)
-                                  ? BorderSide(
-                                      width: 2,
-                                      color: FlutterFlowTheme.of(context)
-                                          .alternate,
-                                    )
-                                  : null,
+                              side: BorderSide(
+                                width: 2.0,
+                                color: FlutterFlowTheme.of(context).alternate,
+                              ),
                               activeColor: FlutterFlowTheme.of(context).primary,
                               checkColor: FlutterFlowTheme.of(context).info,
                             ),
@@ -338,20 +330,20 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
                               style: FlutterFlowTheme.of(context)
                                   .bodyMedium
                                   .override(
-                                    font: GoogleFonts.inter(
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                    ),
-                                    color: FlutterFlowTheme.of(context).accent1,
-                                    fontSize: 14.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .fontStyle,
-                                  ),
+                                font: GoogleFonts.inter(
+                                  fontWeight: FontWeight.normal,
+                                  fontStyle: FlutterFlowTheme.of(context)
+                                      .bodyMedium
+                                      .fontStyle,
+                                ),
+                                color: FlutterFlowTheme.of(context).accent1,
+                                fontSize: 14.0,
+                                letterSpacing: 0.0,
+                                fontWeight: FontWeight.normal,
+                                fontStyle: FlutterFlowTheme.of(context)
+                                    .bodyMedium
+                                    .fontStyle,
+                              ),
                             ),
                           ].divide(SizedBox(width: 12.0)),
                         ),
@@ -366,28 +358,24 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
                               checkboxTheme: CheckboxThemeData(
                                 visualDensity: VisualDensity.compact,
                                 materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
+                                MaterialTapTargetSize.shrinkWrap,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(4.0),
                                 ),
                               ),
                               unselectedWidgetColor:
-                                  FlutterFlowTheme.of(context).alternate,
+                              FlutterFlowTheme.of(context).alternate,
                             ),
                             child: Checkbox(
                               value: _model.checkboxValue3 ??= true,
                               onChanged: (newValue) async {
                                 safeSetState(
-                                    () => _model.checkboxValue3 = newValue!);
+                                        () => _model.checkboxValue3 = newValue!);
                               },
-                              side: (FlutterFlowTheme.of(context).alternate !=
-                                      null)
-                                  ? BorderSide(
-                                      width: 2,
-                                      color: FlutterFlowTheme.of(context)
-                                          .alternate,
-                                    )
-                                  : null,
+                              side: BorderSide(
+                                width: 2.0,
+                                color: FlutterFlowTheme.of(context).alternate,
+                              ),
                               activeColor: FlutterFlowTheme.of(context).primary,
                               checkColor: FlutterFlowTheme.of(context).info,
                             ),
@@ -411,40 +399,40 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
                         'tt2phkev' /* Marketing preference */,
                       ),
                       style: FlutterFlowTheme.of(context).titleLarge.override(
-                            font: GoogleFonts.interTight(
-                              fontWeight: FontWeight.w500,
-                              fontStyle: FlutterFlowTheme.of(context)
-                                  .titleLarge
-                                  .fontStyle,
-                            ),
-                            color: FlutterFlowTheme.of(context).accent1,
-                            fontSize: 16.0,
-                            letterSpacing: 0.0,
-                            fontWeight: FontWeight.w500,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .titleLarge
-                                .fontStyle,
-                          ),
+                        font: GoogleFonts.interTight(
+                          fontWeight: FontWeight.w500,
+                          fontStyle: FlutterFlowTheme.of(context)
+                              .titleLarge
+                              .fontStyle,
+                        ),
+                        color: FlutterFlowTheme.of(context).accent1,
+                        fontSize: 16.0,
+                        letterSpacing: 0.0,
+                        fontWeight: FontWeight.w500,
+                        fontStyle: FlutterFlowTheme.of(context)
+                            .titleLarge
+                            .fontStyle,
+                      ),
                     ),
                     Text(
                       FFLocalizations.of(context).getText(
                         'kj82qg6d' /* Choose how to get special offe... */,
                       ),
                       style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            font: GoogleFonts.inter(
-                              fontWeight: FontWeight.normal,
-                              fontStyle: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .fontStyle,
-                            ),
-                            color: Color(0xFF7A7676),
-                            fontSize: 14.0,
-                            letterSpacing: 0.0,
-                            fontWeight: FontWeight.normal,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .fontStyle,
-                          ),
+                        font: GoogleFonts.inter(
+                          fontWeight: FontWeight.normal,
+                          fontStyle: FlutterFlowTheme.of(context)
+                              .bodyMedium
+                              .fontStyle,
+                        ),
+                        color: Color(0xFF7A7676),
+                        fontSize: 14.0,
+                        letterSpacing: 0.0,
+                        fontWeight: FontWeight.normal,
+                        fontStyle: FlutterFlowTheme.of(context)
+                            .bodyMedium
+                            .fontStyle,
+                      ),
                     ),
                   ].divide(SizedBox(height: 8.0)),
                 ),
@@ -466,20 +454,20 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
                           'r5nko7za' /* Push notifications */,
                         ),
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              font: GoogleFonts.inter(
-                                fontWeight: FontWeight.w500,
-                                fontStyle: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .fontStyle,
-                              ),
-                              color: FlutterFlowTheme.of(context).accent1,
-                              fontSize: 14.0,
-                              letterSpacing: 0.0,
-                              fontWeight: FontWeight.w500,
-                              fontStyle: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .fontStyle,
-                            ),
+                          font: GoogleFonts.inter(
+                            fontWeight: FontWeight.w500,
+                            fontStyle: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .fontStyle,
+                          ),
+                          color: FlutterFlowTheme.of(context).accent1,
+                          fontSize: 14.0,
+                          letterSpacing: 0.0,
+                          fontWeight: FontWeight.w500,
+                          fontStyle: FlutterFlowTheme.of(context)
+                              .bodyMedium
+                              .fontStyle,
+                        ),
                       ),
                       Icon(
                         Icons.chevron_right,
@@ -506,26 +494,26 @@ class _CommunicationWidgetState extends State<CommunicationWidget> {
                     height: 56.0,
                     padding: EdgeInsets.all(8.0),
                     iconPadding:
-                        EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                    EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
                     color: FlutterFlowTheme.of(context).primary,
                     textStyle: FlutterFlowTheme.of(context)
                         .titleMedium
                         .override(
-                          font: GoogleFonts.interTight(
-                            fontWeight: FontWeight.normal,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .titleMedium
-                                .fontStyle,
-                          ),
-                          color:
-                              FlutterFlowTheme.of(context).secondaryBackground,
-                          fontSize: 24.0,
-                          letterSpacing: 0.0,
-                          fontWeight: FontWeight.normal,
-                          fontStyle: FlutterFlowTheme.of(context)
-                              .titleMedium
-                              .fontStyle,
-                        ),
+                      font: GoogleFonts.interTight(
+                        fontWeight: FontWeight.normal,
+                        fontStyle: FlutterFlowTheme.of(context)
+                            .titleMedium
+                            .fontStyle,
+                      ),
+                      color:
+                      FlutterFlowTheme.of(context).secondaryBackground,
+                      fontSize: 24.0,
+                      letterSpacing: 0.0,
+                      fontWeight: FontWeight.normal,
+                      fontStyle: FlutterFlowTheme.of(context)
+                          .titleMedium
+                          .fontStyle,
+                    ),
                     elevation: 0.0,
                     borderRadius: BorderRadius.circular(28.0),
                   ),

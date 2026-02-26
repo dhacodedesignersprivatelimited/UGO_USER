@@ -76,8 +76,14 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       }
 
       if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        // FIXED: Using LocationSettings instead of desiredAccuracy
+        const LocationSettings locationSettings = LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+        );
+
         Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
+          locationSettings: locationSettings,
         );
 
         if (mounted) {
@@ -94,7 +100,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
         }
       }
     } catch (e) {
-      print('Location error: $e');
+      debugPrint('Location error: $e');
       if (mounted) {
         setState(() {
           pickupLocation = hyderabadCenter;
@@ -106,25 +112,30 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
 
   Future<void> _setCurrentLocationAsPickup() async {
     try {
+      // FIXED: Using LocationSettings instead of desiredAccuracy
+      const LocationSettings locationSettings = LocationSettings(
+        accuracy: LocationAccuracy.high,
+      );
+
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: locationSettings,
       );
 
       LatLng latLng = LatLng(position.latitude, position.longitude);
       _addPickupMarker(latLng);
 
-      setState(() {
-        pickupPredictions = [];
-        showPickupDropdown = false;
-      });
+      if (mounted) {
+        setState(() {
+          pickupPredictions = [];
+          showPickupDropdown = false;
+        });
+      }
 
       await _reverseGeocode(latLng, true);
 
-      if (mapController != null) {
-        mapController!.animateCamera(
-          CameraUpdate.newLatLngZoom(latLng, 16),
-        );
-      }
+      mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(latLng, 16),
+      );
 
       _showSnackBar('Current location set as pickup');
     } catch (e) {
@@ -141,10 +152,10 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       markers.removeWhere((marker) => marker.markerId.value == 'pickup');
       markers.add(
         Marker(
-          markerId: MarkerId('pickup'),
+          markerId: const MarkerId('pickup'),
           position: location,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          infoWindow: InfoWindow(title: "Pickup Location"),
+          infoWindow: const InfoWindow(title: "Pickup Location"),
         ),
       );
       pickupLocation = location;
@@ -156,10 +167,10 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       markers.removeWhere((marker) => marker.markerId.value == 'drop');
       markers.add(
         Marker(
-          markerId: MarkerId('drop'),
+          markerId: const MarkerId('drop'),
           position: location,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          infoWindow: InfoWindow(title: "Drop Location"),
+          infoWindow: const InfoWindow(title: "Drop Location"),
         ),
       );
       dropLocation = location;
@@ -203,7 +214,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
         }
       }
     } catch (e) {
-      print('Reverse geocode error: $e');
+      debugPrint('Reverse geocode error: $e');
     }
   }
 
@@ -225,7 +236,6 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     setState(() => isSearching = true);
 
     try {
-      // Restricted to India (components=country:in)
       final url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$GOOGLE_MAPS_API_KEY&components=country:in&radius=50000';
       final response = await http.get(Uri.parse(url));
 
@@ -307,7 +317,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
         }
       }
     } catch (e) {
-      print('Place details error: $e');
+      debugPrint('Place details error: $e');
     }
   }
 
@@ -317,17 +327,14 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
 
   void _swapLocations() {
     setState(() {
-      // Swap Texts
       String tempText = _model.pickupController.text;
       _model.pickupController.text = _model.dropController.text;
       _model.dropController.text = tempText;
 
-      // Swap AppState - Address
       String tempLoc = FFAppState().pickuplocation;
       FFAppState().pickuplocation = FFAppState().droplocation;
       FFAppState().droplocation = tempLoc;
 
-      // Swap AppState - Coords
       double? tempLat = FFAppState().pickupLatitude;
       FFAppState().pickupLatitude = FFAppState().dropLatitude;
       FFAppState().dropLatitude = tempLat;
@@ -336,7 +343,6 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       FFAppState().pickupLongitude = FFAppState().dropLongitude;
       FFAppState().dropLongitude = tempLng;
 
-      // Swap Map Markers
       LatLng? tempPickup = pickupLocation;
       pickupLocation = dropLocation;
       dropLocation = tempPickup;
@@ -346,7 +352,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   }
 
   void _setAirportAsPickup() {
-    final airportLocation = LatLng(17.2403, 78.4294);
+    final airportLocation = const LatLng(17.2403, 78.4294);
     setState(() {
       _model.dropController.text = 'Rajiv Gandhi Airport, Shamshabad';
       FFAppState().droplocation = 'Rajiv Gandhi Airport, Shamshabad';
@@ -370,8 +376,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
 
     _showSnackBar('Locations confirmed! Finding rides...');
 
-    // Navigate to Available Options
-    Future.delayed(Duration(milliseconds: 500), () {
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         context.pushNamed(AvaliableOptionsWidget.routeName);
       }
@@ -382,12 +387,9 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-        ),
+        content: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
         backgroundColor: isError ? Colors.red : Colors.green,
-        duration: Duration(milliseconds: 2000),
+        duration: const Duration(milliseconds: 2000),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -405,7 +407,6 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 1. Google Map Background
           GoogleMap(
             onMapCreated: (controller) => mapController = controller,
             onTap: (position) {
@@ -428,7 +429,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
             compassEnabled: false,
           ),
 
-          // 2. Top Navigation Bar
+          // Top Navigation Bar
           Positioned(
             top: 0,
             left: 0,
@@ -441,12 +442,12 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                 bottom: 12,
               ),
               decoration: BoxDecoration(
-                color: Color(0xFFFF7B10),
+                color: const Color(0xFFFF7B10),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha:0.1),
                     blurRadius: 4,
-                    offset: Offset(0, 2),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -454,12 +455,12 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                 children: [
                   InkWell(
                     onTap: () => context.pop(),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
+                    child: const Padding(
+                      padding: EdgeInsets.all(8.0),
                       child: Icon(Icons.arrow_back, color: Colors.white),
                     ),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     'Plan Your Ride',
                     style: GoogleFonts.inter(
@@ -473,7 +474,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
             ),
           ),
 
-          // 3. Location Input Card
+          // Location Input Card
           Positioned(
             top: MediaQuery.of(context).padding.top + 70,
             left: 16,
@@ -481,7 +482,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
             child: Material(
               elevation: 8,
               borderRadius: BorderRadius.circular(16),
-              shadowColor: Colors.black.withOpacity(0.15),
+              shadowColor: Colors.black.withValues(alpha:0.15),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -492,18 +493,14 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                   children: [
                     // Pickup Input
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       child: Row(
                         children: [
                           Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(0xFF2DB854),
-                            ),
+                            width: 10, height: 10,
+                            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF2DB854)),
                           ),
-                          SizedBox(width: 16),
+                          const SizedBox(width: 16),
                           Expanded(
                             child: TextField(
                               controller: _model.pickupController,
@@ -525,7 +522,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                           ),
                           if (_model.pickupController.text.isNotEmpty)
                             IconButton(
-                              icon: Icon(Icons.clear, size: 20, color: Colors.grey),
+                              icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
                               onPressed: () {
                                 setState(() {
                                   _model.pickupController.clear();
@@ -537,29 +534,22 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                             ),
                           IconButton(
                             onPressed: _setCurrentLocationAsPickup,
-                            icon: Icon(Icons.my_location, size: 22, color: Color(0xFF2DB854)),
+                            icon: const Icon(Icons.my_location, size: 22, color: Color(0xFF2DB854)),
                           ),
                         ],
                       ),
                     ),
-
-                    // Divider
                     Divider(height: 1, thickness: 1, color: Colors.grey[200]),
-
                     // Drop Input
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       child: Row(
                         children: [
                           Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(0xFFFF5A5F),
-                            ),
+                            width: 10, height: 10,
+                            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFFF5A5F)),
                           ),
-                          SizedBox(width: 16),
+                          const SizedBox(width: 16),
                           Expanded(
                             child: TextField(
                               controller: _model.dropController,
@@ -581,7 +571,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                           ),
                           if (_model.dropController.text.isNotEmpty)
                             IconButton(
-                              icon: Icon(Icons.clear, size: 20, color: Colors.grey),
+                              icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
                               onPressed: () {
                                 setState(() {
                                   _model.dropController.clear();
@@ -599,33 +589,20 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                       ),
                     ),
 
-                    // Quick Actions (Only show if not searching)
                     if (!showPickupDropdown && !showDropDropdown)
                       Container(
-                        padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         child: Column(
                           children: [
                             Divider(height: 1, thickness: 1, color: Colors.grey[200]),
-                            SizedBox(height: 12),
+                            const SizedBox(height: 12),
                             Row(
                               children: [
-                                _buildQuickAction(
-                                  icon: Icons.home_outlined,
-                                  label: 'Home',
-                                  onTap: () => _showSnackBar('Add home location in settings'),
-                                ),
-                                SizedBox(width: 12),
-                                _buildQuickAction(
-                                  icon: Icons.work_outline,
-                                  label: 'Work',
-                                  onTap: () => _showSnackBar('Add work location in settings'),
-                                ),
-                                SizedBox(width: 12),
-                                _buildQuickAction(
-                                  icon: Icons.flight_outlined,
-                                  label: 'Airport',
-                                  onTap: _setAirportAsPickup,
-                                ),
+                                _buildQuickAction(icon: Icons.home_outlined, label: 'Home', onTap: () => _showSnackBar('Add home location in settings')),
+                                const SizedBox(width: 12),
+                                _buildQuickAction(icon: Icons.work_outline, label: 'Work', onTap: () => _showSnackBar('Add work location in settings')),
+                                const SizedBox(width: 12),
+                                _buildQuickAction(icon: Icons.flight_outlined, label: 'Airport', onTap: _setAirportAsPickup),
                               ],
                             ),
                           ],
@@ -637,38 +614,22 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
             ),
           ),
 
-          // 4. Autocomplete Suggestions (Pickup)
           if (showPickupDropdown && pickupPredictions.isNotEmpty)
-            _buildSuggestionsList(
-              predictions: pickupPredictions,
-              onSelect: (p) => _selectPlace(p, true),
-            ),
+            _buildSuggestionsList(predictions: pickupPredictions, onSelect: (p) => _selectPlace(p, true)),
 
-          // 5. Autocomplete Suggestions (Drop)
           if (showDropDropdown && dropPredictions.isNotEmpty)
-            _buildSuggestionsList(
-              predictions: dropPredictions,
-              onSelect: (p) => _selectPlace(p, false),
-            ),
+            _buildSuggestionsList(predictions: dropPredictions, onSelect: (p) => _selectPlace(p, false)),
 
-          // 6. Confirm Button
+          // Confirm Button
           Positioned(
-            bottom: 24,
-            left: 16,
-            right: 16,
+            bottom: 24, left: 16, right: 16,
             child: Container(
               height: 56,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFF7B10), Color(0xFFE65100)],
-                ),
+                gradient: const LinearGradient(colors: [Color(0xFFFF7B10), Color(0xFFE65100)]),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
-                  BoxShadow(
-                    color: Color(0xFFFF7B10).withOpacity(0.4),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
+                  BoxShadow(color: const Color(0xFFFF7B10).withValues(alpha:0.4), blurRadius: 12, offset: const Offset(0, 4)),
                 ],
               ),
               child: Material(
@@ -679,12 +640,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                   child: Center(
                     child: Text(
                       'Confirm Locations',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
+                      style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 0.5),
                     ),
                   ),
                 ),
@@ -706,19 +662,14 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   }) {
     return Positioned(
       top: MediaQuery.of(context).padding.top + 200,
-      left: 16,
-      right: 16,
-      bottom: 100, // Leave space for button
+      left: 16, right: 16, bottom: 100,
       child: Material(
         elevation: 8,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-          ),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
           child: ListView.separated(
-            padding: EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: predictions.length,
             separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[200]),
             itemBuilder: (context, index) {
@@ -726,41 +677,22 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
               return InkWell(
                 onTap: () => onSelect(prediction),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
                       Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
                         child: Icon(Icons.location_on_outlined, color: Colors.grey[600], size: 20),
                       ),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              prediction.mainText,
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black,
-                              ),
-                            ),
+                            Text(prediction.mainText, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black)),
                             if (prediction.secondaryText.isNotEmpty)
-                              Text(
-                                prediction.secondaryText,
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: Colors.grey[600],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                              Text(prediction.secondaryText, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600]), maxLines: 1, overflow: TextOverflow.ellipsis),
                           ],
                         ),
                       ),
@@ -785,7 +717,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: Colors.grey[50],
             borderRadius: BorderRadius.circular(8),
@@ -794,15 +726,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
           child: Column(
             children: [
               Icon(icon, size: 22, color: Colors.grey[700]),
-              SizedBox(height: 4),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: Colors.grey[700],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              const SizedBox(height: 4),
+              Text(label, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w500)),
             ],
           ),
         ),

@@ -229,7 +229,7 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                 Container(
                   width: 48, height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
+                    color: Colors.orange.withValues(alpha:0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.local_offer_rounded, color: Colors.orange),

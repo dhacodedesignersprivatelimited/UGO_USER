@@ -70,9 +70,7 @@ String? serializeParam(
       case ParamType.JSON:
         data = json.encode(param);
 
-      default:
-        data = null;
-    }
+      }
     return data;
   } catch (e) {
     print('Error serializing parameter: $e');
@@ -196,9 +194,7 @@ dynamic deserializeParam<T>(
       case ParamType.JSON:
         return json.decode(param);
 
-      default:
-        return null;
-    }
+      }
   } catch (e) {
     print('Error deserializing parameter: $e');
     return null;

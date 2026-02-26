@@ -238,7 +238,7 @@ class _SupportWidgetState extends State<SupportWidget> {
     return Material(
       color: Colors.transparent,
       elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha:0.1),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -257,7 +257,7 @@ class _SupportWidgetState extends State<SupportWidget> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha:0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(

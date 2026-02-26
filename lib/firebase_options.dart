@@ -50,26 +50,26 @@ class DefaultFirebaseOptions {
     apiKey: 'AIzaSyD7nAniQNk4_AWyCu6HiOO4kMcaBISBP5U',
     appId: '1:1002601441010:web:1286b2b6038e798bbc926b',
     messagingSenderId: '1002601441010',
-    projectId: 'ugo-user-8ff52',
-    authDomain: 'ugo-user-8ff52.firebaseapp.com',
-    storageBucket: 'ugo-user-8ff52.firebasestorage.app',
+    projectId: 'Ugo User-8ff52',
+    authDomain: 'Ugo User-8ff52.firebaseapp.com',
+    storageBucket: 'Ugo User-8ff52.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyA29RG-kmbZmXU6BxF2Uo2qqR3_Jr84ltU',
     appId: '1:1002601441010:android:764afa4a462d3c3ebc926b',
     messagingSenderId: '1002601441010',
-    projectId: 'ugo-user-8ff52',
-    storageBucket: 'ugo-user-8ff52.firebasestorage.app',
+    projectId: 'Ugo User-8ff52',
+    storageBucket: 'Ugo User-8ff52.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBvO0YV3ejXEiTcy0dhppGzXp_8wRObF18',
     appId: '1:1002601441010:ios:e094a36041a8ab6cbc926b',
     messagingSenderId: '1002601441010',
-    projectId: 'ugo-user-8ff52',
-    storageBucket: 'ugo-user-8ff52.firebasestorage.app',
-    iosBundleId: 'com.ugocabs.user',
+    projectId: 'Ugo User-8ff52',
+    storageBucket: 'Ugo User-8ff52.firebasestorage.app',
+    iosBundleId: 'com.ugotaxi_rajkumar.user',
   );
 
 }
