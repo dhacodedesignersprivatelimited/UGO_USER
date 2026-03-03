@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
+import '/core/app_config.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import 'api_manager.dart';
 
 export 'api_manager.dart' show ApiCallResponse;
+
+/// Base API URL - single source of truth.
+String get _baseUrl => AppConfig.baseApiUrl;
 
 
 /// ---------------------------------------------------------------------------
@@ -22,7 +26,7 @@ class CreateUserCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'createUser',
-      apiUrl: 'https://ugo-api.icacorp.org/api/users/post',
+      apiUrl: '$_baseUrl/api/users/post',
       callType: ApiCallType.POST,
       headers: {},
       params: {
@@ -56,7 +60,7 @@ class LoginCall {
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'login',
-      apiUrl: 'https://ugo-api.icacorp.org/api/users/login',
+      apiUrl: '$_baseUrl/api/users/login',
       callType: ApiCallType.POST,
       headers: {},
       params: {},
@@ -89,7 +93,7 @@ class GetUserDetailsCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'getUserDetails',
-      apiUrl: 'https://ugo-api.icacorp.org/api/users/$userId',
+      apiUrl: '$_baseUrl/api/users/$userId',
       callType: ApiCallType.GET,
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -172,7 +176,7 @@ class UpdateUserByIdCall {
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'updateUserById',
-      apiUrl: 'https://ugo-api.icacorp.org/api/users/$userId',
+      apiUrl: '$_baseUrl/api/users/$userId',
       callType: ApiCallType.PUT,
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -195,7 +199,7 @@ class UpdateProfileImageCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'updateProfileImage',
-      apiUrl: 'https://ugo-api.icacorp.org/api/users/profile-image/$userId',
+      apiUrl: '$_baseUrl/api/users/profile-image/$userId',
       callType: ApiCallType.PUT,
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -233,7 +237,7 @@ class SaveAddressCall {
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'SaveAddress',
-      apiUrl: 'https://ugo-api.icacorp.org/api/saved-addresses/post',
+      apiUrl: '$_baseUrl/api/saved-addresses/post',
       callType: ApiCallType.POST,
       headers: {
         'Authorization': 'Bearer ${token}',
@@ -282,7 +286,7 @@ class GetSavedAddressesCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'GetSavedAddresses',
-      apiUrl: 'https://ugo-api.icacorp.org/api/saved-addresses/$userId',
+      apiUrl: '$_baseUrl/api/saved-addresses/$userId',
       callType: ApiCallType.GET,
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -360,7 +364,7 @@ class GetRideHistoryCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'getRideHistory',
-      apiUrl: 'https://ugo-api.icacorp.org/api/users/ride-history/$userId',
+      apiUrl: '$_baseUrl/api/users/ride-history/$userId',
       callType: ApiCallType.GET,
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -506,7 +510,7 @@ class AddMoneyToWalletCall {
 
     return ApiManager.instance.makeApiCall(
       callName: 'AddMoneyToWallet',
-      apiUrl: 'https://ugo-api.icacorp.org/api/wallets/add',
+      apiUrl: '$_baseUrl/api/wallets/add',
       callType: ApiCallType.POST,
       headers: {
         if (token != null && token.isNotEmpty)
@@ -586,7 +590,7 @@ class GetVehicleDetailsCall {
       response = await ApiManager.instance.makeApiCall(
         callName: 'GetVehicleDetails',
         // ✅ Updated URL
-        apiUrl: 'https://ugo-api.icacorp.org/api/admins/api/admins/vehicles',
+        apiUrl: '$_baseUrl/api/admins/api/admins/vehicles',
         callType: ApiCallType.GET,
         headers: {},
         params: {},
@@ -694,6 +698,30 @@ class GetVehicleDetailsCall {
       .toList();
 }
 
+/// ---------------------------------------------------------------------------
+/// GET ALL DRIVERS (filter by vehicle type like Rapido)
+/// ---------------------------------------------------------------------------
+class GetAllDriversCall {
+  static Future<ApiCallResponse> call() async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetAllDrivers',
+      apiUrl: '$_baseUrl/api/drivers/getall',
+      callType: ApiCallType.GET,
+      headers: {},
+      params: {},
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static List? drivers(dynamic response) =>
+      (getJsonField(response, r'''$.data''') as List?)?.toList();
+}
+
 class VehicleData {
   int? id;
   int? vehicleTypeId;
@@ -764,7 +792,7 @@ class GetRideStatus {
     return ApiManager.instance.makeApiCall(
       callName: 'GetRideStatus',
       apiUrl:
-      'https://ugo-api.icacorp.org/api/rides/users/$userId/pending-rides',
+      '$_baseUrl/api/rides/users/$userId/pending-rides',
       callType: ApiCallType.GET,
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -832,7 +860,7 @@ class GetRideDetailsCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'getRideDetails',
-      apiUrl: 'https://ugo-api.icacorp.org/api/rides/$rideId',
+      apiUrl: '$_baseUrl/api/rides/$rideId',
       callType: ApiCallType.GET,
       headers: {
         'Authorization': 'Bearer $token',
@@ -928,7 +956,7 @@ class CreateRideCall {
 
       response = await ApiManager.instance.makeApiCall(
         callName: 'CreateRide',
-        apiUrl: 'https://ugo-api.icacorp.org/api/rides/post',
+        apiUrl: '$_baseUrl/api/rides/post',
         callType: ApiCallType.POST,
         headers: {
           'Authorization': 'Bearer $token',
@@ -1088,7 +1116,7 @@ class DriverIdfetchCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'driverIdfetch',
-      apiUrl: 'https://ugo-api.icacorp.org/api/drivers/${id}',
+      apiUrl: '$_baseUrl/api/drivers/${id}',
       callType: ApiCallType.GET,
       headers: {
         'Authorization': 'Bearer ${token}',
@@ -1265,7 +1293,7 @@ class GetDriverDetailsCall {
     if (imagePath != null && imagePath.isNotEmpty) {
       return imagePath.startsWith('http')
           ? imagePath
-          : 'https://ugo-api.icacorp.org/$imagePath';
+          : '$_baseUrl/$imagePath';
     }
     return null;
   }
@@ -1288,7 +1316,14 @@ class GetDriverDetailsCall {
     if (number != null) return number;
     number =
         castToType<String>(getJsonField(response, r'''$.data.license_plate'''));
-    return number ?? 'AP-00-XX-0000';
+    if (number != null) return number;
+    number = castToType<String>(
+        getJsonField(response, r'''$.data.registration_number'''));
+    if (number != null) return number;
+    // Fallback: adminVehicle.vehicle_name from GET /api/drivers/:id
+    final vehicleName = castToType<String>(
+        getJsonField(response, r'''$.data.adminVehicle.vehicle_name'''));
+    return vehicleName ?? 'AP-00-XX-0000';
   }
 
   static String? vehicleType(dynamic response) {
@@ -1324,7 +1359,7 @@ class GetNearbyDriversCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'getNearbyDrivers',
-      apiUrl: 'https://ugo-api.icacorp.org/api/drivers/nearby',
+      apiUrl: '$_baseUrl/api/drivers/nearby',
       callType: ApiCallType.GET,
       headers: {
         'Authorization': 'Bearer $token',
@@ -1356,7 +1391,7 @@ class CancelRide {
 }''';
     return ApiManager.instance.makeApiCall(
       callName: 'cancelRide',
-      apiUrl: 'https://ugo-api.icacorp.org/api/rides/rides/cancel',
+      apiUrl: '$_baseUrl/api/rides/rides/cancel',
       callType: ApiCallType.PATCH,
       headers: {
         'Authorization': 'Bearer $token',
@@ -1387,7 +1422,7 @@ class GetAllNotificationsCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'getAllNotifications',
-      apiUrl: 'https://ugo-api.icacorp.org/api/notifications/getall',
+      apiUrl: '$_baseUrl/api/notifications/getall',
       callType: ApiCallType.GET,
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -1415,7 +1450,7 @@ class GetwalletCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'getwallet',
-      apiUrl: 'https://ugo-api.icacorp.org/api/wallets/user/$userId',
+      apiUrl: '$_baseUrl/api/wallets/user/$userId',
       callType: ApiCallType.GET,
       headers: {
         if (token != null && token.isNotEmpty)
@@ -1464,12 +1499,13 @@ class SubmitRideRatingCall {
 
     final token = FFAppState().accessToken;
 
-    print('📤 API Request Body: $ffApiRequestBody');
-    print('🔐 Auth Token: $token');
+    if (kDebugMode) {
+      print('📤 API Request Body: $ffApiRequestBody');
+    }
 
     return ApiManager.instance.makeApiCall(
       callName: 'submitRideRating',
-      apiUrl: 'https://ugo-api.icacorp.org/api/ratings/post',
+      apiUrl: '$_baseUrl/api/ratings/post',
       callType: ApiCallType.POST,
       headers: {
         'Content-Type': 'application/json',
@@ -1501,50 +1537,11 @@ class SubmitRideRatingCall {
       castToType<int>(getJsonField(response, r'''$.data.id'''));
 }
 
-class writeReviewCall {
-  static Future<ApiCallResponse> call({
-    String? token,
-    int? rideId,
-    int? rating,
-    String? review,
-    String? user_id,
-    String? driver_id,
-  }) async {
-    final Map<String, dynamic> requestBody = {
-      "ride_id": rideId,
-      "user_id": user_id,
-      "driver_id": driver_id,
-      "rating_given_by": "user",
-      "rating_score": rating,
-      "rating_comment": review,
-    };
-
-    return ApiManager.instance.makeApiCall(
-      callName: 'WriteReview',
-      apiUrl: 'https://ugo-api.icacorp.org/api/ratings/post',
-      callType: ApiCallType.POST,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      params: {},
-      body: jsonEncode(requestBody),
-      bodyType: BodyType.JSON,
-      returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
-      cache: false,
-      isStreamingApi: false,
-      alwaysAllowBody: false,
-    );
-  }
-}
-
 class GetAllVouchersCall {
   static Future<ApiCallResponse> call({String? token}) async {
     return ApiManager.instance.makeApiCall(
       callName: 'getAllVouchers',
-      apiUrl: 'https://ugo-api.icacorp.org/api/promo-codes/getall',
+      apiUrl: '$_baseUrl/api/promo-codes/getall',
       callType: ApiCallType.GET,
       headers: {
         if (token != null && token.isNotEmpty)
@@ -1592,7 +1589,7 @@ class UpdateRideStatusCall {
     while (currentRetry <= maxRetries) {
       response = await ApiManager.instance.makeApiCall(
         callName: 'UpdateRideStatus',
-        apiUrl: 'https://ugo-api.icacorp.org/api/drivers/update-ride-status',
+        apiUrl: '$_baseUrl/api/drivers/update-ride-status',
         callType: ApiCallType.POST,
         headers: {
           if (token != null && token.isNotEmpty)

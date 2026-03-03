@@ -1,4 +1,5 @@
 import '/backend/api_requests/api_calls.dart';
+import '/flutter_flow/flutter_flow_google_map.dart' show GoogleMapStyle, googleMapStyleStrings;
 import '/flutter_flow/flutter_flow_util.dart' hide LatLng;
 import '/index.dart';
 import 'package:flutter/material.dart';
@@ -10,9 +11,6 @@ import 'dart:math' show cos, sqrt, asin, sin;
 import 'dart:async';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 export 'avaliable_options_model.dart';
-
-// ⚠️ Ensure this API key has Directions API enabled
-const String GOOGLE_MAPS_API_KEY = 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y';
 
 class AvaliableOptionsWidget extends StatefulWidget {
   const AvaliableOptionsWidget({super.key});
@@ -51,6 +49,11 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   bool showPaymentOptions = false;
   String selectedPaymentMethod = 'Cash'; // Default
 
+  // Vehicle marker icons (1=auto, 2=bike, 3=car) - distinct Uber-style icons
+  BitmapDescriptor? _bikeIcon;
+  BitmapDescriptor? _autoIcon;
+  BitmapDescriptor? _carIcon;
+
   // Razorpay & Wallet
   late Razorpay _razorpay;
   int? _rideAmountForPayment;
@@ -60,6 +63,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   @override
   void initState() {
     super.initState();
+    selectedPaymentMethod =
+        _formatPaymentMethod(FFAppState().selectedPaymentMethod);
 
     // Initialize Razorpay
     _razorpay = Razorpay();
@@ -105,23 +110,102 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   Future<void> _addMarkers() async {
     final appState = FFAppState();
     if (appState.pickupLatitude != null && appState.dropLatitude != null) {
-      setState(() {
-        markers.clear();
-        // Pickup Marker
-        markers.add(Marker(
-          markerId: const MarkerId('pickup'),
-          position: LatLng(appState.pickupLatitude!, appState.pickupLongitude!),
-          icon:
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        ));
-        // Drop Marker
-        markers.add(Marker(
-          markerId: const MarkerId('drop'),
-          position: LatLng(appState.dropLatitude!, appState.dropLongitude!),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        ));
-      });
+      final newMarkers = <Marker>{};
+      // Pickup Marker
+      newMarkers.add(Marker(
+        markerId: const MarkerId('pickup'),
+        position: LatLng(appState.pickupLatitude!, appState.pickupLongitude!),
+        icon:
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      ));
+      // Drop Marker
+      newMarkers.add(Marker(
+        markerId: const MarkerId('drop'),
+        position: LatLng(appState.dropLatitude!, appState.dropLongitude!),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      ));
+
+      // Driver markers (orange bike/auto/car - Uber style)
+      final driverMarkers = await _buildDriverMarkers(appState);
+      newMarkers.addAll(driverMarkers);
+
+      if (mounted) {
+        setState(() {
+          markers.clear();
+          markers.addAll(newMarkers);
+        });
+      }
     }
+  }
+
+  Future<void> _loadVehicleIconsIfNeeded() async {
+    if (_bikeIcon != null) return;
+    try {
+      final config = ImageConfiguration(size: Size(48, 48));
+      final results = await Future.wait([
+        BitmapDescriptor.asset(config, 'assets/images/bike.png'),
+        BitmapDescriptor.asset(config, 'assets/images/auto.png'),
+        BitmapDescriptor.asset(config, 'assets/images/car.png'),
+      ]);
+      if (mounted) {
+        _bikeIcon = results[0];
+        _autoIcon = results[1];
+        _carIcon = results[2];
+      }
+    } catch (e) {
+      print('❌ Error loading vehicle icons: $e');
+    }
+  }
+
+  Future<Set<Marker>> _buildDriverMarkers(FFAppState appState) async {
+    final result = <Marker>{};
+    try {
+      await _loadVehicleIconsIfNeeded();
+
+      final response = await GetAllDriversCall.call();
+      if (!response.succeeded) return result;
+      final allDrivers =
+          (getJsonField(response.jsonBody, r'''$.data''') as List?)?.toList() ??
+              [];
+      final filtered =
+          _filterDriversByVehicleType(allDrivers, appState.selectedRideCategory);
+
+      final orangeIcon =
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+
+      int index = 0;
+      for (final d in filtered) {
+        final isActive = getJsonField(d, r'''$.is_active''') == true;
+        final isOnline = getJsonField(d, r'''$.is_online''') == true;
+        if (!isActive || !isOnline) continue;
+
+        final lat = getJsonField(d, r'''$.current_location_latitude''');
+        final lng = getJsonField(d, r'''$.current_location_longitude''');
+        if (lat == null || lng == null) continue;
+
+        final latVal = lat is num ? lat.toDouble() : double.tryParse(lat.toString());
+        final lngVal = lng is num ? lng.toDouble() : double.tryParse(lng.toString());
+        if (latVal == null || lngVal == null) continue;
+
+        final vtId = getJsonField(d, r'''$.vehicle_type_id''');
+        final vt = vtId is int ? vtId : int.tryParse(vtId?.toString() ?? '');
+        final vehicleLabel = vt == 1 ? 'auto' : vt == 2 ? 'bike' : vt == 3 ? 'car' : 'ride';
+        final driverIcon = (vt == 1 ? _autoIcon : vt == 2 ? _bikeIcon : _carIcon) ?? orangeIcon;
+        final name = '${getJsonField(d, r'''$.first_name''') ?? ''} ${getJsonField(d, r'''$.last_name''') ?? ''}'.trim();
+        final info = name.isNotEmpty ? '$name • $vehicleLabel' : vehicleLabel;
+
+        result.add(Marker(
+          markerId: MarkerId('driver_$index'),
+          position: LatLng(latVal, lngVal),
+          icon: driverIcon,
+          infoWindow: InfoWindow(title: vehicleLabel.toUpperCase(), snippet: info),
+        ));
+        index++;
+      }
+    } catch (e) {
+      print('❌ Error adding driver markers: $e');
+    }
+    return result;
   }
 
   Future<void> _getRoutePolyline() async {
@@ -135,7 +219,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
       final String url = 'https://maps.googleapis.com/maps/api/directions/json?'
           'origin=${appState.pickupLatitude},${appState.pickupLongitude}'
           '&destination=${appState.dropLatitude},${appState.dropLongitude}'
-          '&key=$GOOGLE_MAPS_API_KEY';
+          '&key=${AppConfig.googleMapsApiKey}';
 
       final response = await http.get(Uri.parse(url));
 
@@ -210,16 +294,174 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
 
   Future<List<dynamic>> _getVehicleData() async {
     try {
-      final response = await GetVehicleDetailsCall.call();
-      if (response.succeeded) {
-        return (getJsonField(response.jsonBody, r'''$.data''') as List?)
-                ?.toList() ??
-            [];
+      final vehiclesResponse = await GetVehicleDetailsCall.call();
+      final driversResponse = await GetAllDriversCall.call();
+
+      List<dynamic> vehicles = [];
+      if (vehiclesResponse.succeeded) {
+        vehicles =
+            (getJsonField(vehiclesResponse.jsonBody, r'''$.data''') as List?)
+                    ?.map((v) => v is Map ? Map<String, dynamic>.from(v) : v)
+                    .toList() ??
+                [];
       }
+
+      List<dynamic> allDrivers = [];
+      if (driversResponse.succeeded) {
+        allDrivers =
+            (getJsonField(driversResponse.jsonBody, r'''$.data''') as List?)
+                    ?.toList() ??
+                [];
+      }
+
+      vehicles = _filterVehiclesByCategory(vehicles);
+      final availableDrivers =
+          _filterDriversByVehicleType(allDrivers, FFAppState().selectedRideCategory);
+
+      return _mergeDriverCountsIntoVehicles(vehicles, availableDrivers);
     } catch (e) {
       print('❌ Error fetching vehicles: $e');
     }
     return [];
+  }
+
+  List<dynamic> _filterDriversByVehicleType(
+      List<dynamic> drivers, String? category) {
+    if (category == null || category.isEmpty) return drivers;
+    final cat = category.toLowerCase();
+
+    int? targetVehicleTypeId;
+    switch (cat) {
+      case 'auto':
+        targetVehicleTypeId = 1;
+        break;
+      case 'bike':
+        targetVehicleTypeId = 2;
+        break;
+      case 'car':
+        targetVehicleTypeId = 3;
+        break;
+      default:
+        return drivers;
+    }
+
+    return drivers.where((d) {
+      final isActive = getJsonField(d, r'''$.is_active''') == true;
+      final isOnline = getJsonField(d, r'''$.is_online''') == true;
+      final vtId = getJsonField(d, r'''$.vehicle_type_id''');
+      final driverVtId = vtId is int ? vtId : int.tryParse(vtId?.toString() ?? '');
+      return isActive &&
+          isOnline &&
+          driverVtId != null &&
+          driverVtId == targetVehicleTypeId;
+    }).toList();
+  }
+
+  List<dynamic> _mergeDriverCountsIntoVehicles(
+      List<dynamic> vehicles, List<dynamic> drivers) {
+    return vehicles.map((v) {
+      final m =
+          v is Map<String, dynamic> ? v : Map<String, dynamic>.from(v as Map);
+      final vehicleTypeId = getJsonField(m, r'''$.vehicle_type_id''');
+      final vtId = vehicleTypeId is int
+          ? vehicleTypeId
+          : int.tryParse(vehicleTypeId?.toString() ?? '');
+      final adminVehicleId = getJsonField(m, r'''$.id''');
+      final avId = adminVehicleId is int
+          ? adminVehicleId
+          : int.tryParse(adminVehicleId?.toString() ?? '');
+
+      int count = 0;
+      for (final d in drivers) {
+        final dVtId = getJsonField(d, r'''$.vehicle_type_id''');
+        final driverVtId =
+            dVtId is int ? dVtId : int.tryParse(dVtId?.toString() ?? '');
+        final dAvId = getJsonField(d, r'''$.admin_vehicle_id''');
+        final driverAvId =
+            dAvId is int ? dAvId : int.tryParse(dAvId?.toString() ?? '');
+        final matchesByType = driverVtId != null && driverVtId == vtId;
+        final matchesByAdminVehicle =
+            driverAvId != null && avId != null && driverAvId == avId;
+        if (matchesByType || matchesByAdminVehicle) count++;
+      }
+      m['available_drivers_count'] = count;
+      return m;
+    }).toList();
+  }
+
+  String _getCategoryLabel(String category) {
+    switch (category.toLowerCase()) {
+      case 'bike':
+        return 'Bike';
+      case 'auto':
+        return 'Auto';
+      case 'car':
+        return 'Car';
+      default:
+        return category;
+    }
+  }
+
+  String _getDriverAvailabilityText(dynamic data) {
+    final count = getJsonField(data, r'''$.available_drivers_count''');
+    final n = count is int ? count : int.tryParse(count?.toString() ?? '0') ?? 0;
+    if (n <= 0) return 'No drivers nearby';
+    if (n == 1) return '1 driver available';
+    return '$n drivers available';
+  }
+
+  /// Filters vehicles by category. Uses vehicle_type_id (1=auto, 2=bike, 3=car)
+  /// when available; falls back to name/type string matching.
+  List<dynamic> _filterVehiclesByCategory(List<dynamic> vehicles) {
+    final category = FFAppState().selectedRideCategory?.toLowerCase();
+    if (category == null || category.isEmpty) return vehicles;
+
+    int? targetVehicleTypeId;
+    switch (category) {
+      case 'auto':
+        targetVehicleTypeId = 1;
+        break;
+      case 'bike':
+        targetVehicleTypeId = 2;
+        break;
+      case 'car':
+        targetVehicleTypeId = 3;
+        break;
+      default:
+        return vehicles;
+    }
+
+    return vehicles.where((v) {
+      final vtId = getJsonField(v, r'''$.vehicle_type_id''');
+      final vehicleTypeId =
+          vtId is int ? vtId : int.tryParse(vtId?.toString() ?? '');
+      if (vehicleTypeId != null && vehicleTypeId == targetVehicleTypeId) {
+        return true;
+      }
+      final name =
+          (getJsonField(v, r'''$.vehicle_name''') ?? '').toString().toLowerCase();
+      final type =
+          (getJsonField(v, r'''$.vehicle_type''') ?? '').toString().toLowerCase();
+      final combined = '$name $type';
+      switch (category) {
+        case 'bike':
+          return combined.contains('bike') ||
+              combined.contains('motorcycle') ||
+              combined.contains('2-wheeler');
+        case 'car':
+          return (combined.contains('car') ||
+                  combined.contains('sedan') ||
+                  combined.contains('suv') ||
+                  combined.contains('hatchback')) &&
+              !combined.contains('auto');
+        case 'auto':
+          return combined.contains('auto') ||
+              combined.contains('rickshaw') ||
+              combined.contains('autorickshaw');
+        default:
+          return true;
+      }
+    }).toList();
   }
 
   // Haversine Fallback
@@ -549,23 +791,27 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<FFAppState>();
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     double currentDistance = googleDistanceKm ?? 0.0;
 
     return Scaffold(
       key: scaffoldKey,
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
           // 1. Map Layer
           Positioned.fill(
             child: GoogleMap(
+              style: googleMapStyleStrings[
+                  isDark ? GoogleMapStyle.dark : GoogleMapStyle.uber],
               onMapCreated: (c) {
                 mapController = c;
                 if (markers.isNotEmpty) _initializeMap();
               },
               initialCameraPosition: CameraPosition(
-                target: LatLng(appState.pickupLatitude ?? 17.3850,
-                    appState.pickupLongitude ?? 78.4867),
+                target: LatLng(appState.pickupLatitude ?? AppConfig.defaultLat,
+                    appState.pickupLongitude ?? AppConfig.defaultLng),
                 zoom: 14,
               ),
               markers: markers,
@@ -588,10 +834,10 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
               padding: EdgeInsets.fromLTRB(
                   16, MediaQuery.of(context).padding.top + 12, 16, 16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black12,
+                      color: isDark ? Colors.black54 : Colors.black12,
                       blurRadius: 8,
                       offset: Offset(0, 2))
                 ],
@@ -603,9 +849,9 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                          color: Colors.grey[100],
+                          color: theme.colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.arrow_back, size: 20),
+                      child: Icon(Icons.arrow_back, size: 20, color: theme.colorScheme.onSurface),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -614,11 +860,11 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                     children: [
                       Text('Choose a ride',
                           style: GoogleFonts.inter(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
+                              fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
                       Text(
                           '${currentDistance.toStringAsFixed(1)} km • ${googleDuration ?? "Calculating..."}',
                           style: GoogleFonts.inter(
-                              fontSize: 13, color: Colors.grey[600])),
+                              fontSize: 13, color: theme.colorScheme.onSurfaceVariant)),
                     ],
                   ),
                 ],
@@ -634,12 +880,12 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
               child: Container(
                 height: MediaQuery.of(context).size.height * 0.58,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: theme.colorScheme.surface,
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(24)),
                   boxShadow: [
                     BoxShadow(
-                        color: Colors.black12,
+                        color: isDark ? Colors.black54 : Colors.black12,
                         blurRadius: 20,
                         offset: Offset(0, -4))
                   ],
@@ -652,9 +898,38 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                          color: Colors.grey[300],
+                          color: theme.colorScheme.outline.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(2)),
                     ),
+                    // Category label when filtered by vehicle type
+                    if (appState.selectedRideCategory != null &&
+                        appState.selectedRideCategory!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 4),
+                        child: Row(
+                          children: [
+                            Text(
+                              _getCategoryLabel(
+                                  appState.selectedRideCategory!),
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'sub-vehicles',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: theme.colorScheme.onSurfaceVariant
+                                    .withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
                     // List
                     Expanded(
@@ -666,6 +941,63 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                                 child: CircularProgressIndicator(
                                     color: Color(0xFFFF7B10)));
                           final vehicles = snapshot.data!;
+
+                          if (vehicles.isEmpty) {
+                            final category =
+                                appState.selectedRideCategory ?? 'ride';
+                            final label = category == 'bike'
+                                ? 'Bike'
+                                : category == 'car'
+                                    ? 'Car'
+                                    : category == 'auto'
+                                        ? 'Auto'
+                                        : 'ride';
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.directions_car_outlined,
+                                        size: 64, color: theme.colorScheme.onSurfaceVariant),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No $label rides available',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Try "Where to go?" for all options',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    TextButton(
+                                      onPressed: () {
+                                        FFAppState().selectedRideCategory = null;
+                                        setState(() {
+                                          _vehiclesFuture = _getVehicleData();
+                                        });
+                                        _addMarkers();
+                                      },
+                                      child: Text('Show all rides',
+                                          style: GoogleFonts.inter(
+                                              color: Color(0xFFFF7B10),
+                                              fontWeight: FontWeight.w600)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
 
                           return ListView.builder(
                             padding: const EdgeInsets.symmetric(
@@ -696,7 +1028,9 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   Widget _buildVehicleCard(dynamic data, double distance, FFAppState appState) {
     final pricing = getJsonField(data, r'''$.pricing''');
     final String vehicleId =
-        getJsonField(data, r'''$.pricing.vehicle_id''')?.toString() ?? '1';
+        getJsonField(data, r'''$.pricing.vehicle_id''')?.toString() ??
+        getJsonField(data, r'''$.id''')?.toString() ??
+        '1';
     final String name =
         getJsonField(data, r'''$.vehicle_name''')?.toString() ?? 'Ride';
 
@@ -895,7 +1229,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text('2 mins away',
+                    Text(
+                        _getDriverAvailabilityText(data),
                         style: GoogleFonts.inter(
                             fontSize: 12, color: Colors.grey[600])),
                     if (isPro)
@@ -930,116 +1265,221 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   }
 
   Widget _buildBottomActions(FFAppState appState) {
+    final distance = googleDistanceKm ??
+        (appState.pickupLatitude != null && appState.dropLatitude != null
+            ? calculateDistance(
+                appState.pickupLatitude!,
+                appState.pickupLongitude!,
+                appState.dropLatitude!,
+                appState.dropLongitude!,
+              )
+            : 0.0);
+    final estimatedFare = selectedVehicleType != null
+        ? (calculateTieredFare(
+                distanceKm: distance,
+                baseKmStart: 1,
+                baseKmEnd: 5,
+                baseFare: appState.selectedBaseFare,
+                pricePerKm: appState.selectedPricePerKm,
+              ) -
+            appState.discountAmount)
+            .round()
+            .clamp(0, 999999)
+        : null;
+
+    const primaryOrange = Color(0xFFFF7B10);
+
     return Container(
       padding: EdgeInsets.fromLTRB(
           16, 12, 16, MediaQuery.of(context).padding.bottom + 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[200]!)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Row with Payment & Coupon
+          // Uber/Rapido-style: Payment method chips (inline selection)
           Row(
             children: [
-              // PAYMENT SELECTION BUTTON
-              InkWell(
-                onTap: () async {
-                  // Navigate to Payment Screen & Wait for Result
-                  final result =
-                      await context.pushNamed(PaymentOptionsWidget.routeName);
-
-                  if (result != null && result is String) {
-                    setState(() {
-                      selectedPaymentMethod = result;
-                    });
-                  }
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[300]!),
-                  ),
+              Text(
+                'Payment',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      Icon(
-                          selectedPaymentMethod == 'Cash'
-                              ? Icons.money
-                              : selectedPaymentMethod == 'Wallet'
-                                  ? Icons.account_balance_wallet
-                                  : Icons.qr_code,
-                          size: 18,
-                          color: const Color(0xFF1B5E20)),
+                      _buildPaymentChip('Cash', Icons.money_rounded, primaryOrange, apiValue: 'Cash'),
                       const SizedBox(width: 8),
-                      Text(
-                        selectedPaymentMethod,
-                        style: GoogleFonts.inter(
-                            fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.keyboard_arrow_right,
-                          size: 18, color: Colors.grey),
+                      _buildPaymentChip('Wallet', Icons.account_balance_wallet_rounded, primaryOrange, apiValue: 'Wallet'),
+                      const SizedBox(width: 8),
+                      _buildPaymentChip('UPI', Icons.qr_code_rounded, primaryOrange, apiValue: 'Online'),
                     ],
                   ),
                 ),
               ),
-
-              const Spacer(),
-
-              // OFFERS BUTTON
               InkWell(
                 onTap: () => context.pushNamed(VoucherWidget.routeName),
-                child: Row(
-                  children: [
-                    const Icon(Icons.local_offer,
-                        size: 18, color: Color(0xFFFF7B10)),
-                    const SizedBox(width: 4),
-                    Text('Offers',
-                        style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFFFF7B10))),
-                  ],
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.local_offer_rounded, size: 18, color: primaryOrange),
+                      const SizedBox(width: 4),
+                      Text('Offers',
+                          style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: primaryOrange)),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-
-          const SizedBox(height: 16),
-
-          // CONFIRM BUTTON
+          if (selectedPaymentMethod == 'Wallet') ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: primaryOrange.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.account_balance_wallet, size: 18, color: primaryOrange),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Wallet: ₹${appState.walletBalance.toStringAsFixed(2)}',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            height: 56,
+            height: 52,
             child: ElevatedButton(
               onPressed: isLoadingRide || selectedVehicleType == null
                   ? null
                   : _confirmBooking,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF7B10),
+                backgroundColor: primaryOrange,
+                disabledBackgroundColor: Colors.grey[300],
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                elevation: 2,
+                    borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
               ),
               child: isLoadingRide
                   ? const SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 3))
-                  : Text('Confirm Booking',
+                          color: Colors.white, strokeWidth: 2.5))
+                  : Text(
+                      selectedVehicleType != null && estimatedFare != null
+                          ? 'Pay ₹$estimatedFare via ${_paymentDisplayLabel(selectedPaymentMethod)}'
+                          : 'Select a ride to continue',
                       style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                           color: Colors.white)),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildPaymentChip(String label, IconData icon, Color primaryColor,
+      {String? apiValue}) {
+    final value = apiValue ?? label;
+    final isSelected = selectedPaymentMethod == value || selectedPaymentMethod == label;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          selectedPaymentMethod = value;
+          FFAppState().selectedPaymentMethod = value.toLowerCase();
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? primaryColor.withValues(alpha: 0.12)
+              : Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? primaryColor : Colors.grey[300]!,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? primaryColor : Colors.grey[600],
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? primaryColor : Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _paymentDisplayLabel(String method) {
+    switch (method.toLowerCase()) {
+      case 'online':
+        return 'UPI';
+      default:
+        return method;
+    }
+  }
+
+  String _formatPaymentMethod(String method) {
+    switch (method.toLowerCase()) {
+      case 'wallet':
+        return 'Wallet';
+      case 'online':
+        return 'Online';
+      case 'cash':
+      default:
+        return 'Cash';
+    }
   }
 }

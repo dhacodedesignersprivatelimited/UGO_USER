@@ -64,8 +64,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
       canPop: false, // Prevents default back behavior to handle custom navigation
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        // Navigate to Home instead of exiting
-        context.pushNamed(HomeWidget.routeName);
+        context.goNamed(HomeWidget.routeName);
       },
       child: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
@@ -87,7 +86,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
                     size: 18,
                   ),
                   onPressed: () async {
-                    context.pushNamed(HomeWidget.routeName);
+                    context.goNamed(HomeWidget.routeName);
                   },
                 ),
                 const SizedBox(width: 16),
@@ -195,7 +194,7 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
             ),
             const SizedBox(height: 32),
             FFButtonWidget(
-              onPressed: () => context.pushNamed(HomeWidget.routeName),
+              onPressed: () => context.goNamed(HomeWidget.routeName),
               text: 'Book a ride',
               options: FFButtonOptions(
                 width: 180,

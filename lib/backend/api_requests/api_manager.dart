@@ -1,19 +1,23 @@
 // ignore_for_file: constant_identifier_names, depend_on_referenced_packages, prefer_final_fields
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
-import 'package:http/http.dart' as http;
+
+import 'network_exceptions_io.dart'
+    if (dart.library.html) 'network_exceptions_stub.dart' as net;
 import 'package:equatable/equatable.dart';
+import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:mime_type/mime_type.dart';
 
 import '/flutter_flow/uploaded_file.dart';
 
 import 'get_streamed_response.dart';
+import 'http_client.dart';
 
 enum ApiCallType {
   GET,
@@ -226,12 +230,7 @@ class ApiManager {
   static ApiManager? _instance;
   static ApiManager get instance => _instance ??= ApiManager._();
 
-  // If your API calls need authentication, populate this field once
-  // the user has authenticated. Alter this as needed.
-  static String? _accessToken;
-  // You may want to call this if, for example, you make a change to the
-  // database and no longer want the cached result of a call that may
-  // have changed.
+  /// Invalidates cached results for a given call (e.g. when data changes).
   static void clearCache(String callName) => _apiCache.keys
       .toSet()
       .forEach((k) => k.callName == callName ? _apiCache.remove(k) : null);
@@ -254,13 +253,13 @@ class ApiManager {
     bool isStreamingApi, {
     http.Client? client,
   }) async {
+    final c = client ?? TimeoutHttpClient.instance;
     if (params.isNotEmpty) {
       final specifier =
           Uri.parse(apiUrl).queryParameters.isNotEmpty ? '&' : '?';
       apiUrl = '$apiUrl$specifier${asQueryParams(params)}';
     }
     if (isStreamingApi) {
-      client ??= http.Client();
       final request =
           http.Request(callType.toString().split('.').last, Uri.parse(apiUrl))
             ..headers.addAll(toStringMap(headers));
@@ -272,9 +271,7 @@ class ApiManager {
         streamedResponse: streamedResponse,
       );
     }
-    final makeRequest = callType == ApiCallType.GET
-        ? (client != null ? client.get : http.get)
-        : (client != null ? client.delete : http.delete);
+    final makeRequest = callType == ApiCallType.GET ? c.get : c.delete;
     final response =
         await makeRequest(Uri.parse(apiUrl), headers: toStringMap(headers));
     return ApiCallResponse.fromHttpResponse(response, returnBody, decodeUtf8);
@@ -294,6 +291,7 @@ class ApiManager {
     bool isStreamingApi, {
     http.Client? client,
   }) async {
+    final c = client ?? TimeoutHttpClient.instance;
     assert(
       {ApiCallType.POST, ApiCallType.PUT, ApiCallType.PATCH}.contains(type) ||
           (alwaysAllowBody && type == ApiCallType.DELETE),
@@ -302,7 +300,6 @@ class ApiManager {
     final postBody =
         createBody(headers, params, body, bodyType, encodeBodyUtf8);
     if (isStreamingApi) {
-      client ??= http.Client();
       final request =
           http.Request(type.toString().split('.').last, Uri.parse(apiUrl))
             ..headers.addAll(toStringMap(headers));
@@ -322,10 +319,10 @@ class ApiManager {
     }
 
     final requestFn = {
-      ApiCallType.POST: client != null ? client.post : http.post,
-      ApiCallType.PUT: client != null ? client.put : http.put,
-      ApiCallType.PATCH: client != null ? client.patch : http.patch,
-      ApiCallType.DELETE: client != null ? client.delete : http.delete,
+      ApiCallType.POST: c.post,
+      ApiCallType.PUT: c.put,
+      ApiCallType.PATCH: c.patch,
+      ApiCallType.DELETE: c.delete,
     }[type]!;
     final response = await requestFn(Uri.parse(apiUrl),
         headers: toStringMap(headers), body: postBody);
@@ -379,7 +376,9 @@ class ApiManager {
       ..files.addAll(files);
     nonFileParams.forEach((key, value) => request.fields[key] = value);
 
-    final response = await http.Response.fromStream(await request.send());
+    final streamedResponse =
+        await TimeoutHttpClient.instance.send(request);
+    final response = await http.Response.fromStream(streamedResponse);
     return ApiCallResponse.fromHttpResponse(response, returnBody, decodeUtf8);
   }
 
@@ -457,6 +456,16 @@ class ApiManager {
         client: client,
       );
 
+  /// Whether a failure is transient and safe to retry.
+  static bool _isTransientFailure(Object? error, ApiCallResponse? response) {
+    if (net.isTransientNetworkError(error)) return true;
+    if (response != null) {
+      final code = response.statusCode;
+      if (code == 502 || code == 503 || code == 504) return true;
+    }
+    return false;
+  }
+
   Future<ApiCallResponse> makeApiCall({
     required String callName,
     required String apiUrl,
@@ -471,6 +480,7 @@ class ApiManager {
     bool alwaysAllowBody = false,
     bool cache = false,
     bool isStreamingApi = false,
+    bool enableRetry = true,
     ApiCallOptions? options,
     http.Client? client,
   }) async {
@@ -490,10 +500,6 @@ class ApiManager {
           cache: cache,
           isStreamingApi: isStreamingApi,
         );
-    // Modify for your specific needs if this differs from your API.
-    if (_accessToken != null) {
-      headers[HttpHeaders.authorizationHeader] = 'Bearer $_accessToken';
-    }
     if (!apiUrl.startsWith('http')) {
       apiUrl = 'https://$apiUrl';
     }
@@ -504,77 +510,104 @@ class ApiManager {
       return _apiCache[callOptions]!;
     }
 
-    ApiCallResponse result;
-    
-    try {
-      switch (callType) {
-        case ApiCallType.GET:
-          result = await urlRequest(
-            callType,
-            apiUrl,
-            headers,
-            params,
-            returnBody,
-            decodeUtf8,
-            isStreamingApi,
-            client: client,
-          );
-          break;
-        case ApiCallType.DELETE:
-          result = alwaysAllowBody
-              ? await requestWithBody(
-                  callType,
-                  apiUrl,
-                  headers,
-                  params,
-                  body,
-                  bodyType,
-                  returnBody,
-                  encodeBodyUtf8,
-                  decodeUtf8,
-                  alwaysAllowBody,
-                  isStreamingApi,
-                  client: client,
-                )
-              : await urlRequest(
-                  callType,
-                  apiUrl,
-                  headers,
-                  params,
-                  returnBody,
-                  decodeUtf8,
-                  isStreamingApi,
-                  client: client,
-                );
-          break;
-        case ApiCallType.POST:
-        case ApiCallType.PUT:
-        case ApiCallType.PATCH:
-          result = await requestWithBody(
-            callType,
-            apiUrl,
-            headers,
-            params,
-            body,
-            bodyType,
-            returnBody,
-            encodeBodyUtf8,
-            decodeUtf8,
-            alwaysAllowBody,
-            isStreamingApi,
-            client: client,
-          );
-          break;
+    const int maxRetries = 3;
+    const List<Duration> backoffDelays = [
+      Duration(seconds: 1),
+      Duration(seconds: 2),
+      Duration(seconds: 4),
+    ];
+
+    ApiCallResponse? result;
+    Object? lastError;
+    int attempt = 0;
+
+    while (true) {
+      result = null;
+      lastError = null;
+
+      try {
+        switch (callType) {
+          case ApiCallType.GET:
+            result = await urlRequest(
+              callType,
+              apiUrl,
+              headers,
+              params,
+              returnBody,
+              decodeUtf8,
+              isStreamingApi,
+              client: client,
+            );
+            break;
+          case ApiCallType.DELETE:
+            result = alwaysAllowBody
+                ? await requestWithBody(
+                    callType,
+                    apiUrl,
+                    headers,
+                    params,
+                    body,
+                    bodyType,
+                    returnBody,
+                    encodeBodyUtf8,
+                    decodeUtf8,
+                    alwaysAllowBody,
+                    isStreamingApi,
+                    client: client,
+                  )
+                : await urlRequest(
+                    callType,
+                    apiUrl,
+                    headers,
+                    params,
+                    returnBody,
+                    decodeUtf8,
+                    isStreamingApi,
+                    client: client,
+                  );
+            break;
+          case ApiCallType.POST:
+          case ApiCallType.PUT:
+          case ApiCallType.PATCH:
+            result = await requestWithBody(
+              callType,
+              apiUrl,
+              headers,
+              params,
+              body,
+              bodyType,
+              returnBody,
+              encodeBodyUtf8,
+              decodeUtf8,
+              alwaysAllowBody,
+              isStreamingApi,
+              client: client,
+            );
+            break;
+        }
+      } catch (e) {
+        lastError = e;
+        result = ApiCallResponse(null, {}, -1, exception: e);
       }
-print("access_tocken");
-      // If caching is on, cache the result (if present).
-      if (cache) {
-        _apiCache[callOptions] = result;
+
+      final shouldRetry = enableRetry &&
+          attempt < maxRetries &&
+          _isTransientFailure(lastError, result);
+
+      if (!shouldRetry) {
+        break;
       }
-    } catch (e) {
-      result = ApiCallResponse(null, {}, -1, exception: e);
+
+      await Future<void>.delayed(backoffDelays[attempt]);
+      attempt++;
     }
-print("API RESPONCE${result.response!.body}");
-    return result;
+
+    final response = result;
+
+    if (cache && response.statusCode >= 200 && response.statusCode < 300) {
+      _apiCache[callOptions] = response;
+    }
+
+    return response;
   }
 }

@@ -1,3 +1,4 @@
+import '/flutter_flow/flutter_flow_google_map.dart' show GoogleMapStyle, googleMapStyleStrings;
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'choose_destination_model.dart';
 export 'choose_destination_model.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'dart:async';
 
 class ChooseDestinationWidget extends StatefulWidget {
   const ChooseDestinationWidget({super.key});
@@ -28,13 +30,14 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
 
   List<dynamic> _predictions = [];
   bool _isSearching = false;
+  Timer? _searchDebounce;
+  Timer? _reverseGeocodeDebounce;
 
   // Map controller and location
   gmaps.GoogleMapController? _mapController;
   gmaps.LatLng? _currentMapCenter;
 
   // Google Maps API Key
-  final String _googleMapsApiKey = 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y';
 
   @override
   void initState() {
@@ -158,6 +161,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
   }
 
   Future<void> _getPlacePredictions(String input) async {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
     if (input.isEmpty) {
       setState(() {
         _predictions = [];
@@ -169,7 +174,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
     setState(() => _isSearching = true);
 
     final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$_googleMapsApiKey&components=country:in',
+      'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=${AppConfig.googleMapsApiKey}&components=country:in',
     );
 
     try {
@@ -187,11 +192,12 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
       debugPrint("Error fetching predictions: $e");
       if (mounted) setState(() => _isSearching = false);
     }
+    });
   }
 
   Future<void> _getPlaceDetails(String placeId, String description) async {
     final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&fields=geometry&key=$_googleMapsApiKey',
+      'https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&fields=geometry&key=${AppConfig.googleMapsApiKey}',
     );
 
     try {
@@ -291,6 +297,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _reverseGeocodeDebounce?.cancel();
     _mapController?.dispose();
     _model.dispose();
     super.dispose();
@@ -309,6 +317,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
               // 1. Google Map Background
               if (_currentMapCenter != null)
                 gmaps.GoogleMap(
+                  style: googleMapStyleStrings[GoogleMapStyle.uber],
                   initialCameraPosition: gmaps.CameraPosition(
                     target: _currentMapCenter!,
                     zoom: 15,
@@ -593,33 +602,32 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
     );
   }
   Future<void> _updateDestinationFromMap(gmaps.LatLng latLng) async {
-  try {
-    setState(() {
-    });
+    _reverseGeocodeDebounce?.cancel();
+    _reverseGeocodeDebounce =
+        Timer(const Duration(milliseconds: 600), () async {
+      try {
+        final placemarks = await geo.placemarkFromCoordinates(
+          latLng.latitude,
+          latLng.longitude,
+        );
 
-    final placemarks = await geo.placemarkFromCoordinates(
-      latLng.latitude,
-      latLng.longitude,
-    );
+        if (placemarks.isNotEmpty && mounted) {
+          final place = placemarks.first;
 
-    if (placemarks.isNotEmpty && mounted) {
-      final place = placemarks.first;
+          final address =
+              "${place.name ?? ''}, ${place.subLocality ?? ''}, ${place.locality ?? ''}";
 
-      final address =
-          "${place.name ?? ''}, ${place.subLocality ?? ''}, ${place.locality ?? ''}";
-
-      setState(() {
-        _model.destinationLocationController?.text = address;
-        FFAppState().droplocation = address;
-        FFAppState().dropLatitude = latLng.latitude;
-        FFAppState().dropLongitude = latLng.longitude;
-      });
-    }
-  } catch (e) {
-    debugPrint("Reverse geocode error: $e");
-    setState(() {
+          setState(() {
+            _model.destinationLocationController?.text = address;
+            FFAppState().droplocation = address;
+            FFAppState().dropLatitude = latLng.latitude;
+            FFAppState().dropLongitude = latLng.longitude;
+          });
+        }
+      } catch (e) {
+        debugPrint("Reverse geocode error: $e");
+      }
     });
   }
-}
 
 }

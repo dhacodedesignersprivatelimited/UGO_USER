@@ -1,11 +1,11 @@
 ## =========================
 ## Flutter / Dart
 ## =========================
-#.dart_tool/
-#build/
-#.pub/
-#.pub-cache/
-#.packages
+.dart_tool/
+build/
+.pub/
+.pub-cache/
+.packages
 #
 ## =========================
 ## FlutterFlow
@@ -17,32 +17,34 @@
 ## =========================
 ## Android
 ## =========================
-#android/.gradle/
-#android/local.properties
-#android/key.properties
+android/.gradle/
+android/local.properties
+android/key.properties
+android/*.jks
 #
 ## =========================
 ## iOS
 ## =========================
-#ios/Pods/
-#ios/.symlinks/
-#ios/Flutter/ephemeral/
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
 #
 ## =========================
 ## Web
 ## =========================
-#web/.dart_tool/
-#web/build/
+web/.dart_tool/
+web/build/
 #
 ## =========================
 ## IDE / Editor
 ## =========================
-#.vscode/
-#.idea/
-#*.iml
+.vscode/
+.idea/
+*.iml
 #
 ## =========================
 ## OS files
 ## =========================
-#.DS_Store
-#Thumbs.db
+.DS_Store
+Thumbs.db
+firebase-debug.log

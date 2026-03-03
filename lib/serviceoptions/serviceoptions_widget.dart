@@ -1,3 +1,4 @@
+import '/flutter_flow/flutter_flow_google_map.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
@@ -40,12 +41,8 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
       // which allows us to handle the navigation manually in onPopInvokedWithResult.
       canPop: false,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
-        // If the pop has already happened (didPop is true), we do nothing.
-        if (didPop) {
-          return;
-        }
-        // Navigate to Home instead of exiting the app.
-        context.pushNamed(HomeWidget.routeName);
+        if (didPop) return;
+        context.goNamed(HomeWidget.routeName);
       },
       child: GestureDetector(
         onTap: () {
@@ -74,7 +71,7 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
                   size: 24.0,
                 ),
                 onPressed: () async {
-                  context.pushNamed(HomeWidget.routeName);
+                  context.goNamed(HomeWidget.routeName);
                 },
               ),
             ),
@@ -99,9 +96,37 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
                 final padding = isNarrow ? 20.0 : 28.0;
 
                 return SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(padding, 32, padding, 40),
+                  padding: EdgeInsets.fromLTRB(padding, 0, padding, 40),
                   child: Column(
                     children: [
+                      // 0. Map preview (Uber-style orange roads)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: SizedBox(
+                          height: 180,
+                          width: double.infinity,
+                          child: FlutterFlowGoogleMap(
+                            controller: _model.googleMapsController,
+                            onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
+                            initialLocation: _model.googleMapsCenter ??
+                                const LatLng(17.3850, 78.4867),
+                            markers: const [],
+                            markerColor: GoogleMarkerColor.orange,
+                            mapType: MapType.normal,
+                            style: GoogleMapStyle.uber,
+                            initialZoom: 13.0,
+                            allowInteraction: true,
+                            allowZoom: true,
+                            showZoomControls: false,
+                            showLocation: false,
+                            showCompass: false,
+                            showMapToolbar: false,
+                            showTraffic: false,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: isNarrow ? 24 : 28),
+
                       // 1. Hero Header
                       _buildHeroHeader(isNarrow),
 

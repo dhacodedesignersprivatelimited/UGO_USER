@@ -1,4 +1,5 @@
 import '/flutter_flow/flutter_flow_util.dart';
+import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'trip_summary_model.dart';
@@ -485,7 +486,7 @@ class _TripSummaryWidgetState extends State<TripSummaryWidget> {
                     child: OutlinedButton(
                       onPressed: () {
                         // Navigate to home and clear all previous routes
-                        context.goNamed('Home');
+                        context.goNamed(HomeWidget.routeName);
                       },
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: Colors.grey[300]!, width: 1.5),

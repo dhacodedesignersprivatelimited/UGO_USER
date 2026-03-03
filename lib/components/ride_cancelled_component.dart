@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '/flutter_flow/flutter_flow_theme.dart';
 
 class RideCancelledComponent extends StatelessWidget {
   final VoidCallback onBackToHome;
+  final VoidCallback? onFindNewRide;
+  final bool cancelledByDriver;
 
   const RideCancelledComponent({
     Key? key,
     required this.onBackToHome,
+    this.onFindNewRide,
+    this.cancelledByDriver = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.secondaryBackground,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
@@ -38,7 +44,7 @@ class RideCancelledComponent extends StatelessWidget {
             child: Icon(
               Icons.cancel_outlined,
               size: 60,
-              color: Colors.red,
+              color: theme.error,
             ),
           ),
           SizedBox(height: 24),
@@ -49,44 +55,83 @@ class RideCancelledComponent extends StatelessWidget {
             style: GoogleFonts.inter(
               fontSize: 24,
               fontWeight: FontWeight.w700,
+              color: theme.primaryText,
             ),
           ),
           SizedBox(height: 12),
 
           // Subtitle
           Text(
-            'Your ride has been cancelled successfully',
+            cancelledByDriver
+                ? 'Driver cancelled the ride. You can search for another driver.'
+                : 'Your ride has been cancelled successfully',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.grey[600],
+              color: theme.secondaryText,
             ),
           ),
           SizedBox(height: 32),
 
-          // Back to Home Button
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: onBackToHome,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+          // Find new ride (primary when driver cancels)
+          if (onFindNewRide != null) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: onFindNewRide,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
                 ),
-                elevation: 0,
+                child: Text(
+                  'Find new ride',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: theme.secondaryBackground,
+                  ),
+                ),
               ),
+            ),
+            SizedBox(height: 12),
+            TextButton(
+              onPressed: onBackToHome,
               child: Text(
                 'Back to Home',
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: theme.primary,
                 ),
               ),
             ),
-          ),
+          ] else
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: onBackToHome,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Back to Home',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: theme.secondaryBackground,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

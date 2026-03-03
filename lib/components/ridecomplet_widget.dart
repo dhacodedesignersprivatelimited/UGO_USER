@@ -7,6 +7,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'ridecomplet_model.dart';
 export 'ridecomplet_model.dart';
 
+String? _vehicleFromAdminVehicle(Map<String, dynamic>? d) {
+  if (d == null) return null;
+  final av = d['adminVehicle'];
+  if (av is Map) return av['vehicle_name']?.toString();
+  return null;
+}
+
 class RidecompletWidget extends StatefulWidget {
   const RidecompletWidget({
     super.key,
@@ -21,6 +28,7 @@ class RidecompletWidget extends StatefulWidget {
     this.driverDetails,
     this.rideId,
     this.userId,
+    this.paymentMethod,
   });
 
   final VoidCallback? onNext;
@@ -34,6 +42,7 @@ class RidecompletWidget extends StatefulWidget {
   final Map<String, dynamic>? driverDetails;
   final int? rideId;
   final int? userId;
+  final String? paymentMethod;
 
   @override
   State<RidecompletWidget> createState() => _RidecompletWidgetState();
@@ -69,6 +78,18 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
     super.dispose();
   }
 
+  String _formatPaymentLabel(String? method) {
+    if (method == null || method.isEmpty) return 'Cash';
+    switch (method.toLowerCase()) {
+      case 'wallet':
+        return 'Wallet';
+      case 'online':
+        return 'UPI / Card';
+      default:
+        return 'Cash';
+    }
+  }
+
   Future<void> _submitRating() async {
     if (_rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -95,15 +116,15 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
     });
 
     try {
-      // Safely get driver data
+      // Safely get driver data (handles both wrapped {data: {...}} and flat format)
       final rawDriver = widget.driverDetails ?? RideSession().driverData;
       Map<String, dynamic>? driverData;
 
       if (rawDriver != null) {
         final dataField = rawDriver['data'];
-        if (dataField != null && dataField is Map) {
-          driverData = dataField as Map<String, dynamic>;
-        }
+        driverData = (dataField != null && dataField is Map)
+            ? Map<String, dynamic>.from(dataField as Map)
+            : Map<String, dynamic>.from(rawDriver);
       }
 
       final driverId = driverData?['id'];
@@ -203,9 +224,11 @@ if (isSuccess) {
           if (!mounted) return;
 
 // Clear ride session if needed
+            FFAppState().bookingInProgress = false;
+            FFAppState().currentRideId = null;
             RideSession().clear();
 
-            context.pushNamed(HomeWidget.routeName);
+            context.goNamed(HomeWidget.routeName);
 
         }
       } else {
@@ -267,15 +290,15 @@ if (isSuccess) {
 
   @override
   Widget build(BuildContext context) {
-    // Safely get driver data for display
+    // Safely get driver data (handles both wrapped {data: {...}} and flat format)
     final rawDriver = widget.driverDetails ?? RideSession().driverData;
     Map<String, dynamic>? driverData;
 
     if (rawDriver != null) {
       final dataField = rawDriver['data'];
-      if (dataField != null && dataField is Map) {
-        driverData = dataField as Map<String, dynamic>;
-      }
+      driverData = (dataField != null && dataField is Map)
+          ? Map<String, dynamic>.from(dataField as Map)
+          : Map<String, dynamic>.from(rawDriver);
     }
 
     final driverName = (driverData != null)
@@ -283,8 +306,12 @@ if (isSuccess) {
         .trim()
         : 'Driver';
 
-    final vehicleType = driverData?['vehicle_type'] ?? 'Auto';
-    final driverRating = driverData?['rating']?.toString() ?? '4.9';
+    final vehicleType = driverData?['vehicle_type'] ??
+        _vehicleFromAdminVehicle(driverData) ??
+        'Auto';
+    final driverRating = driverData?['driver_rating']?.toString() ??
+        driverData?['rating']?.toString() ??
+        '4.9';
 
     return Container(
       // backgroundColor: Colors.white,
@@ -545,7 +572,8 @@ if (isSuccess) {
                             const SizedBox(height: 12),
                             Divider(color: Color(0xFFE0E0E0), thickness: 1),
                             const SizedBox(height: 12),
-                            _buildFareRow('Payment Method', 'Cash',
+                            _buildFareRow('Payment Method',
+                              _formatPaymentLabel(widget.paymentMethod ?? appState.selectedPaymentMethod ?? 'cash'),
                                 isLast: true),
                           ],
                         ),

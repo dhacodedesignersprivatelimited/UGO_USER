@@ -32,6 +32,7 @@ class _HomeWidgetState extends State<HomeWidget>
   // State Flags
   bool isScanning = false;
   bool _isCheckingRideStatus = false;
+  DateTime? _lastBackPress;
 
   // Performance Optimization: Notifier for Notification Count
   final ValueNotifier<int> _unreadCountNotifier = ValueNotifier<int>(0);
@@ -345,7 +346,26 @@ class _HomeWidgetState extends State<HomeWidget>
     final isSmallScreen = screenWidth < 360;
     final horizontalPadding = screenWidth * 0.05;
 
-    return GestureDetector(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final now = DateTime.now();
+        if (_lastBackPress != null &&
+            now.difference(_lastBackPress!) < const Duration(seconds: 2)) {
+          SystemNavigator.pop();
+        } else {
+          _lastBackPress = now;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Press back again to exit'),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+      child: GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         key: scaffoldKey,
@@ -500,18 +520,32 @@ class _HomeWidgetState extends State<HomeWidget>
                         _buildRideTypeCard(
                           context,
                           image: 'assets/images/bike.png',
-                          comingSoonMessage: 'Bike rides coming soon',
-                        ),
-                        _buildRideTypeCard(
-                          context,
-                          image: 'assets/images/car.png',
-                          comingSoonMessage: 'Car rides coming soon',
+                          label: 'Bike',
+                          onTap: () {
+                            FFAppState().selectedRideCategory = 'bike';
+                            context.pushNamed(PlanYourRideWidget.routeName);
+                          },
+                          isSmallScreen: isSmallScreen,
                         ),
                         _buildRideTypeCard(
                           context,
                           image: 'assets/images/auto.png',
-                          comingSoonMessage:
-                          'Auto ride available. Use "Where to go?"',
+                          label: 'Auto',
+                          onTap: () {
+                            FFAppState().selectedRideCategory = 'auto';
+                            context.pushNamed(PlanYourRideWidget.routeName);
+                          },
+                          isSmallScreen: isSmallScreen,
+                        ),
+                        _buildRideTypeCard(
+                          context,
+                          image: 'assets/images/car.png',
+                          label: 'Car',
+                          onTap: () {
+                            FFAppState().selectedRideCategory = 'car';
+                            context.pushNamed(PlanYourRideWidget.routeName);
+                          },
+                          isSmallScreen: isSmallScreen,
                         ),
                       ],
                     ),
@@ -524,11 +558,17 @@ class _HomeWidgetState extends State<HomeWidget>
           ],
         ),
       ),
+    ),
     );
   }
 
-  Widget _buildRideTypeCard(BuildContext context,
-      {required String image, required String comingSoonMessage}) {
+  Widget _buildRideTypeCard(
+    BuildContext context, {
+    required String image,
+    required String label,
+    required VoidCallback onTap,
+    required bool isSmallScreen,
+  }) {
     return Expanded(
       child: TweenAnimationBuilder<double>(
         tween: Tween(begin: 0.0, end: -4.0),
@@ -540,52 +580,57 @@ class _HomeWidgetState extends State<HomeWidget>
             child: child,
           );
         },
-        child: InkWell(
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(18),
+            splashColor: primaryOrange.withValues(alpha: 0.15),
+            highlightColor: primaryOrange.withValues(alpha: 0.08),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              height: isSmallScreen ? 90 : 100,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.info_outline, color: Colors.white),
-                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        comingSoonMessage,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
+                      child: Image.asset(
+                        image,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.directions_car_rounded,
+                          color: primaryOrange,
+                          size: isSmallScreen ? 28 : 32,
                         ),
                       ),
                     ),
+                    SizedBox(height: isSmallScreen ? 4 : 6),
+                    Text(
+                      label,
+                      style: GoogleFonts.poppins(
+                        fontSize: isSmallScreen ? 12 : 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   ],
                 ),
-                backgroundColor: primaryOrange,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                duration: const Duration(seconds: 2),
               ),
-            );
-          },
-          borderRadius: BorderRadius.circular(18),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 6),
-            height: 90,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha:0.12),
-                  blurRadius: 14,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Image.asset(image, fit: BoxFit.contain),
             ),
           ),
         ),
@@ -595,7 +640,10 @@ class _HomeWidgetState extends State<HomeWidget>
 
   Widget _buildSearchBar(BuildContext context, bool isSmallScreen) {
     return InkWell(
-      onTap: () => context.pushNamed(PlanYourRideWidget.routeName),
+      onTap: () {
+        FFAppState().selectedRideCategory = null;
+        context.pushNamed(PlanYourRideWidget.routeName);
+      },
       borderRadius: BorderRadius.circular(30),
       child: Container(
         width: double.infinity,
@@ -767,7 +815,10 @@ class _HomeWidgetState extends State<HomeWidget>
 
   Widget _buildPromoBanner(BuildContext context, double screenWidth) {
     return InkWell(
-      onTap: () {},
+      onTap: () {
+        FFAppState().selectedRideCategory = 'auto';
+        context.pushNamed(PlanYourRideWidget.routeName);
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         width: double.infinity,

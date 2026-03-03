@@ -297,7 +297,7 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                             initialLocation: _model.googleMapsCenter ?? currentUserLocationValue!,
                             markerColor: GoogleMarkerColor.orange,
                             mapType: MapType.normal,
-                            style: GoogleMapStyle.standard,
+                            style: GoogleMapStyle.uber,
                             initialZoom: 14.0,
                             allowInteraction: true,
                             allowZoom: true,

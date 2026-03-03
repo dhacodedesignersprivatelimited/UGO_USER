@@ -1,8 +1,10 @@
+import '/backend/api_requests/api_calls.dart';
 import '/components/ridecomplet_widget.dart';
 import '/components/trip_summary_widget.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/index.dart';
 import '/review/review_widget.dart';
 import '/ride_session.dart';
 import 'package:flutter/material.dart';
@@ -11,10 +13,11 @@ import 'ridecomplete_model.dart';
 export 'ridecomplete_model.dart';
 
 class RidecompleteWidget extends StatefulWidget {
-  const RidecompleteWidget({super.key, this.driverDetails});
+  const RidecompleteWidget({super.key, this.rideId, this.driverDetails});
 
   static String routeName = 'ridecomplete';
   static String routePath = '/ridecomplete';
+  final int? rideId;
   final Map<String, dynamic>? driverDetails;
 
   @override
@@ -31,8 +34,36 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
     super.initState();
     print('DEBUG: [RidecompleteWidget] initState called');
     _model = createModel(context, () => RidecompleteModel());
-    // Optionally clear session after use
-    // RideSession().clear();
+    _fetchDriverIfMissing();
+  }
+
+  Future<void> _fetchDriverIfMissing() async {
+    if (RideSession().driverData != null) return;
+    final rawRide = RideSession().rideData ?? {};
+    final rideData = rawRide['data'] is Map
+        ? rawRide['data'] as Map
+        : rawRide;
+    final driverId = rideData['driver_id'];
+    if (driverId == null) return;
+    try {
+      final res = await GetDriverDetailsCall.call(
+        driverId: driverId,
+        token: FFAppState().accessToken,
+      );
+      if (res.succeeded && mounted) {
+        RideSession().driverData = res.jsonBody;
+        setState(() {});
+      }
+    } catch (e) {
+      print('Ridecomplete: fetch driver failed: $e');
+    }
+  }
+
+  static String? _vehicleFromAdminVehicle(Map<String, dynamic>? d) {
+    if (d == null) return null;
+    final av = d['adminVehicle'];
+    if (av is Map) return av['vehicle_name']?.toString();
+    return null;
   }
 
   @override
@@ -44,30 +75,51 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final rideData = RideSession().rideData ?? {};
-    final driverData = RideSession().driverData;
+    // Unwrap ride data (API may return {data: {...}})
+    final rawRide = RideSession().rideData ?? {};
+    final rideData = rawRide['data'] is Map
+        ? Map<String, dynamic>.from(rawRide['data'] as Map)
+        : Map<String, dynamic>.from(rawRide);
 
-    print('DEBUG: Ridecomplete.driverData => $driverData');
-    print('🟢 Driver in RideComplete: ${RideSession().driverData}');
+    // Unwrap driver data (GetDriverDetailsCall returns {success, data: {...}})
+    final rawDriver = RideSession().driverData;
+    final driverData = rawDriver != null && rawDriver['data'] is Map
+        ? Map<String, dynamic>.from(rawDriver['data'] as Map)
+        : rawDriver != null
+            ? Map<String, dynamic>.from(rawDriver)
+            : null;
 
-    // ✅ Extract driver information with fallbacks
+    final rideIdRaw = widget.rideId ?? FFAppState().currentRideId ??
+        rideData['id'] ?? rideData['ride_id'];
+    final rideId = rideIdRaw is int
+        ? rideIdRaw
+        : (rideIdRaw != null ? int.tryParse(rideIdRaw.toString()) : null);
+
+    // Extract driver information with fallbacks
     final driverName = driverData != null
-        ? (driverData['name'] ??
-            driverData['first_name'] ??
-            driverData['driver_name'] ??
-            'Driver not assigned')
+        ? ('${driverData['first_name'] ?? ''} ${driverData['last_name'] ?? ''}'
+                .trim()
+                .isNotEmpty
+            ? '${driverData['first_name'] ?? ''} ${driverData['last_name'] ?? ''}'
+                .trim()
+            : (driverData['name'] ??
+                driverData['driver_name'] ??
+                'Driver not assigned'))
         : 'Driver not assigned';
 
     final vehicleNumber = driverData != null
         ? (driverData['vehicle_number'] ??
             driverData['vehicleNumber'] ??
             driverData['vehicle_no'] ??
+            _vehicleFromAdminVehicle(driverData) ??
             'N/A')
         : 'N/A';
 
     final fare = rideData['estimated_fare'] != null
         ? '₹${rideData['estimated_fare']}'
-        : null;
+        : rideData['fare'] != null
+            ? '₹${rideData['fare']}'
+            : null;
 
     print('🚗 Passing to RidecompletWidget:');
     print('   - driverName: $driverName');
@@ -126,13 +178,19 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
               if (_model.currentStep == 0)
                 Expanded(
                   child: RidecompletWidget(
-                    // Trip location data
-                    pickupLocation: rideData['pickup_location_address'],
-                    dropoffLocation: rideData['drop_location_address'],
-                    distance: rideData['ride_distance_km']?.toString(),
+                    rideId: rideId,
+                    userId: FFAppState().userid,
+                    paymentMethod: (rideData['payment_method'] ??
+                            rideData['payment_type'] ??
+                            FFAppState().selectedPaymentMethod)
+                        ?.toString(),
+                    pickupLocation: rideData['pickup_location_address'] ??
+                        rideData['pickup_address'],
+                    dropoffLocation: rideData['drop_location_address'] ??
+                        rideData['drop_address'],
+                    distance: rideData['ride_distance_km']?.toString() ??
+                        rideData['distance']?.toString(),
                     duration: rideData['duration']?.toString(),
-                    
-                    // ✅ FIXED: Pass driver details to child component
                     driverName: driverName,
                     vehicleNumber: vehicleNumber,
                     fare: fare,

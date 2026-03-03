@@ -35,6 +35,7 @@ class _PaymentOptionsWidgetState extends State<PaymentOptionsWidget> {
 
   void _selectPaymentMethod(String method) {
     // Return selected method to previous screen
+    FFAppState().selectedPaymentMethod = method.toLowerCase();
     context.pop(method);
   }
 

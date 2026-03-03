@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../core/app_config.dart';
+import '../flutter_flow/flutter_flow_theme.dart';
 import '../flutter_flow/flutter_flow_util.dart';
 import '/backend/api_requests/api_calls.dart';
 import 'dart:math';
@@ -13,6 +15,7 @@ class DriverDetailsComponent extends StatelessWidget {
   final VoidCallback onCancel;
   final String rideStatus;
   final double? currentRemainingDistance; // ✅ Real-time distance from parent
+  final String? liveEtaText; // ✅ Uber-style: Google Directions ETA (e.g. "5 mins")
 
   static const Color primaryColor = Color(0xFFFF7B10);
 
@@ -26,6 +29,7 @@ class DriverDetailsComponent extends StatelessWidget {
     required this.onCancel,
     required this.rideStatus,
     this.currentRemainingDistance,
+    this.liveEtaText,
   }) : super(key: key);
 
   // --- Utility Functions ---
@@ -52,6 +56,7 @@ class DriverDetailsComponent extends StatelessWidget {
   // --- Main Build ---
   @override
   Widget build(BuildContext context) {
+    final flowTheme = FlutterFlowTheme.of(context);
     // Normalization: Ensure we check against lowercase standard statuses
     final status = rideStatus.toLowerCase().trim();
 
@@ -63,30 +68,37 @@ class DriverDetailsComponent extends StatelessWidget {
     if (isLoading || driverDetails == null) {
       return Container(
         height: 400,
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: flowTheme.secondaryBackground,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: const Center(child: CircularProgressIndicator(color: primaryColor)),
       );
     }
 
-    // Extract Data
+    // Extract Data (API: GET /api/drivers/:id returns {success, data: {...}})
     final driverName = GetDriverDetailsCall.name(driverDetails) ?? 'Captain';
     final driverRating = GetDriverDetailsCall.rating(driverDetails) ?? '4.8';
     final vehicleNumber = GetDriverDetailsCall.vehicleNumber(driverDetails) ?? 'AP28TA1234';
     final driverPhone = DriverIdfetchCall.mobileNumber(driverDetails);
+    final driverImage = GetDriverDetailsCall.profileImage(driverDetails);
 
     final pickupLat = FFAppState().pickupLatitude;
     final pickupLng = FFAppState().pickupLongitude;
 
-    String? driverImage;
-    try {
-      driverImage = driverDetails?['profile_photo'] ??
-          driverDetails?['profile_image'] ??
-          driverDetails?['photo'] ??
-          driverDetails?['image'];
-    } catch (_) {}
+    // Fallback for nested/ride-embedded driver (profile_image in data)
+    String? resolvedImage = driverImage;
+    if (resolvedImage == null) {
+      try {
+        final d = driverDetails?['data'] ?? driverDetails;
+        if (d is Map) {
+          resolvedImage = (d['profile_photo'] ?? d['profile_image'] ?? d['photo'] ?? d['image'])?.toString();
+          if (resolvedImage != null && !resolvedImage.startsWith('http')) {
+            resolvedImage = '${AppConfig.baseApiUrl}/$resolvedImage';
+          }
+        }
+      } catch (_) {}
+    }
 
     // ✅ OTP Logic: Only show if accepted or arriving. HIDE if ride already started.
     List<String> otpDigits = [];
@@ -146,7 +158,7 @@ class DriverDetailsComponent extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: flowTheme.alternate,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -160,7 +172,7 @@ class DriverDetailsComponent extends StatelessWidget {
               text: 'Driver is on the way',
               color: Colors.blue,
             ),
-            if (arrivingDistance != null && arrivingEta != null) ...[
+            if (liveEtaText != null || (arrivingDistance != null && arrivingEta != null)) ...[
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -169,20 +181,22 @@ class DriverDetailsComponent extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.blue.withValues(alpha:0.3)),
                 ),
-                child: Row( // Changed to Row for cleaner look
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    if (arrivingDistance != null)
+                      Text(
+                        '${arrivingDistance.toStringAsFixed(1)} km away',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.blue),
+                      ),
+                    if (arrivingDistance != null && (liveEtaText != null || arrivingEta != null))
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        height: 12, width: 1, color: Colors.blue,
+                      ),
                     Text(
-                      '${arrivingDistance.toStringAsFixed(1)} km away',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.blue),
-                    ),
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      height: 12, width: 1, color: Colors.blue,
-                    ),
-                    Text(
-                      '~ $arrivingEta min',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w500, color: Colors.blue[700]),
+                      liveEtaText != null ? 'Driver is $liveEtaText away' : '~ $arrivingEta min',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.blue[700]),
                     ),
                   ],
                 ),
@@ -210,9 +224,9 @@ class DriverDetailsComponent extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: flowTheme.alternate.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey[200]!),
+              border: Border.all(color: flowTheme.alternate),
             ),
             child: Column(
               children: [
@@ -221,9 +235,9 @@ class DriverDetailsComponent extends StatelessWidget {
                     // Avatar
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: driverImage != null && driverImage.isNotEmpty
+                      child: resolvedImage != null && resolvedImage.isNotEmpty
                           ? Image.network(
-                        driverImage,
+                        resolvedImage,
                         width: 60, height: 60,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => _buildPlaceholderAvatar(),
@@ -317,7 +331,7 @@ class DriverDetailsComponent extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: flowTheme.alternate.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Column(

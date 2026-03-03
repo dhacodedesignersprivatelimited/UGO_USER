@@ -1,5 +1,6 @@
-import '/backend/api_requests/api_calls.dart'; // ✅ Your fixed CancelRide API
+import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
+import '/index.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -113,11 +114,9 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
             ),
           );
 
-          // Pop twice to go back to home
           Future.delayed(Duration(milliseconds: 1500), () {
             if (mounted) {
-              context.pop(); // Cancel screen
-              context.pop(); // AutoBook screen
+              context.goNamed(HomeWidget.routeName);
             }
           });
         } else {

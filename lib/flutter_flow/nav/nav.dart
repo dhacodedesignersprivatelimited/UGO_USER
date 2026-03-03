@@ -431,6 +431,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       builder: (context, params) => RideOverviewWidget(),
     ),
     FFRoute(
+      name: ReceiptWidget.routeName,
+      path: ReceiptWidget.routePath,
+      requireAuth: true,
+      builder: (context, params) => ReceiptWidget(),
+    ),
+    FFRoute(
       name: FindLostItemsWidget.routeName,
       path: FindLostItemsWidget.routePath,
       requireAuth: true,
@@ -489,6 +495,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       path: RidecompleteWidget.routePath,
       requireAuth: true,
       builder: (context, params) => RidecompleteWidget(
+        rideId: params.getParam('rideId', ParamType.int),
         driverDetails: params.getParam('driverDetails', ParamType.JSON),
       ),
     ),

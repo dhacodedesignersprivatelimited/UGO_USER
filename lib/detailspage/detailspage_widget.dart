@@ -156,13 +156,40 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
 
         // 6. Navigate to Home
         print('🚀 Navigating to Home...');
-        context.goNamedAuth('Home', mounted);
+        context.goNamedAuth('home', mounted);
       } else {
-        final errorMsg = getJsonField(
+        final errorMsg = (getJsonField(
+                    _model.apiResultRegister?.jsonBody, r'''$.message''') ??
+                'Registration failed')
+            .toString()
+            .toLowerCase();
+
+        // Handle "Mobile number already exists" - user is registered, try login
+        if (errorMsg.contains('already exists') ||
+            errorMsg.contains('mobile number already exists')) {
+          final loginRes = await LoginCall.call(
+            mobile: widget.mobile,
+            fcmToken: _currentFcmToken ?? '',
+          );
+          if (!mounted) return;
+          if (loginRes.succeeded) {
+            final token = LoginCall.accesToken(loginRes.jsonBody);
+            final userId = LoginCall.userid(loginRes.jsonBody);
+            if (token != null) FFAppState().accessToken = token;
+            if (userId != null) FFAppState().userid = userId;
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Welcome back! You\'re logged in.'),
+                backgroundColor: Colors.green));
+            context.goNamedAuth('home', mounted);
+            return;
+          }
+        }
+
+        final displayMsg = getJsonField(
                 _model.apiResultRegister?.jsonBody, r'''$.message''') ??
             'Registration failed';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(errorMsg.toString()), backgroundColor: Colors.red));
+            content: Text(displayMsg.toString()), backgroundColor: Colors.red));
       }
     } catch (e) {
       if (mounted) {

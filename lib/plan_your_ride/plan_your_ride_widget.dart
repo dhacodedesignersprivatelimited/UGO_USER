@@ -1,3 +1,5 @@
+import '/backend/api_requests/api_calls.dart';
+import '/flutter_flow/flutter_flow_google_map.dart' show GoogleMapStyle, googleMapStyleStrings;
 import '/flutter_flow/flutter_flow_util.dart' hide LatLng;
 import '/index.dart';
 import 'package:flutter/material.dart';
@@ -5,11 +7,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 import 'plan_your_ride_model.dart';
 export 'plan_your_ride_model.dart';
-
-// NOTE: Ideally, move this to a secure config or AppState
-const String GOOGLE_MAPS_API_KEY = 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y';
 
 enum LocationSelection {
   pickup,
@@ -45,20 +45,24 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   bool showPickupDropdown = false;
   bool showDropDropdown = false;
   bool isSearching = false;
+  Timer? _searchDebounce;
 
-  // Default Location (Hyderabad)
-  static final LatLng hyderabadCenter = LatLng(17.3850, 78.4867);
-  LatLng currentLocation = hyderabadCenter;
+  // Default Location (from AppConfig)
+  LatLng get _defaultCenter =>
+      LatLng(AppConfig.defaultLat, AppConfig.defaultLng);
+  late LatLng currentLocation;
 
   @override
   void initState() {
     super.initState();
+    currentLocation = _defaultCenter;
     _model = createModel(context, () => PlanYourRideModel());
     _initializeLocation();
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     mapController?.dispose();
     _model.dispose();
     super.dispose();
@@ -103,8 +107,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       debugPrint('Location error: $e');
       if (mounted) {
         setState(() {
-          pickupLocation = hyderabadCenter;
-          _addPickupMarker(hyderabadCenter);
+          pickupLocation = _defaultCenter;
+          _addPickupMarker(_defaultCenter);
         });
       }
     }
@@ -189,7 +193,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
 
   Future<void> _reverseGeocode(LatLng location, bool isPickup) async {
     try {
-      final url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.latitude},${location.longitude}&key=$GOOGLE_MAPS_API_KEY';
+      final url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.latitude},${location.longitude}&key=${AppConfig.googleMapsApiKey}';
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -219,6 +223,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   }
 
   Future<void> _searchPlaces(String input, bool isPickup) async {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
     if (input.isEmpty) {
       setState(() {
         if (isPickup) {
@@ -236,7 +242,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     setState(() => isSearching = true);
 
     try {
-      final url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=$GOOGLE_MAPS_API_KEY&components=country:in&radius=50000';
+      final url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=${AppConfig.googleMapsApiKey}&components=country:in&radius=50000';
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -270,11 +276,12 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     } catch (e) {
       if (mounted) setState(() => isSearching = false);
     }
+    });
   }
 
   Future<void> _selectPlace(PlacePrediction prediction, bool isPickup) async {
     try {
-      final url = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.placeId}&key=$GOOGLE_MAPS_API_KEY';
+      final url = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.placeId}&key=${AppConfig.googleMapsApiKey}';
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -351,6 +358,77 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     });
   }
 
+  Future<void> _setSavedLocationByLabel(String label) async {
+    try {
+      final res = await GetSavedAddressesCall.call(
+        userId: FFAppState().userid,
+        token: FFAppState().accessToken,
+      );
+      if (!res.succeeded || !mounted) return;
+
+      final data = getJsonField(res.jsonBody, r'$.data');
+      final list = data is List ? data : <dynamic>[];
+
+      Map<String, dynamic>? match;
+      final search = label.toLowerCase();
+      for (final a in list) {
+        final l = (a['address_label'] ?? '').toString().toLowerCase();
+        if (l.contains(search)) {
+          match = a is Map<String, dynamic> ? a : Map<String, dynamic>.from(a);
+          break;
+        }
+      }
+
+      if (match == null) {
+        _showSnackBar('No saved $label location. Add it in Saved Places.');
+        return;
+      }
+
+      final lat = (match['latitude'] is num)
+          ? (match['latitude'] as num).toDouble()
+          : double.tryParse(match['latitude']?.toString() ?? '');
+      final lng = (match['longitude'] is num)
+          ? (match['longitude'] as num).toDouble()
+          : double.tryParse(match['longitude']?.toString() ?? '');
+      final address = match['address_text']?.toString() ?? '';
+
+      if (lat == null || lng == null) {
+        _showSnackBar('Invalid $label location saved.');
+        return;
+      }
+
+      final location = LatLng(lat, lng);
+
+      if (mounted) {
+        setState(() {
+          if (activeSelection == LocationSelection.pickup) {
+            _model.pickupController.text = address;
+            pickupPredictions = [];
+            showPickupDropdown = false;
+            _addPickupMarker(location);
+            FFAppState().pickuplocation = address;
+            FFAppState().pickupLatitude = lat;
+            FFAppState().pickupLongitude = lng;
+          } else {
+            _model.dropController.text = address;
+            dropPredictions = [];
+            showDropDropdown = false;
+            _addDropMarker(location);
+            FFAppState().droplocation = address;
+            FFAppState().dropLatitude = lat;
+            FFAppState().dropLongitude = lng;
+          }
+        });
+        mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(location, 15),
+        );
+        _showSnackBar('$label location set');
+      }
+    } catch (e) {
+      _showSnackBar('Could not load $label location', isError: true);
+    }
+  }
+
   void _setAirportAsPickup() {
     final airportLocation = const LatLng(17.2403, 78.4294);
     setState(() {
@@ -408,6 +486,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       body: Stack(
         children: [
           GoogleMap(
+            style: googleMapStyleStrings[GoogleMapStyle.uber],
             onMapCreated: (controller) => mapController = controller,
             onTap: (position) {
               if (activeSelection == LocationSelection.pickup) {

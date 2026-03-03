@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '/flutter_flow/flutter_flow_theme.dart';
 
 class SearchingRideComponent extends StatefulWidget {
   final int searchSeconds;
@@ -43,10 +44,11 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
 
   @override
   Widget build(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.secondaryBackground,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
@@ -97,6 +99,7 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
               fontSize: 22,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.5,
+              color: theme.primaryText,
             ),
           ),
           const SizedBox(height: 8),
@@ -106,7 +109,7 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
             'Searching for nearby drivers...',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.grey[600],
+              color: theme.secondaryText,
             ),
           ),
           const SizedBox(height: 8),
@@ -151,7 +154,7 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
             child: OutlinedButton(
               onPressed: widget.onCancel,
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: Colors.grey[300]!),
+                side: BorderSide(color: theme.alternate),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -161,7 +164,7 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                  color: theme.primaryText,
                 ),
               ),
             ),

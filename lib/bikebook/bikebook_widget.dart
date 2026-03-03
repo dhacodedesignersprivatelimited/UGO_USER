@@ -93,7 +93,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                       LatLng(13.106061, -59.613158),
                   markerColor: GoogleMarkerColor.violet,
                   mapType: MapType.normal,
-                  style: GoogleMapStyle.standard,
+                  style: GoogleMapStyle.uber,
                   initialZoom: 14.0,
                   allowInteraction: true,
                   allowZoom: true,

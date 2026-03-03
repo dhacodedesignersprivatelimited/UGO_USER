@@ -146,7 +146,7 @@ Future<void> _createRide() async {
       estimatedFare: totalAmount.toStringAsFixed(2),
       rideStatus: 'qr_scan', // IMPORTANT
       driverId: widget.driverId,
-      paymentType: "cash", // Assuming cash for now; adjust as needed
+      paymentType: FFAppState().selectedPaymentMethod, // cash | wallet | online
     );
 
     print('🟢 CreateRide response: ${response.jsonBody}');
@@ -161,7 +161,8 @@ Future<void> _createRide() async {
 
         // ✅ SAVE RIDE ID PROPERLY
         _rideId = rideId;
-        // FFAppState().currentRideId = rideId;
+        FFAppState().currentRideId = rideId;
+        FFAppState().bookingInProgress = true;
 
         print('✅ Ride created successfully');
         print('🆔 rideId = $_rideId');
@@ -313,94 +314,6 @@ Future<void> _createRide() async {
     return baseFare + (extraKm * pricePerKm);
   }
 
-  // --- 2. Confirm Booking (Direct Start) ---
-
-  // Future<void> _confirmBooking() async {
-  //   if (isLoadingRide) return;
-
-  //   final appState = FFAppState();
-
-  //   // Safety check for location before API call
-  //   if (appState.pickupLatitude == null || appState.dropLatitude == null) {
-  //     _showError("Locations not set. Please restart booking.");
-  //     return;
-  //   }
-
-  //   setState(() => isLoadingRide = true);
-
-  //   try {
-  //     print('🚀 Starting Ride Directly (No OTP)...');
-
-      // Call Create Ride API with status 'started'
-      // final createRideRes = await CreateRideCall.call(
-      //   token: appState.accessToken,
-      //   userId: appState.userid,
-      //   pickupLocationAddress: appState.pickuplocation.isNotEmpty
-      //       ? appState.pickuplocation
-      //       : "Current Location", // Fallback name
-      //   dropLocationAddress: appState.droplocation.isNotEmpty
-      //       ? appState.droplocation
-      //       : "Drop Location",   // Fallback name
-      //   pickupLatitude: appState.pickupLatitude!,
-      //   pickupLongitude: appState.pickupLongitude!,
-      //   dropLatitude: appState.dropLatitude!,
-      //   dropLongitude: appState.dropLongitude!,
-      //   adminVehicleId: widget.vehicleType,
-      //   estimatedFare: totalAmount.toStringAsFixed(2),
-      //   rideStatus: 'started', // <--- KEY: Bypass OTP/Pending state
-      //   driverId: widget.driverId,
-      // );
-
-      // if (createRideRes.succeeded) {
-      //   // Extract Ride ID safely
-      //   final rideId = CreateRideCall.rideId(createRideRes.jsonBody)?.toString() ??
-      //       getJsonField(createRideRes.jsonBody, r'''$.data.id''')?.toString();
-
-        // if (rideId != null) {
-        //   appState.currentRideId = int.parse(rideId);
-        //   appState.bookingInProgress = true; // Mark session active
-        //   print('✅ Ride Started Successfully. ID: $rideId');
-
-        //   // Navigate to Active Ride Screen
-        //   if (mounted) {
-        //     await context.pushNamed(
-        //       AutoBookWidget.routeName,
-        //       queryParameters: {
-        //         'rideId': rideId,
-        //         // Add these if AutoBookWidget needs them to initialize UI faster
-        //         'status': 'started',
-        //       },
-        //     );
-        //   }
-        // } else {
-        //   _showError("Ride created but ID missing.");
-        // }
-      // } else {
-      //   final errorMsg = CreateRideCall.getResponseMessage(createRideRes.jsonBody) ??
-      //       'Failed to start ride.';
-      //   _showError(errorMsg);
-      // }
-//       onPressed: () async {
-//   final response = await UpdateRideStatusCall.call(
-//     rideId: FFAppState().currentRideId,
-//     status: 'started',
-//     token: FFAppState().accessToken,
-//   );
-
-//   if (UpdateRideStatusCall.success(response.jsonBody) == true) {
-//     FFAppState().currentRideStatus = 'started';
-//     print('🚀 Ride started');
-//   }
-// }
-
-//     } catch (e) {
-//       print('❌ Booking Exception: $e');
-//       _showError('Connection error. Please try again.');
-//     } finally {
-//       if (mounted) setState(() => isLoadingRide = false);
-//     }
-//   }
-
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -417,6 +330,10 @@ Future<void> _createRide() async {
   setState(() => isLoadingRide = true);
 
   try {
+    if (_rideId == null) {
+      _showError('Ride not created yet. Please try again.');
+      return;
+    }
     print('🚀 START RIDE pressed');
 
     final response = await UpdateRideStatusCall.call(

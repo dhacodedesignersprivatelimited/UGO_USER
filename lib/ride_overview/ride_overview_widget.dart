@@ -140,7 +140,7 @@ class _RideOverviewWidgetState extends State<RideOverviewWidget> {
                         ),
                         FFButtonWidget(
                           onPressed: () {
-                            print('Button pressed ...');
+                            context.pushNamed(SupportRideWidget.routeName);
                           },
                           text: FFLocalizations.of(context).getText(
                             'y2ttgl8h' /* Get help */,
@@ -204,7 +204,7 @@ class _RideOverviewWidgetState extends State<RideOverviewWidget> {
                         LatLng(13.106061, -59.613158),
                     markerColor: GoogleMarkerColor.violet,
                     mapType: MapType.normal,
-                    style: GoogleMapStyle.standard,
+                    style: GoogleMapStyle.uber,
                     initialZoom: 14.0,
                     allowInteraction: true,
                     allowZoom: true,
@@ -345,7 +345,7 @@ RAJENDRA ... */
                       children: [
                         FFButtonWidget(
                           onPressed: () {
-                            print('Button pressed ...');
+                            context.pushNamed(ReceiptWidget.routeName);
                           },
                           text: FFLocalizations.of(context).getText(
                             't13nqnia' /* Receipt */,
@@ -389,7 +389,7 @@ RAJENDRA ... */
                         ),
                         FFButtonWidget(
                           onPressed: () {
-                            print('Button pressed ...');
+                            context.pushNamed(ReceiptWidget.routeName);
                           },
                           text: FFLocalizations.of(context).getText(
                             '858a9u1g' /* Invoice */,

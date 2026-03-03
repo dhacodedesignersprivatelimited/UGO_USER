@@ -57,6 +57,10 @@ class FFAppState extends ChangeNotifier {
     _safeInit(() {
       _currentRideId = prefs.getInt('ff_currentRideId');
     });
+    _safeInit(() {
+      _selectedPaymentMethod =
+          prefs.getString('ff_selectedPaymentMethod') ?? _selectedPaymentMethod;
+    });
     // ✅ Initialize Wallet Balance
     _safeInit(() {
       _walletBalance = prefs.getDouble('ff_walletBalance') ?? _walletBalance;
@@ -163,6 +167,14 @@ class FFAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Ride category for home cards: 'bike', 'car', 'auto' (null = show all)
+  String? _selectedRideCategory;
+  String? get selectedRideCategory => _selectedRideCategory;
+  set selectedRideCategory(String? value) {
+    _selectedRideCategory = value;
+    notifyListeners();
+  }
+
   // User Authentication
   String _accessToken = '';
   String get accessToken => _accessToken;
@@ -208,6 +220,14 @@ class FFAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  String _selectedPaymentMethod = 'cash';
+  String get selectedPaymentMethod => _selectedPaymentMethod;
+  set selectedPaymentMethod(String value) {
+    _selectedPaymentMethod = value;
+    prefs.setString('ff_selectedPaymentMethod', value);
+    notifyListeners();
+  }
+
   // ✅ ADDED: Wallet Balance
   double _walletBalance = 0.0;
   double get walletBalance => _walletBalance;
@@ -229,6 +249,7 @@ class FFAppState extends ChangeNotifier {
     _dropLatitude = null;
     _dropLongitude = null;
     _vehicleselect = '';
+    _selectedRideCategory = null;
     _selectedlocation = false;
     _appliedCouponCode = '';
     _discountAmount = 0.0;
@@ -236,6 +257,8 @@ class FFAppState extends ChangeNotifier {
     _selectedPricePerKm = 0.0;
     prefs.remove('ff_selectedBaseFare');
     prefs.remove('ff_selectedPricePerKm');
+    _selectedPaymentMethod = 'cash';
+    prefs.remove('ff_selectedPaymentMethod');
     _currentRideId = null;
     prefs.remove('ff_currentRideId');
     notifyListeners();

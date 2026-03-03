@@ -1,3 +1,6 @@
+// Export core singletons
+export '/core/app_config.dart' show AppConfig;
+
 // Export pages
 export '/ug_intro/ug_intro_widget.dart' show UgIntroWidget;
 export '/login/login_widget.dart' show LoginWidget;
@@ -58,6 +61,7 @@ export '/wallet_password/wallet_password_widget.dart' show WalletPasswordWidget;
 export '/add_cards/add_cards_widget.dart' show AddCardsWidget;
 export '/driver_details/driver_details_widget.dart' show DriverDetailsWidget;
 export '/messages/messages_widget.dart' show MessagesWidget;
+export '/receipt/receipt_widget.dart' show ReceiptWidget;
 export '/language/language_widget.dart' show LanguageWidget;
 export '/account_support/account_support_widget.dart' show AccountSupportWidget;
 export '/support_ride/support_ride_widget.dart' show SupportRideWidget;

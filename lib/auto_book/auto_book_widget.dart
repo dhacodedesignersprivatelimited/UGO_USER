@@ -57,6 +57,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   // State Flags
   bool isLoadingDriver = false;
   bool _isCancelling = false;
+  bool _userInitiatedCancel = false;
+  bool _cancelledByDriver = false;
   String? _rideOtp;
 
   // UI Status
@@ -282,8 +284,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         // 3. Status State Machine
         if (status == 'cancelled') {
           _rideStatus = STATUS_CANCELLED;
+          _cancelledByDriver = !_userInitiatedCancel;
           _searchTimer?.cancel();
           _stopDistanceUpdateTimer();
+          socket?.off("ride_updated");
+          FFAppState().bookingInProgress = false;
+          FFAppState().currentRideId = null;
+          RideSession().clear();
         } else if (['accepted', 'driver_assigned'].contains(status)) {
           if (_rideStatus == STATUS_SEARCHING) {
             _rideStatus = STATUS_ACCEPTED;
@@ -414,6 +421,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     socket?.off("ride_updated");
 
     RideSession().rideData = rideData;
+    FFAppState().currentRideId = widget.rideId;
 
     // Ensure we have driver data before navigating
     if (driverDetails != null) {
@@ -454,7 +462,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     }
 
     if (mounted) {
-      context.goNamed(RidecompleteWidget.routeName);
+      context.goNamed(
+        RidecompleteWidget.routeName,
+        queryParameters: {'rideId': widget.rideId.toString()},
+      );
     }
   }
 
@@ -501,7 +512,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
   Future<void> _cancelRide(String reason) async {
     if (_isCancelling) return;
-    setState(() => _isCancelling = true);
+    setState(() {
+      _isCancelling = true;
+      _userInitiatedCancel = true;
+    });
     try {
       final response = await CancelRide.call(
         rideId: widget.rideId,
@@ -519,6 +533,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             _searchTimer?.cancel();
             _stopDistanceUpdateTimer();
           });
+          FFAppState().bookingInProgress = false;
+          FFAppState().currentRideId = null;
+          RideSession().clear();
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted) context.pop();
           });
@@ -706,7 +723,11 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       return SearchingRideComponent(
           searchSeconds: _searchSeconds, onCancel: _showCancelDialog);
     } else if (_rideStatus == STATUS_CANCELLED) {
-      return RideCancelledComponent(onBackToHome: () => context.pop());
+      return RideCancelledComponent(
+        onBackToHome: () => context.pop(),
+        onFindNewRide: _cancelledByDriver ? () => context.pop() : null,
+        cancelledByDriver: _cancelledByDriver,
+      );
     } else {
       return DriverDetailsComponent(
         isLoading: isLoadingDriver,
