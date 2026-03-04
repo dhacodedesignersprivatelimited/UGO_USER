@@ -132,6 +132,7 @@ dependencies:
   crypto: any
   http_parser: any
   razorpay_flutter: ^1.4.1
+  firebase_remote_config: ^5.4.5
 
 dependency_overrides:
   google_api_headers: 4.5.3
