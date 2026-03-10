@@ -282,15 +282,11 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                       // 3. Navigate based on Backend Result
                       if ((_model.apiResultx4u?.succeeded ?? false)) {
                         // User EXISTS
-                        FFAppState().accessToken = getJsonField(
-                          (_model.apiResultx4u?.jsonBody ?? ''),
-                          r'''$.data.accessToken''',
-                        ).toString();
+                        final token = LoginCall.accessToken(_model.apiResultx4u?.jsonBody);
+                        final userId = LoginCall.userid(_model.apiResultx4u?.jsonBody);
 
-                        FFAppState().userid = getJsonField(
-                          (_model.apiResultx4u?.jsonBody ?? ''),
-                          r'''$.data.user.id''',
-                        );
+                        if (token != null) FFAppState().accessToken = token;
+                        if (userId != null) FFAppState().userid = userId!;
 
                         context.goNamedAuth(HomeWidget.routeName, context.mounted);
                       } else {

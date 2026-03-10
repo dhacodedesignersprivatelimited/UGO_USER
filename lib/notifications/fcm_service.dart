@@ -37,6 +37,7 @@ const _kRideEventTypes = {
   'started',
   'picked_up',
   'in_progress',
+  'ontrip',
 };
 
 /// Completion types that should open Ride Complete.

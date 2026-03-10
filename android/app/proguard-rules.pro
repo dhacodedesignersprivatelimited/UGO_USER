@@ -9,6 +9,10 @@
 # Firebase
 -keep class com.google.firebase.** { *; }
 
+# Razorpay SDK - prevent ClassNotFoundException and ProGuard stripping
+-keep class com.razorpay.** { *; }
+-dontwarn com.razorpay.**
+
 # Standard rules
 -dontwarn io.flutter.embedding.**
 -ignorewarnings

@@ -5,7 +5,8 @@ import '/backend/api_requests/api_calls.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'driver_details_model.dart';
-import 'package:geolocator/geolocator.dart'; // Ensure this package is available for getCurrentPosition
+import 'package:geolocator/geolocator.dart';
+import '/services/route_distance_service.dart';
 export 'driver_details_model.dart';
 
 class DriverDetailsWidget extends StatefulWidget {
@@ -62,14 +63,9 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
     _model = createModel(context, () => DriverDetailsModel());
     _fetchDriverDetails();
 
-    // Calculate fare immediately after build
+    // Calculate fare immediately after build (ride created on tap Continue)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDistanceAndFare();
-       _createRide();
-       print('🧪 Updating ride');
-        print('rideId = $_rideId');
-        print('token = ${FFAppState().accessToken}');
-
     });
                  
       
@@ -144,9 +140,9 @@ Future<void> _createRide() async {
       dropLongitude: FFAppState().dropLongitude!,
       adminVehicleId: widget.vehicleType ?? 1,
       estimatedFare: totalAmount.toStringAsFixed(2),
-      rideStatus: 'qr_scan', // IMPORTANT
+      rideStatus: 'started', // Create with started since driver is assigned
       driverId: widget.driverId,
-      paymentType: FFAppState().selectedPaymentMethod, // cash | wallet | online
+      paymentType: 'cash', // Scan booking: cash only
     );
 
     print('🟢 CreateRide response: ${response.jsonBody}');
@@ -172,12 +168,21 @@ Future<void> _createRide() async {
         final message =
             getJsonField(response.jsonBody, r'$.message') ?? 'Ride creation failed';
         print('❌ Backend error: $message');
+        if (mounted) _showDriverInRideError(message.toString());
       }
     } else {
-      print('❌ CreateRide API failed');
+      final body = response.jsonBody;
+      final message = body != null
+          ? (getJsonField(body, r'$.message') ??
+                getJsonField(body, r'$.error') ??
+                'Ride creation failed')
+          : 'Ride creation failed';
+      print('❌ CreateRide API failed: $message');
+      if (mounted) _showDriverInRideError(message.toString());
     }
   } catch (e) {
     print('🔥 Exception in _createRide(): $e');
+    if (mounted) _showError('Something went wrong. Please try again.');
   }
 }
 
@@ -228,15 +233,20 @@ Future<void> _createRide() async {
       return;
     }
 
-    // 2. Calculate Distance (Haversine)
-    final distance = calculateDistance(lat1, lon1, lat2, lon2);
+    // 2. Calculate Road Distance using Google Directions
+    final distance = await RouteDistanceService().getDrivingDistanceKm(
+      originLat: lat1,
+      originLng: lon1,
+      destLat: lat2,
+      destLng: lon2,
+    ) ?? calculateDistance(lat1, lon1, lat2, lon2); // Fallback to Haversine if API fails
 
     // 3. Pricing Logic (Robust Fallback)
     // Prioritize widget params passed from QR scan, fallback to defaults
     final baseKmStart = widget.baseKmStart ?? 1.0;
     final baseKmEnd = widget.baseKmEnd ?? 5.0;
-    final baseFare = widget.baseFare ?? 50.0; // Default base fare if null
-    final pricePerKm = widget.pricePerKm ?? 15.0; // Default price/km if null
+    final baseFare = widget.baseFare ?? 50.0;
+    final pricePerKm = widget.pricePerKm ?? 15.0;
 
     // 4. Calculate Fare
     final fare = _calculateTierFare(
@@ -252,7 +262,7 @@ Future<void> _createRide() async {
         _calculatedDistanceKm = distance;
         _calculatedFare = fare;
       });
-      debugPrint('✅ Distance: ${distance.toStringAsFixed(2)} km, Fare: ₹${fare.toStringAsFixed(2)}');
+      debugPrint('✅ Road Distance: ${distance.toStringAsFixed(2)} km, Fare: ₹${fare.toStringAsFixed(2)}');
     }
   }
 
@@ -294,6 +304,11 @@ Future<void> _createRide() async {
     return earthRadius * c;
   }
 
+  static String _formatDistance(double? km) {
+    if (km == null) return '--';
+    return km < 1 ? '${(km * 1000).round()}m' : '${km.toStringAsFixed(1)}Km';
+  }
+
   // --- Helper: Fare Math ---
   double _calculateTierFare({
     required double distanceKm,
@@ -324,32 +339,49 @@ Future<void> _createRide() async {
       ),
     );
   }
-  Future<void> _confirmBooking() async {
-  if (isLoadingRide) return;
 
-  setState(() => isLoadingRide = true);
+  /// Show message when driver is already on another ride
+  void _showDriverInRideError(String backendMessage) {
+    if (!mounted) return;
+    final lower = backendMessage.toLowerCase();
+    final isDriverInRide = lower.contains('already') ||
+        lower.contains('in ride') ||
+        lower.contains('on ride') ||
+        lower.contains('busy') ||
+        lower.contains('another ride') ||
+        lower.contains('ongoing');
+    final displayMessage = isDriverInRide
+        ? 'Driver is already in ride. Complete the ride to book a new ride.'
+        : backendMessage;
 
-  try {
-    if (_rideId == null) {
-      _showError('Ride not created yet. Please try again.');
-      return;
-    }
-    print('🚀 START RIDE pressed');
-
-    final response = await UpdateRideStatusCall.call(
-      rideId:  _rideId,
-      status: 'started',
-      token: FFAppState().accessToken,
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cannot Book'),
+        content: Text(displayMessage),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context.safePop();
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
+  }
+  /// On tap Continue/START RIDE: create ride with status started, then go to tracking
+  Future<void> _confirmBooking() async {
+    if (isLoadingRide) return;
 
-    print('🟢 UpdateRideStatus response: ${response.jsonBody}');
+    setState(() => isLoadingRide = true);
 
-    if (UpdateRideStatusCall.success(response.jsonBody) == true) {
-      // FFAppState().currentRideStatus = 'started';
-      print('✅ Ride status changed to STARTED');
+    try {
+      print('🚀 START RIDE pressed - creating ride with status started');
+      await _createRide();
 
-      // OPTIONAL: navigate to next screen
-      if (mounted) {
+      if (mounted && _rideId != null) {
         await context.pushNamed(
           AutoBookWidget.routeName,
           queryParameters: {
@@ -358,17 +390,13 @@ Future<void> _createRide() async {
           },
         );
       }
-    } else {
-      _showError('Failed to start ride');
-      print('🟢 response: ${response.jsonBody}');
+    } catch (e) {
+      print('❌ Start ride error: $e');
+      if (mounted) _showError('Something went wrong');
+    } finally {
+      if (mounted) setState(() => isLoadingRide = false);
     }
-  } catch (e) {
-    print('❌ Start ride error: $e');
-    _showError('Something went wrong');
-  } finally {
-    if (mounted) setState(() => isLoadingRide = false);
   }
-}
 
 
   // --- UI Construction ---
@@ -513,7 +541,7 @@ Future<void> _createRide() async {
 
                           // Trip Details
                           _buildDetailRow('Destination', displayDropLoc),
-                          _buildDetailRow('Distance', '${_calculatedDistanceKm.toStringAsFixed(2)} km'),
+                          _buildDetailRow('Distance', _formatDistance(_calculatedDistanceKm)),
                           _buildDetailRow('Est. Fare', '₹${_calculatedFare.toStringAsFixed(0)}'),
 
                           const SizedBox(height: 20),
@@ -584,7 +612,7 @@ Future<void> _createRide() async {
                       child: SizedBox(
                         height: 56,
                         child: OutlinedButton(
-                          onPressed: () => context.safePop(),
+                          onPressed: () => context.goNamed(HomeWidget.routeName),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Color(0xFFF01C1C), width: 1.5),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

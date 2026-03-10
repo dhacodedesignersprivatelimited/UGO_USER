@@ -5,7 +5,6 @@ import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
-import '/review/review_widget.dart';
 import '/ride_session.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -57,6 +56,12 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
     } catch (e) {
       print('Ridecomplete: fetch driver failed: $e');
     }
+  }
+
+  static num? _parseFare(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value;
+    return num.tryParse(value.toString().replaceAll(RegExp(r'[^\d.]'), ''));
   }
 
   static String? _vehicleFromAdminVehicle(Map<String, dynamic>? d) {
@@ -126,12 +131,20 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
     print('   - vehicleNumber: $vehicleNumber');
     print('   - fare: $fare');
 
-    return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-        FocusManager.instance.primaryFocus?.unfocus();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        if (context.mounted) {
+          context.goNamed(HomeWidget.routeName);
+        }
       },
-      child: Scaffold(
+      child: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus();
+          FocusManager.instance.primaryFocus?.unfocus();
+        },
+        child: Scaffold(
         key: scaffoldKey,
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         appBar: AppBar(
@@ -184,6 +197,7 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
                             rideData['payment_type'] ??
                             FFAppState().selectedPaymentMethod)
                         ?.toString(),
+                    fareAmount: _parseFare(rideData['estimated_fare'] ?? rideData['fare']),
                     pickupLocation: rideData['pickup_location_address'] ??
                         rideData['pickup_address'],
                     dropoffLocation: rideData['drop_location_address'] ??
@@ -226,6 +240,6 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
           ),
         ),
       ),
-    );
+    ));
   }
 }

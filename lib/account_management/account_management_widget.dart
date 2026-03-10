@@ -66,7 +66,7 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
           _profileImageUrl = rawImg.isNotEmpty
               ? (rawImg.startsWith('http')
                   ? rawImg
-                  : 'https://ugo-api.icacorp.org/$rawImg')
+                  : '${AppConfig.baseApiUrl}/$rawImg')
               : '';
           _isLoadingUser = false;
         });

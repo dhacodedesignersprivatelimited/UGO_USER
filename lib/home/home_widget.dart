@@ -2,7 +2,6 @@ import '/components/menu_widget.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'home_model.dart';
@@ -33,6 +32,10 @@ class _HomeWidgetState extends State<HomeWidget>
   bool isScanning = false;
   bool _isCheckingRideStatus = false;
   DateTime? _lastBackPress;
+
+  // Our Services - vehicle types from API
+  List<Map<String, dynamic>> _vehicleTypes = [];
+  bool _vehicleTypesLoading = true;
 
   // Performance Optimization: Notifier for Notification Count
   final ValueNotifier<int> _unreadCountNotifier = ValueNotifier<int>(0);
@@ -67,6 +70,29 @@ class _HomeWidgetState extends State<HomeWidget>
 
     // 4. Pre-fetch location on load to speed up "Scan to Go"
     _initializePickupLocation();
+
+    // 5. Fetch vehicle types for Our Services
+    _fetchVehicleTypes();
+  }
+
+  Future<void> _fetchVehicleTypes() async {
+    try {
+      final res = await GetVehicleTypesCall.call();
+      if (mounted && res.succeeded) {
+        final list = GetVehicleTypesCall.vehicles(res.jsonBody);
+        setState(() {
+          _vehicleTypes = (list ?? [])
+              .map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{})
+              .toList();
+          _vehicleTypesLoading = false;
+        });
+      } else {
+        if (mounted) setState(() => _vehicleTypesLoading = false);
+      }
+    } catch (e) {
+      debugPrint('Fetch vehicle types error: $e');
+      if (mounted) setState(() => _vehicleTypesLoading = false);
+    }
   }
 
   void _startNotificationRefresh() {
@@ -133,9 +159,11 @@ class _HomeWidgetState extends State<HomeWidget>
             'driver_assigned',
             'accepted',
             'arriving',
+            'arrived',
             'picked_up',
             'started',
-            'in_progress'
+            'in_progress',
+            'ontrip'
           ];
 
           final isActive = status == null || activeStatuses.contains(status);
@@ -219,117 +247,9 @@ class _HomeWidgetState extends State<HomeWidget>
     super.dispose();
   }
 
-  // THIS IS THE SCAN TO BOOK PROCESS (Step 3)
-  void _handleQRScan() async {
-    if (isScanning) return;
-
-    // 1. Validation: Ensure Destination (Green Pin) is selected
-    if (FFAppState().droplocation.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a destination (Green Pin) first.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() => isScanning = true);
-
-    try {
-      // 2. Validation: Ensure Pickup (Red Pin / Current Location) is set
-      // If missing, try to fetch it now before opening camera
-      if (FFAppState().pickupLatitude == 0.0 || FFAppState().pickupLatitude == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Locating you for pickup...')),
-        );
-        await _initializePickupLocation();
-
-        // If still null after fetch attempt, abort
-        if (FFAppState().pickupLatitude == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not detect current location. Please enable GPS.')),
-          );
-          setState(() => isScanning = false);
-          return;
-        }
-      }
-
-      // 3. Start Camera Scan
-      final scanResult = await FlutterBarcodeScanner.scanBarcode(
-        '#FF7B10',
-        'Cancel',
-        true,
-        ScanMode.BARCODE,
-      );
-
-      if (scanResult == '-1') {
-        setState(() => isScanning = false);
-        return;
-      }
-
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (!mounted) return;
-
-      int? driverId;
-      int? vehicleType;
-      double? baseFare;
-      double? pricePerKm;
-      double? baseKmStart;
-      double? baseKmEnd;
-
-      try {
-        // Handle complex JSON QR or simple Driver ID QR
-        if (scanResult.trim().startsWith('{')) {
-          final decodedData = jsonDecode(scanResult);
-          driverId = int.tryParse(decodedData['driver_id']?.toString() ?? '');
-          vehicleType =
-              int.tryParse(decodedData['vehicle_type_id']?.toString() ?? '');
-
-          final pricing = decodedData['pricing'] ?? {};
-          baseFare = double.tryParse(pricing['base_fare']?.toString() ?? '0');
-          pricePerKm =
-              double.tryParse(pricing['price_per_km']?.toString() ?? '0');
-          baseKmStart =
-              double.tryParse(pricing['base_km_start']?.toString() ?? '1');
-          baseKmEnd =
-              double.tryParse(pricing['base_km_end']?.toString() ?? '5');
-        } else {
-          driverId = int.tryParse(scanResult);
-        }
-      } catch (e) {
-        debugPrint('QR decode error: $e');
-        driverId = int.tryParse(scanResult);
-      }
-
-      if (driverId != null) {
-        
-        // 4. Success: Navigate to Driver Verification
-        context.pushNamed(
-          DriverDetailsWidget.routeName,
-        queryParameters: {
-            'driverId': driverId.toString(),
-            'vehicleType': vehicleType?.toString() ?? '',
-            'baseFare': baseFare?.toString() ?? '0',
-            'pricePerKm': pricePerKm?.toString() ?? '0',
-            'baseKmStart': baseKmStart?.toString() ?? '1',
-            'baseKmEnd': baseKmEnd?.toString() ?? '5',
-          },
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid QR Code')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Scan failed: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => isScanning = false);
-    }
+  /// Navigate to Scan to Book flow (new backend: scan-book API + socket)
+  void _handleQRScan() {
+    context.pushNamed(ScanToBookWidget.routeName);
   }
 
   @override
@@ -514,41 +434,7 @@ class _HomeWidgetState extends State<HomeWidget>
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildRideTypeCard(
-                          context,
-                          image: 'assets/images/bike.png',
-                          label: 'Bike',
-                          onTap: () {
-                            FFAppState().selectedRideCategory = 'bike';
-                            context.pushNamed(PlanYourRideWidget.routeName);
-                          },
-                          isSmallScreen: isSmallScreen,
-                        ),
-                        _buildRideTypeCard(
-                          context,
-                          image: 'assets/images/auto.png',
-                          label: 'Auto',
-                          onTap: () {
-                            FFAppState().selectedRideCategory = 'auto';
-                            context.pushNamed(PlanYourRideWidget.routeName);
-                          },
-                          isSmallScreen: isSmallScreen,
-                        ),
-                        _buildRideTypeCard(
-                          context,
-                          image: 'assets/images/car.png',
-                          label: 'Car',
-                          onTap: () {
-                            FFAppState().selectedRideCategory = 'car';
-                            context.pushNamed(PlanYourRideWidget.routeName);
-                          },
-                          isSmallScreen: isSmallScreen,
-                        ),
-                      ],
-                    ),
+                    _buildOurServicesSection(context, isSmallScreen),
                     const SizedBox(height: 20),
                     _buildPromoBanner(context, screenWidth),
                   ],
@@ -562,9 +448,174 @@ class _HomeWidgetState extends State<HomeWidget>
     );
   }
 
+  Widget _buildOurServicesSection(BuildContext context, bool isSmallScreen) {
+    if (_vehicleTypesLoading) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(3, (_) => Expanded(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            height: isSmallScreen ? 90 : 100,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 14,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2, color: primaryOrange),
+              ),
+            ),
+          ),
+        )),
+      );
+    }
+    final vehicles = _vehicleTypes.isEmpty
+        ? [
+            {'id': 2, 'name': 'bike', 'image': null},
+            {'id': 1, 'name': 'auto', 'image': null},
+            {'id': 3, 'name': 'car', 'image': null},
+          ]
+        : _vehicleTypes;
+
+    // Build display items: 1 vehicle -> [ComingSoon, Vehicle, ComingSoon]
+    // 2 vehicles -> [V1, V2, ComingSoon]; 3+ -> all vehicles, then fill to multiple of 3 with ComingSoon
+    List<Widget> displayItems = [];
+    if (vehicles.length == 1) {
+      displayItems = [
+        _buildComingSoonCard(context, isSmallScreen),
+        _buildVehicleCard(vehicles[0], context, isSmallScreen),
+        _buildComingSoonCard(context, isSmallScreen),
+      ];
+    } else {
+      // Add all actual vehicles
+      for (final v in vehicles) {
+        displayItems.add(_buildVehicleCard(v, context, isSmallScreen));
+      }
+      // Fill remaining slots in the last row of 3 with Coming Soon
+      while (displayItems.length % 3 != 0) {
+        displayItems.add(_buildComingSoonCard(context, isSmallScreen));
+      }
+    }
+
+    // Layout: rows of 3 (1:2:3, then 4:5:6, etc.)
+    const rowSpacing = 12.0;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (int i = 0; i < displayItems.length; i += 3) ...[
+          if (i > 0) const SizedBox(height: rowSpacing),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (int j = 0; j < 3; j++)
+                (i + j) < displayItems.length
+                    ? displayItems[i + j]
+                    : Expanded(child: const SizedBox.shrink()),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildComingSoonCard(BuildContext context, bool isSmallScreen) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('New vehicles will be added soon'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(18),
+          splashColor: primaryOrange.withValues(alpha: 0.15),
+          highlightColor: primaryOrange.withValues(alpha: 0.08),
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            height: isSmallScreen ? 90 : 100,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 14,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_circle_outline, color: Colors.grey[500], size: isSmallScreen ? 28 : 32),
+                  SizedBox(height: isSmallScreen ? 4 : 6),
+                  Text(
+                    'Coming soon',
+                    style: GoogleFonts.poppins(
+                      fontSize: isSmallScreen ? 11 : 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[600],
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVehicleCard(
+    Map<String, dynamic> v,
+    BuildContext context,
+    bool isSmallScreen,
+  ) {
+    final name = (v['name'] ?? 'ride').toString().toLowerCase();
+    final label = name.length > 1
+        ? '${name[0].toUpperCase()}${name.substring(1)}'
+        : name.toUpperCase();
+    final imagePath = v['image']?.toString();
+    final imageUrl = imagePath != null && imagePath.isNotEmpty
+        ? (imagePath.startsWith('http')
+            ? imagePath
+            : '${AppConfig.baseApiUrl}${imagePath.startsWith('/') ? '' : '/'}$imagePath')
+        : null;
+
+    return _buildRideTypeCard(
+      context,
+      image: 'assets/images/$name.png',
+      imageUrl: imageUrl,
+      label: label,
+      onTap: () {
+        FFAppState().selectedRideCategory = name;
+        context.pushNamed(PlanYourRideWidget.routeName);
+      },
+      isSmallScreen: isSmallScreen,
+    );
+  }
+
   Widget _buildRideTypeCard(
     BuildContext context, {
     required String image,
+    String? imageUrl,
     required String label,
     required VoidCallback onTap,
     required bool isSmallScreen,
@@ -607,15 +658,29 @@ class _HomeWidgetState extends State<HomeWidget>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Expanded(
-                      child: Image.asset(
-                        image,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.directions_car_rounded,
-                          color: primaryOrange,
-                          size: isSmallScreen ? 28 : 32,
-                        ),
-                      ),
+                      child: imageUrl != null
+                          ? Image.network(
+                              imageUrl,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Image.asset(
+                                image,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) => Icon(
+                                  Icons.directions_car_rounded,
+                                  color: primaryOrange,
+                                  size: isSmallScreen ? 28 : 32,
+                                ),
+                              ),
+                            )
+                          : Image.asset(
+                              image,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.directions_car_rounded,
+                                color: primaryOrange,
+                                size: isSmallScreen ? 28 : 32,
+                              ),
+                            ),
                     ),
                     SizedBox(height: isSmallScreen ? 4 : 6),
                     Text(

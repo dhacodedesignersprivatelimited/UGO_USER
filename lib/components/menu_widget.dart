@@ -24,14 +24,14 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
   late AnimationController _slideController;
   late Animation<Offset> _slideAnimation;
 
-  // Theme constants
-  static const Color primaryOrange = Color(0xFFFF7B10);
-  static const Color secondaryBlue = Color(0xFF2196F3);
-  static const Color accentPurple = Color(0xFF9C27B0);
-  static const Color successGreen = Color(0xFF4CAF50);
-  static const Color surfaceColor = Color(0xFFF8FAFC);
-  static const Color gradientStart = Color(0xFFFFA726);
-  static const Color gradientEnd = Color(0xFFFF5722);
+  // Theme constants - will be dynamic based on context in build
+  Color get primaryOrange => FlutterFlowTheme.of(context).primary;
+  Color get secondaryBlue => FlutterFlowTheme.of(context).secondary;
+  Color get accentPurple => FlutterFlowTheme.of(context).accent1;
+  Color get successGreen => FlutterFlowTheme.of(context).success;
+  Color get surfaceColor => FlutterFlowTheme.of(context).primaryBackground;
+  Color get gradientStart => FlutterFlowTheme.of(context).primary;
+  Color get gradientEnd => FlutterFlowTheme.of(context).secondary;
 
   // User UI state
   String _profileImageUrl = '';
@@ -67,7 +67,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
       if (userId == 0 || token.isEmpty) {
         if (!mounted) return;
         setState(() {
-          _userDisplayName = 'Guest User';
+          _userDisplayName = FFLocalizations.of(context).getText('guest_user');
           _profileImageUrl = '';
           _isLoadingUser = false;
         });
@@ -83,30 +83,30 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
 
       if (response.succeeded) {
         final firstName =
-            (GetUserDetailsCall.firstName(response.jsonBody) ?? '').trim();
+        (GetUserDetailsCall.firstName(response.jsonBody) ?? '').trim();
         final lastName =
-            (GetUserDetailsCall.lastName(response.jsonBody) ?? '').trim();
+        (GetUserDetailsCall.lastName(response.jsonBody) ?? '').trim();
         final rawProfileImg =
-            (GetUserDetailsCall.profileImage(response.jsonBody) ?? '').trim();
+        (GetUserDetailsCall.profileImage(response.jsonBody) ?? '').trim();
 
         final fullName =
-            [firstName, lastName].where((x) => x.isNotEmpty).join(' ');
+        [firstName, lastName].where((x) => x.isNotEmpty).join(' ');
 
-        // If backend returns "/uploads/abc.jpg" → make it full
+        // Efficiently build URL: AppConfig.baseApiUrl + / + rawProfileImg
         final imgUrl = rawProfileImg.isNotEmpty
             ? (rawProfileImg.startsWith('http')
                 ? rawProfileImg
-                : 'https://ugo-api.icacorp.org/$rawProfileImg')
+                : '${AppConfig.baseApiUrl}${rawProfileImg.startsWith('/') ? '' : '/'}$rawProfileImg')
             : '';
 
         setState(() {
-          _userDisplayName = fullName.isNotEmpty ? fullName : 'User';
+          _userDisplayName = fullName.isNotEmpty ? fullName : FFLocalizations.of(context).getText('user_label');
           _profileImageUrl = imgUrl;
           _isLoadingUser = false;
         });
       } else {
         setState(() {
-          _userDisplayName = 'User';
+          _userDisplayName = FFLocalizations.of(context).getText('user_label');
           _profileImageUrl = '';
           _isLoadingUser = false;
         });
@@ -120,6 +120,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
       });
     }
   }
+
 
   @override
   void setState(VoidCallback callback) {
@@ -159,11 +160,15 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                 : 18.0;
 
         return Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [surfaceColor, Colors.white, surfaceColor],
+              colors: [
+                FlutterFlowTheme.of(context).primaryBackground,
+                FlutterFlowTheme.of(context).secondaryBackground,
+                FlutterFlowTheme.of(context).primaryBackground
+              ],
             ),
           ),
           child: Column(
@@ -218,8 +223,41 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                         context,
                         Icons.account_circle_outlined,
                         accentPurple,
-                        'yzazzu72',
+                        'yzazzu72', // Account Management string key? (Assuming it resolves correctly)
                         AccountManagementWidget.routeName,
+                        false,
+                        iconSize,
+                        fontSize,
+                      ),
+                      // SizedBox(height: isNarrow ? 16 : 24),
+                      // _buildMenuItem(
+                      //   context,
+                      //   Icons.settings_outlined,
+                      //   Colors.blueGrey,
+                      //   'menu_settings',
+                      //   SettingsPageWidget.routeName,
+                      //   false,
+                      //   iconSize,
+                      //   fontSize,
+                      // ),
+                      SizedBox(height: isNarrow ? 16 : 24),
+                      _buildMenuItem(
+                        context,
+                        Icons.support_agent_outlined,
+                        Colors.teal,
+                        'menu_support',
+                        CustomerSuportWidget.routeName,
+                        false,
+                        iconSize,
+                        fontSize,
+                      ),
+                      SizedBox(height: isNarrow ? 16 : 24),
+                      _buildMenuItem(
+                        context,
+                        Icons.card_giftcard,
+                        primaryOrange,
+                        'menu_refer_and_earn',
+                        ReferAndEarnWidget.routeName,
                         false,
                         iconSize,
                         fontSize,
@@ -241,19 +279,19 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
     final avatarSize = isNarrow
         ? 52.0
         : isTablet
-            ? 68.0
-            : 64.0;
+        ? 68.0
+        : 64.0;
 
     return InkWell(
-       onTap: () {
-      Navigator.of(context).pop(); // close drawer
-      context.pushNamed(ProfileSettingWidget.routeName);
-    },
+      onTap: () {
+        Navigator.of(context).pop(); // close drawer
+        context.pushNamed(ProfileSettingWidget.routeName);
+      },
 
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [gradientStart, gradientEnd]),
+          gradient: LinearGradient(colors: [gradientStart, gradientEnd]),
           boxShadow: [
             BoxShadow(
               color: gradientEnd.withValues(alpha:0.3),
@@ -281,28 +319,28 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(50),
                 child: _isLoadingUser
                     ? Icon(Icons.person,
-                        color: gradientStart.withValues(alpha:0.75),
-                        size: isNarrow ? 26 : 30)
+                    color: gradientStart.withValues(alpha:0.75),
+                    size: isNarrow ? 26 : 30)
                     : (_profileImageUrl.isNotEmpty
-                        ? Image.network(
-                            _profileImageUrl,
-                            fit: BoxFit.cover,
-                            // Shows a fallback while bytes load
-                            loadingBuilder: (context, child, progress) =>
-                                progress == null
-                                    ? child
-                                    : Icon(Icons.person,
-                                        color: gradientStart.withValues(alpha:0.75),
-                                        size: isNarrow ? 26 : 30),
-                            // Shows a fallback on error
-                            errorBuilder: (context, error, stackTrace) => Icon(
-                              Icons.person,
-                              color: gradientStart,
-                              size: isNarrow ? 26 : 30,
-                            ),
-                          )
-                        : Icon(Icons.person,
-                            color: gradientStart, size: isNarrow ? 26 : 30)),
+                    ? Image.network(
+                  _profileImageUrl,
+                  fit: BoxFit.cover,
+                  // Shows a fallback while bytes load
+                  loadingBuilder: (context, child, progress) =>
+                  progress == null
+                      ? child
+                      : Icon(Icons.person,
+                      color: gradientStart.withValues(alpha:0.75),
+                      size: isNarrow ? 26 : 30),
+                  // Shows a fallback on error
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.person,
+                    color: gradientStart,
+                    size: isNarrow ? 26 : 30,
+                  ),
+                )
+                    : Icon(Icons.person,
+                    color: gradientStart, size: isNarrow ? 26 : 30)),
               ),
             ),
             SizedBox(width: isNarrow ? 14 : 20),
@@ -321,25 +359,25 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                   const SizedBox(height: 4),
                   _isLoadingUser
                       ? SizedBox(
-                          width: 120,
-                          height: 14,
-                          child: LinearProgressIndicator(
-                            backgroundColor: Colors.white.withValues(alpha:0.3),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
+                    width: 120,
+                    height: 14,
+                    child: LinearProgressIndicator(
+                      backgroundColor: Colors.white.withValues(alpha:0.3),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Colors.white,
+                      ),
+                    ),
+                  )
                       : Text(
-                          _userDisplayName,
-                          style: GoogleFonts.poppins(
-                            fontSize: isNarrow ? 16 : 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    _userDisplayName,
+                    style: GoogleFonts.poppins(
+                      fontSize: isNarrow ? 16 : 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ],
               ),
             ),
@@ -444,8 +482,8 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
           context.goNamedAuth(LoginWidget.routeName, context.mounted);
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Logged Out Successfully!"),
+            SnackBar(
+              content: Text(FFLocalizations.of(context).getText('logged_out_success')),
               backgroundColor: primaryOrange,
             ),
           );
@@ -459,9 +497,11 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
         margin: EdgeInsets.symmetric(horizontal: isNarrow ? 16 : 24),
         padding: EdgeInsets.all(isNarrow ? 18 : 24),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: FlutterFlowTheme.of(context).secondaryBackground,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.grey.withValues(alpha:0.15), width: 1.5),
+          border: Border.all(
+              color: FlutterFlowTheme.of(context).alternate.withValues(alpha: 0.5),
+              width: 1.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha:0.06),
@@ -475,7 +515,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
             Container(
               width: isNarrow ? 44 : 52,
               height: isNarrow ? 44 : 52,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(colors: [primaryOrange, gradientEnd]),
                 shape: BoxShape.circle,
               ),
@@ -489,18 +529,18 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Sign Out',
+                    FFLocalizations.of(context).getText('sign_out'),
                     style: GoogleFonts.poppins(
                       fontSize: isNarrow ? 16 : 18,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black87,
+                      color: FlutterFlowTheme.of(context).primaryText,
                     ),
                   ),
                   Text(
-                    'Leave the app session',
+                    FFLocalizations.of(context).getText('leave_session'),
                     style: GoogleFonts.inter(
                       fontSize: isNarrow ? 12 : 13,
-                      color: Colors.grey[600],
+                      color: FlutterFlowTheme.of(context).secondaryText,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

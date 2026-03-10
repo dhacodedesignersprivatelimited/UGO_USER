@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class FFAppState extends ChangeNotifier {
   static FFAppState _instance = FFAppState._internal();
@@ -61,9 +62,22 @@ class FFAppState extends ChangeNotifier {
       _selectedPaymentMethod =
           prefs.getString('ff_selectedPaymentMethod') ?? _selectedPaymentMethod;
     });
-    // ✅ Initialize Wallet Balance
     _safeInit(() {
       _walletBalance = prefs.getDouble('ff_walletBalance') ?? _walletBalance;
+    });
+    _safeInit(() {
+      _recentSearches = prefs.getStringList('ff_recentSearches') ?? _recentSearches;
+    });
+    _safeInit(() {
+      _selectedBaseKmStart =
+          prefs.getDouble('ff_selectedBaseKmStart') ?? _selectedBaseKmStart;
+    });
+    _safeInit(() {
+      _selectedBaseKmEnd =
+          prefs.getDouble('ff_selectedBaseKmEnd') ?? _selectedBaseKmEnd;
+    });
+    _safeInit(() {
+      _firebaseUid = prefs.getString('ff_firebaseUid') ?? _firebaseUid;
     });
   }
 
@@ -104,6 +118,9 @@ class FFAppState extends ChangeNotifier {
     _pickuplocation = value;
     notifyListeners();
   }
+
+  // Current Ride OTP (Secure Ride Start)
+  String currentRideOtp = '';
 
   // Current Ride ID
   int? _currentRideId;
@@ -204,6 +221,13 @@ class FFAppState extends ChangeNotifier {
     prefs.setString('ff_fcmToken', value);
   }
 
+  String _firebaseUid = '';
+  String get firebaseUid => _firebaseUid;
+  set firebaseUid(String value) {
+    _firebaseUid = value;
+    prefs.setString('ff_firebaseUid', value);
+  }
+
   double _selectedBaseFare = 0.0;
   double get selectedBaseFare => _selectedBaseFare;
   set selectedBaseFare(double value) {
@@ -217,6 +241,22 @@ class FFAppState extends ChangeNotifier {
   set selectedPricePerKm(double value) {
     _selectedPricePerKm = value;
     prefs.setDouble('ff_selectedPricePerKm', value);
+    notifyListeners();
+  }
+
+  double _selectedBaseKmStart = 1.0;
+  double get selectedBaseKmStart => _selectedBaseKmStart;
+  set selectedBaseKmStart(double value) {
+    _selectedBaseKmStart = value;
+    prefs.setDouble('ff_selectedBaseKmStart', value);
+    notifyListeners();
+  }
+
+  double _selectedBaseKmEnd = 5.0;
+  double get selectedBaseKmEnd => _selectedBaseKmEnd;
+  set selectedBaseKmEnd(double value) {
+    _selectedBaseKmEnd = value;
+    prefs.setDouble('ff_selectedBaseKmEnd', value);
     notifyListeners();
   }
 
@@ -234,6 +274,43 @@ class FFAppState extends ChangeNotifier {
   set walletBalance(double value) {
     _walletBalance = value;
     prefs.setDouble('ff_walletBalance', value);
+    notifyListeners();
+  }
+
+  // Dynamic Recent Searches
+  List<String> _recentSearches = [];
+  List<String> get recentSearches => _recentSearches;
+  set recentSearches(List<String> value) {
+    _recentSearches = value;
+    prefs.setStringList('ff_recentSearches', value);
+    notifyListeners();
+  }
+
+  void addToRecentSearches(Map<String, dynamic> location) {
+    final String encoded = jsonEncode({
+      'name': location['name'] ?? '',
+      'address': location['address'] ?? '',
+      'lat': (location['lat'] as num?)?.toDouble() ?? 0.0,
+      'lng': (location['lng'] as num?)?.toDouble() ?? 0.0,
+      'icon_name': location['icon_name'] ?? 'history',
+    });
+    
+    _recentSearches.removeWhere((item) {
+      try {
+        final decoded = jsonDecode(item);
+        return decoded['address'] == location['address'];
+      } catch (_) {
+        return false;
+      }
+    });
+    
+    _recentSearches.insert(0, encoded);
+    
+    if (_recentSearches.length > 10) {
+      _recentSearches = _recentSearches.sublist(0, 10);
+    }
+    
+    prefs.setStringList('ff_recentSearches', _recentSearches);
     notifyListeners();
   }
 
@@ -255,10 +332,15 @@ class FFAppState extends ChangeNotifier {
     _discountAmount = 0.0;
     _selectedBaseFare = 0.0;
     _selectedPricePerKm = 0.0;
+    _selectedBaseKmStart = 1.0;
+    _selectedBaseKmEnd = 5.0;
     prefs.remove('ff_selectedBaseFare');
     prefs.remove('ff_selectedPricePerKm');
+    prefs.remove('ff_selectedBaseKmStart');
+    prefs.remove('ff_selectedBaseKmEnd');
     _selectedPaymentMethod = 'cash';
     prefs.remove('ff_selectedPaymentMethod');
+    currentRideOtp = '';
     _currentRideId = null;
     prefs.remove('ff_currentRideId');
     notifyListeners();

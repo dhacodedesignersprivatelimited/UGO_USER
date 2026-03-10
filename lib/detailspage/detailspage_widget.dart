@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../flutter_flow/flutter_flow_theme.dart';
+import '../login/login_widget.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
@@ -42,6 +44,8 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
     _model.textFieldFocusNode2 ??= FocusNode();
     _model.textController3 ??= TextEditingController();
     _model.textFieldFocusNode3 ??= FocusNode();
+    _model.textController4 ??= TextEditingController();
+    _model.textFieldFocusNode4 ??= FocusNode();
 
     _initFCMToken();
   }
@@ -104,22 +108,22 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
   Future<void> _handleRegistration() async {
     // 1. Validate
     if (_model.textController1!.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('First Name is required'),
-          backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(FFLocalizations.of(context).getText('first_name_required')),
+          backgroundColor: FlutterFlowTheme.of(context).error));
       return;
     }
     if (_model.textController3!.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Email is required'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(FFLocalizations.of(context).getText('email_required')), backgroundColor: FlutterFlowTheme.of(context).error));
       return;
     }
 
     // 2. Check Token
     if (_currentFcmToken == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Initializing... please wait'),
-          backgroundColor: Colors.orange));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(FFLocalizations.of(context).getText('initializing_wait')),
+          backgroundColor: FlutterFlowTheme.of(context).warning));
       await _initFCMToken();
       return;
     }
@@ -134,6 +138,7 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
         firstName: _model.textController1!.text,
         lastName: _model.textController2!.text,
         email: _model.textController3!.text,
+        referralCode: _model.textController4!.text,
         profileImage: _model.uploadedLocalFile.bytes != null
             ? _model.uploadedLocalFile
             : null,
@@ -145,14 +150,14 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
       if (_model.apiResultRegister?.succeeded ?? false) {
         // 5. Success - Save Session
         print('✅ Registration Successful. Saving session...');
-        final token = LoginCall.accesToken(_model.apiResultRegister?.jsonBody);
-        final userId = LoginCall.userid(_model.apiResultRegister?.jsonBody);
+        final token = CreateUserCall.accessToken(_model.apiResultRegister?.jsonBody);
+        final userId = CreateUserCall.userid(_model.apiResultRegister?.jsonBody);
 
         if (token != null) FFAppState().accessToken = token;
-        if (userId != null) FFAppState().userid = userId;
+        if (userId != null) FFAppState().userid = userId!;
 
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Welcome to UGO!'), backgroundColor: Colors.green));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(FFLocalizations.of(context).getText('welcome_to_ugo')), backgroundColor: FlutterFlowTheme.of(context).success));
 
         // 6. Navigate to Home
         print('🚀 Navigating to Home...');
@@ -173,13 +178,13 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
           );
           if (!mounted) return;
           if (loginRes.succeeded) {
-            final token = LoginCall.accesToken(loginRes.jsonBody);
+            final token = LoginCall.accessToken(loginRes.jsonBody);
             final userId = LoginCall.userid(loginRes.jsonBody);
             if (token != null) FFAppState().accessToken = token;
-            if (userId != null) FFAppState().userid = userId;
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Welcome back! You\'re logged in.'),
-                backgroundColor: Colors.green));
+            if (userId != null) FFAppState().userid = userId!;
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(FFLocalizations.of(context).getText('login_welcome_back')),
+                backgroundColor: FlutterFlowTheme.of(context).success));
             context.goNamedAuth('home', mounted);
             return;
           }
@@ -189,12 +194,12 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
                 _model.apiResultRegister?.jsonBody, r'''$.message''') ??
             'Registration failed';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(displayMsg.toString()), backgroundColor: Colors.red));
+            content: Text(displayMsg.toString()), backgroundColor: FlutterFlowTheme.of(context).error));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+            SnackBar(content: Text('Error: $e'), backgroundColor: FlutterFlowTheme.of(context).error));
       }
     } finally {
       if (mounted) setState(() => _model.isRegistering = false);
@@ -207,19 +212,25 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: const Color(0xFFF0F0F0),
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.black54),
-            onPressed: () => context.pop(),
+            icon: Icon(Icons.arrow_back_ios, color: FlutterFlowTheme.of(context).secondaryText),
+            onPressed: () {
+              if (Navigator.of(context).canPop()) {
+                context.pop();
+              } else {
+                context.goNamedAuth(LoginWidget.routeName, context.mounted);
+              }
+            },
           ),
-          title: Text('Complete Profile',
+          title: Text(FFLocalizations.of(context).getText('complete_profile'),
               style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
-                  color: Colors.black)),
+                  color: FlutterFlowTheme.of(context).primaryText)),
           centerTitle: true,
         ),
         body: SafeArea(
@@ -236,13 +247,13 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
                       children: [
                         CircleAvatar(
                           radius: 65,
-                          backgroundColor: Colors.grey[200],
+                          backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
                           backgroundImage: _imageBytes != null
                               ? MemoryImage(_imageBytes!)
                               : null,
                           child: _imageBytes == null
-                              ? const Icon(Icons.person_add,
-                                  size: 50, color: Colors.grey)
+                              ? Icon(Icons.person_add,
+                                  size: 50, color: FlutterFlowTheme.of(context).secondaryText)
                               : null,
                         ),
                         Positioned(
@@ -250,35 +261,40 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
                           bottom: -4,
                           child: Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: const BoxDecoration(
-                                color: Color(0xFFFF7B10),
+                            decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context).primary,
                                 shape: BoxShape.circle),
-                            child: const Icon(Icons.camera_alt,
-                                color: Colors.white, size: 20),
+                            child: Icon(Icons.camera_alt,
+                                color: FlutterFlowTheme.of(context).secondaryBackground, size: 20),
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    _imageBytes != null ? 'Photo selected' : 'Tap to add photo',
-                    style: TextStyle(
-                        color: _imageBytes != null
-                            ? Colors.green
-                            : Colors.grey[600],
-                        fontWeight: FontWeight.w500),
-                  ),
+                    Text(
+                      _imageBytes != null 
+                        ? FFLocalizations.of(context).getText('photo_selected') 
+                        : FFLocalizations.of(context).getText('tap_to_add_photo'),
+                      style: TextStyle(
+                          color: _imageBytes != null
+                              ? FlutterFlowTheme.of(context).success
+                              : FlutterFlowTheme.of(context).secondaryText,
+                          fontWeight: FontWeight.w500),
+                    ),
                   const SizedBox(height: 40),
-                  _buildTextField("First name *", _model.textController1,
+                  _buildTextField(FFLocalizations.of(context).getText('first_name_label'), _model.textController1,
                       _model.textFieldFocusNode1),
                   const SizedBox(height: 20),
-                  _buildTextField("Last name", _model.textController2,
+                  _buildTextField(FFLocalizations.of(context).getText('last_name_label'), _model.textController2,
                       _model.textFieldFocusNode2),
                   const SizedBox(height: 20),
-                  _buildTextField("Email *", _model.textController3,
+                  _buildTextField(FFLocalizations.of(context).getText('email_label'), _model.textController3,
                       _model.textFieldFocusNode3,
                       isEmail: true),
+                  const SizedBox(height: 20),
+                  _buildTextField(FFLocalizations.of(context).getText('referral_code_optional'), _model.textController4,
+                      _model.textFieldFocusNode4),
                   const SizedBox(height: 40),
                   FFButtonWidget(
                     onPressed:
@@ -286,19 +302,19 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
                             ? null
                             : _handleRegistration,
                     text: _model.isRegistering
-                        ? 'CREATING ACCOUNT...'
-                        : 'Complete Registration',
+                        ? FFLocalizations.of(context).getText('creating_account')
+                        : FFLocalizations.of(context).getText('complete_registration'),
                     options: FFButtonOptions(
                       width: double.infinity,
                       height: 56,
-                      color: const Color(0xFFFF7B10),
+                      color: FlutterFlowTheme.of(context).primary,
                       textStyle: GoogleFonts.interTight(
-                          color: Colors.white,
+                          color: FlutterFlowTheme.of(context).secondaryBackground,
                           fontSize: 18,
                           fontWeight: FontWeight.bold),
                       elevation: 2,
                       borderRadius: BorderRadius.circular(12),
-                      disabledColor: Colors.orange.withValues(alpha:0.5),
+                      disabledColor: FlutterFlowTheme.of(context).primary.withValues(alpha:0.5),
                     ),
                   ),
                 ],
@@ -320,7 +336,7 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
             style: GoogleFonts.inter(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: Colors.black87)),
+                color: FlutterFlowTheme.of(context).primaryText)),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -329,14 +345,14 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
               isEmail ? TextInputType.emailAddress : TextInputType.name,
           decoration: InputDecoration(
             enabledBorder: OutlineInputBorder(
-                borderSide: const BorderSide(color: Colors.grey, width: 1),
+                borderSide: BorderSide(color: FlutterFlowTheme.of(context).alternate, width: 1),
                 borderRadius: BorderRadius.circular(12)),
             focusedBorder: OutlineInputBorder(
                 borderSide:
-                    const BorderSide(color: Color(0xFFFF7B10), width: 2),
+                    BorderSide(color: FlutterFlowTheme.of(context).primary, width: 2),
                 borderRadius: BorderRadius.circular(12)),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: FlutterFlowTheme.of(context).secondaryBackground,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           ),

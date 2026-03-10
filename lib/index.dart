@@ -77,3 +77,4 @@ export '/passwordcard/passwordcard_widget.dart' show PasswordcardWidget;
 export '/review/review_widget.dart' show ReviewWidget;
 export '/ridecomplete/ridecomplete_widget.dart' show RidecompleteWidget;
 export '/set_location/set_location_widget.dart' show SetLocationWidget;
+export '/refer_and_earn/refer_and_earn_widget.dart' show ReferAndEarnWidget;

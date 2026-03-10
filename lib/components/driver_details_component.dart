@@ -6,23 +6,28 @@ import '../flutter_flow/flutter_flow_util.dart';
 import '/backend/api_requests/api_calls.dart';
 import 'dart:math';
 
-class DriverDetailsComponent extends StatelessWidget {
+class DriverDetailsComponent extends StatefulWidget {
   final bool isLoading;
   final Map<String, dynamic>? driverDetails;
+  final dynamic driverId;
   final String? rideOtp;
   final List<dynamic> ridesCache;
   final Function(String?) onCall;
   final VoidCallback onCancel;
   final String rideStatus;
-  final double? currentRemainingDistance; // ✅ Real-time distance from parent
-  final String? liveEtaText; // ✅ Uber-style: Google Directions ETA (e.g. "5 mins")
+  final double? currentRemainingDistance;
+  final String? liveEtaText;
+  final VoidCallback? onShare;
+  final double? totalRoadDistanceKm;
+  final ScrollController? scrollController;
 
   static const Color primaryColor = Color(0xFFFF7B10);
 
   const DriverDetailsComponent({
     Key? key,
     required this.isLoading,
-    required this.driverDetails,
+    this.driverDetails,
+    required this.driverId,
     required this.rideOtp,
     required this.ridesCache,
     required this.onCall,
@@ -30,7 +35,68 @@ class DriverDetailsComponent extends StatelessWidget {
     required this.rideStatus,
     this.currentRemainingDistance,
     this.liveEtaText,
+    this.onShare,
+    this.totalRoadDistanceKm,
+    this.scrollController,
   }) : super(key: key);
+
+  @override
+  State<DriverDetailsComponent> createState() => _DriverDetailsComponentState();
+}
+
+class _DriverDetailsComponentState extends State<DriverDetailsComponent> {
+  bool _isInternalLoading = false;
+  Map<String, dynamic>? _fetchedDriverData;
+  Map<String, dynamic>? _fetchedVehicleData;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDynamicData();
+  }
+
+  @override
+  void didUpdateWidget(DriverDetailsComponent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.driverId != oldWidget.driverId) {
+      _fetchDynamicData();
+    }
+  }
+
+  Future<void> _fetchDynamicData() async {
+    final dIdRaw = widget.driverId;
+    if (dIdRaw == null) return;
+
+    final dId = dIdRaw is int ? dIdRaw : int.tryParse(dIdRaw.toString());
+    if (dId == null) return;
+
+    if (mounted) setState(() => _isInternalLoading = true);
+
+    try {
+      final token = FFAppState().accessToken;
+
+      // Fetch both in parallel
+      final results = await Future.wait([
+        DriverIdfetchCall.call(id: dId, token: token),
+        GetVehicleInfoByDriverCall.call(driverId: dId, token: token),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          if (results[0].succeeded) {
+            _fetchedDriverData = results[0].jsonBody;
+          }
+          if (results[1].succeeded) {
+            _fetchedVehicleData = results[1].jsonBody;
+          }
+          _isInternalLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching driver/vehicle details: $e');
+      if (mounted) setState(() => _isInternalLoading = false);
+    }
+  }
 
   // --- Utility Functions ---
   double _calculateDistanceKm(double startLat, double startLng, double endLat, double endLng) {
@@ -47,41 +113,90 @@ class DriverDetailsComponent extends StatelessWidget {
 
   double _degToRad(double deg) => deg * (pi / 180);
 
+  static String _formatDistance(double? km) {
+    if (km == null) return '--';
+    return km < 1 ? '${(km * 1000).round()}m' : '${km.toStringAsFixed(1)}Km';
+  }
+
   int _calculateEtaMinutes(double distanceKm) {
     const double avgSpeed = 30; // km/h (city average)
     double hours = distanceKm / avgSpeed;
     return (hours * 60).round();
   }
 
-  // --- Main Build ---
   @override
   Widget build(BuildContext context) {
     final flowTheme = FlutterFlowTheme.of(context);
-    // Normalization: Ensure we check against lowercase standard statuses
-    final status = rideStatus.toLowerCase().trim();
+    final status = widget.rideStatus.toLowerCase().trim();
 
     // Status Groups
-    final isArriving = status == 'arriving';
+    final isArriving = status == 'arriving' || status == 'arrived';
     final isAccepted = status == 'accepted' || status == 'driver_assigned';
-    final isStarted = status == 'started' || status == 'picked_up' || status == 'in_progress';
+    final isStarted = status == 'started' || status == 'picked_up' || status == 'in_progress' || status == 'ontrip';
 
-    if (isLoading || driverDetails == null) {
-      return Container(
-        height: 400,
-        decoration: BoxDecoration(
-          color: flowTheme.secondaryBackground,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    final showLoading = widget.isLoading || (_isInternalLoading && _fetchedDriverData == null);
+
+    if (showLoading) {
+      return SingleChildScrollView(
+        controller: widget.scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height * 0.3),
+          decoration: BoxDecoration(
+            color: flowTheme.secondaryBackground,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 60),
+              child: CircularProgressIndicator(color: DriverDetailsComponent.primaryColor),
+            ),
+          ),
         ),
-        child: const Center(child: CircularProgressIndicator(color: primaryColor)),
       );
     }
 
-    // Extract Data (API: GET /api/drivers/:id returns {success, data: {...}})
-    final driverName = GetDriverDetailsCall.name(driverDetails) ?? 'Captain';
-    final driverRating = GetDriverDetailsCall.rating(driverDetails) ?? '4.8';
-    final vehicleNumber = GetDriverDetailsCall.vehicleNumber(driverDetails) ?? 'AP28TA1234';
-    final driverPhone = DriverIdfetchCall.mobileNumber(driverDetails);
-    final driverImage = GetDriverDetailsCall.profileImage(driverDetails);
+    // Resolve data sources
+    final driverData = _fetchedDriverData ?? widget.driverDetails;
+
+    // Extract Data
+    final driverName = GetDriverDetailsCall.name(driverData) ?? 'Captain';
+    final driverRating = GetDriverDetailsCall.rating(driverData) ?? '4.8';
+    final totalRides = DriverIdfetchCall.totalRidesCompleted(driverData) ?? 0;
+    
+    // Vehicle Info
+    String vehicleInfo = 'AP27TA1234'; // Default fallback
+    String? vehicleImageUrl;
+
+    if (_fetchedVehicleData != null) {
+      final model = GetVehicleInfoByDriverCall.vehicleModel(_fetchedVehicleData) ?? '';
+      final name = GetVehicleInfoByDriverCall.vehicleName(_fetchedVehicleData) ?? '';
+      final color = GetVehicleInfoByDriverCall.vehicleColor(_fetchedVehicleData) ?? '';
+      final plate = GetVehicleInfoByDriverCall.licensePlate(_fetchedVehicleData) ?? '';
+      
+      // We can also try to get vehicle image from this dynamic call if available, 
+      // but DriverIdfetchCall has a dedicated helper for it.
+      
+      List<String> parts = [];
+      if (model.isNotEmpty) parts.add(model);
+      if (name.isNotEmpty) parts.add(name);
+      if (color.isNotEmpty) parts.add(color);
+      
+      if (parts.isNotEmpty && plate.isNotEmpty) {
+        vehicleInfo = '${parts.join(' ')} • $plate';
+      } else if (plate.isNotEmpty) {
+        vehicleInfo = plate;
+      } else if (parts.isNotEmpty) {
+        vehicleInfo = parts.join(' ');
+      }
+    } else {
+      vehicleInfo = GetDriverDetailsCall.vehicleNumber(driverData) ?? vehicleInfo;
+    }
+
+    vehicleImageUrl = DriverIdfetchCall.vehicleImage(driverData);
+
+    final driverPhone = DriverIdfetchCall.mobileNumber(driverData);
+    final driverImage = GetDriverDetailsCall.profileImage(driverData);
 
     final pickupLat = FFAppState().pickupLatitude;
     final pickupLng = FFAppState().pickupLongitude;
@@ -90,7 +205,7 @@ class DriverDetailsComponent extends StatelessWidget {
     String? resolvedImage = driverImage;
     if (resolvedImage == null) {
       try {
-        final d = driverDetails?['data'] ?? driverDetails;
+        final d = driverData?['data'] ?? driverData;
         if (d is Map) {
           resolvedImage = (d['profile_photo'] ?? d['profile_image'] ?? d['photo'] ?? d['image'])?.toString();
           if (resolvedImage != null && !resolvedImage.startsWith('http')) {
@@ -104,8 +219,8 @@ class DriverDetailsComponent extends StatelessWidget {
     List<String> otpDigits = [];
     bool showOtp = (isAccepted || isArriving) && !isStarted;
 
-    if (showOtp && rideOtp != null && rideOtp!.isNotEmpty) {
-      otpDigits = rideOtp!.padRight(4, '-').split('').take(4).toList();
+    if (showOtp && widget.rideOtp != null && widget.rideOtp!.isNotEmpty) {
+      otpDigits = widget.rideOtp!.padRight(4, '-').split('').take(4).toList();
     }
 
     // ✅ Arriving Distance Logic
@@ -120,8 +235,8 @@ class DriverDetailsComponent extends StatelessWidget {
     String originalDistance = '--km';
     String amount = '₹--';
 
-    if (ridesCache.isNotEmpty) {
-      final ride = ridesCache[0];
+    if (widget.ridesCache.isNotEmpty) {
+      final ride = widget.ridesCache[0];
       pickup = ride['pickup_location_address'] ?? pickup;
       dropoff = ride['drop_location_address'] ?? dropoff;
       amount = '₹${ride['estimated_fare'] ?? '--'}';
@@ -130,30 +245,27 @@ class DriverDetailsComponent extends StatelessWidget {
       driverLngDouble = double.tryParse(ride['driver_longitude']?.toString() ?? '');
     }
 
-    // Calculate arrival distance if logic permits
-    if (isArriving && driverLatDouble != null && driverLngDouble != null && pickupLat != null && pickupLng != null) {
-      arrivingDistance = _calculateDistanceKm(driverLatDouble, driverLngDouble, pickupLat, pickupLng);
-      arrivingEta = _calculateEtaMinutes(arrivingDistance);
+    // Calculate arrival distance logic
+    if (isArriving) {
+      if (widget.currentRemainingDistance != null) {
+        arrivingDistance = widget.currentRemainingDistance;
+      } else if (driverLatDouble != null && driverLngDouble != null && pickupLat != null && pickupLng != null) {
+        arrivingDistance = _calculateDistanceKm(driverLatDouble, driverLngDouble, pickupLat, pickupLng);
+      }
+
+      if (arrivingDistance != null) {
+        arrivingEta = _calculateEtaMinutes(arrivingDistance);
+      }
     }
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha:0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+    return SingleChildScrollView(
+      controller: widget.scrollController,
+      physics: widget.scrollController != null ? const ClampingScrollPhysics() : const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag Handle
+          // Drag Handle (Visual only now)
           Container(
             width: 40,
             height: 4,
@@ -165,46 +277,6 @@ class DriverDetailsComponent extends StatelessWidget {
           const SizedBox(height: 20),
 
           // --- 1. Status Banners ---
-
-          if (isArriving) ...[
-            _buildStatusBanner(
-              icon: Icons.car_rental,
-              text: 'Driver is on the way',
-              color: Colors.blue,
-            ),
-            if (liveEtaText != null || (arrivingDistance != null && arrivingEta != null)) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha:0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.withValues(alpha:0.3)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (arrivingDistance != null)
-                      Text(
-                        '${arrivingDistance.toStringAsFixed(1)} km away',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w700, color: Colors.blue),
-                      ),
-                    if (arrivingDistance != null && (liveEtaText != null || arrivingEta != null))
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        height: 12, width: 1, color: Colors.blue,
-                      ),
-                    Text(
-                      liveEtaText != null ? 'Driver is $liveEtaText away' : '~ $arrivingEta min',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.blue[700]),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-          ],
-
           if (isStarted) ...[
             _buildStatusBanner(
               icon: Icons.navigation,
@@ -233,16 +305,26 @@ class DriverDetailsComponent extends StatelessWidget {
                 Row(
                   children: [
                     // Avatar
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: resolvedImage != null && resolvedImage.isNotEmpty
-                          ? Image.network(
-                        resolvedImage,
-                        width: 60, height: 60,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _buildPlaceholderAvatar(),
-                      )
-                          : _buildPlaceholderAvatar(),
+                    Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: resolvedImage != null && resolvedImage.isNotEmpty
+                              ? Image.network(
+                            resolvedImage,
+                            width: 60, height: 60,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _buildPlaceholderAvatar(),
+                          )
+                              : _buildPlaceholderAvatar(),
+                        ),
+                        Container(
+                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          padding: const EdgeInsets.all(2),
+                          child: const Icon(Icons.verified, color: Colors.blue, size: 16),
+                        ),
+                      ],
                     ),
                     const SizedBox(width: 12),
 
@@ -251,7 +333,26 @@ class DriverDetailsComponent extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(driverName, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700)),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(driverName, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700)),
+                              ),
+                              if (totalRides > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withValues(alpha:0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.amber.withValues(alpha:0.3)),
+                                  ),
+                                  child: Text(
+                                    "$totalRides+ Rides",
+                                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber[800]),
+                                  ),
+                                ),
+                            ],
+                          ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
@@ -265,9 +366,25 @@ class DriverDetailsComponent extends StatelessWidget {
                                 width: 4, height: 4,
                                 decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle),
                               ),
-                              Text(
-                                vehicleNumber,
-                                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w900),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.directions_car_filled, size: 14, color: Colors.grey[600]),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        vehicleInfo.toUpperCase(),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.5,
+                                          color: Colors.grey[800],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
@@ -275,14 +392,29 @@ class DriverDetailsComponent extends StatelessWidget {
                       ),
                     ),
 
+                    // Share Trip (PRD: Trip sharing)
+                    if (widget.onShare != null)
+                      InkWell(
+                        onTap: widget.onShare,
+                        borderRadius: BorderRadius.circular(30),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.share_outlined, color: Colors.grey[800], size: 22),
+                        ),
+                      ),
+                    if (widget.onShare != null) const SizedBox(width: 10),
                     // Call Button
                     InkWell(
-                      onTap: () => onCall(driverPhone?.toString()),
+                      onTap: () => widget.onCall(driverPhone?.toString()),
                       borderRadius: BorderRadius.circular(30),
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: const BoxDecoration(
-                          color: primaryColor,
+                          color: DriverDetailsComponent.primaryColor,
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.call, color: Colors.white, size: 24),
@@ -291,37 +423,22 @@ class DriverDetailsComponent extends StatelessWidget {
                   ],
                 ),
 
-                // Live Distance (Only when Started)
-                if (isStarted && currentRemainingDistance != null) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green.withValues(alpha:0.3)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.near_me, size: 18, color: Colors.green),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Destination Distance:',
-                              style: GoogleFonts.inter(fontSize: 13, color: Colors.green[800]),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          '${currentRemainingDistance!.toStringAsFixed(1)} km',
-                          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.green[900]),
-                        ),
-                      ],
+                // Vehicle Image Section
+                if (vehicleImageUrl != null && vehicleImageUrl.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      vehicleImageUrl.startsWith('http') ? vehicleImageUrl : '${AppConfig.baseApiUrl}/$vehicleImageUrl',
+                      width: double.infinity,
+                      height: 100,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                     ),
                   ),
                 ],
+
+                // Live Distance (Only when Started)
               ],
             ),
           ),
@@ -353,14 +470,14 @@ class DriverDetailsComponent extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Distance', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600])),
-                        Text(originalDistance, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
+                        Text(_formatDistance(widget.totalRoadDistanceKm ?? double.tryParse(originalDistance.replaceAll('km', ''))), style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
                       ],
                     ),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text('Fare', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600])),
-                        Text(amount, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: primaryColor)),
+                        Text(amount, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w900, color: DriverDetailsComponent.primaryColor)),
                       ],
                     ),
                   ],
@@ -376,7 +493,7 @@ class DriverDetailsComponent extends StatelessWidget {
               width: double.infinity,
               height: 50,
               child: OutlinedButton(
-                onPressed: onCancel,
+                onPressed: widget.onCancel,
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: Colors.red[300]!),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -394,7 +511,6 @@ class DriverDetailsComponent extends StatelessWidget {
   }
 
   // --- Sub-Widgets ---
-
   Widget _buildStatusBanner({required IconData icon, required String text, required Color color}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -428,7 +544,7 @@ class DriverDetailsComponent extends StatelessWidget {
 
   Widget _buildLocationRow(IconData icon, Color color, String text) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start, // Align to top for multi-line text
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 20, color: color),
         const SizedBox(width: 12),
@@ -448,9 +564,9 @@ class DriverDetailsComponent extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: primaryColor.withValues(alpha:0.08),
+        color: DriverDetailsComponent.primaryColor.withValues(alpha:0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: primaryColor.withValues(alpha:0.2)),
+        border: Border.all(color: DriverDetailsComponent.primaryColor.withValues(alpha:0.2)),
       ),
       child: Column(
         children: [
@@ -464,12 +580,12 @@ class DriverDetailsComponent extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: primaryColor),
+                border: Border.all(color: DriverDetailsComponent.primaryColor),
                 boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 4, offset: const Offset(0, 2))],
               ),
               child: Text(
                 digit,
-                style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: primaryColor),
+                style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: DriverDetailsComponent.primaryColor),
               ),
             )).toList(),
           ),

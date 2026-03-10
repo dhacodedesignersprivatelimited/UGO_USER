@@ -45,20 +45,8 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
   @override
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: theme.secondaryBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha:0.1),
-            blurRadius: 20,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -71,14 +59,14 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24), // Reduced from 32
 
           // Search Animation
           ScaleTransition(
             scale: _pulseAnimation,
             child: Container(
-              width: 100,
-              height: 100,
+              width: 80, // Reduced from 100
+              height: 80, // Reduced from 100
               decoration: BoxDecoration(
                 color: primaryColor.withValues(alpha:0.1),
                 shape: BoxShape.circle,
@@ -86,17 +74,18 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
               child: Icon(
                 Icons.search,
                 color: primaryColor,
-                size: 50,
+                size: 40, // Reduced from 50
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20), // Reduced from 24
 
           // Title
           Text(
             'Finding your Ride',
+            textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              fontSize: 22,
+              fontSize: 20, // Reduced from 22
               fontWeight: FontWeight.w700,
               letterSpacing: -0.5,
               color: theme.primaryText,
@@ -107,6 +96,7 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
           // Subtitle
           Text(
             'Searching for nearby drivers...',
+            textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 14,
               color: theme.secondaryText,
@@ -123,34 +113,12 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
               fontWeight: FontWeight.w600,
             ),
           ),
-          // const SizedBox(height: 32),
-
-          // // Tips
-          // Container(
-          //   padding: EdgeInsets.all(16),
-          //   decoration: BoxDecoration(
-          //     color: Colors.grey[50],
-          //     borderRadius: BorderRadius.circular(12),
-          //   ),
-          //   child: Row(
-          //     children: [
-          //       Icon(Icons.tips_and_updates_outlined, color: primaryColor, size: 20),
-          //       SizedBox(width: 12),
-          //       Expanded(
-          //         child: Text(
-          //           'Tip: You can request a ride up to 30 days in advance',
-          //           style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[700]),
-          //         ),
-          //       ),
-          //     ],
-          //   ),
-          // ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20), // Added spacing back but smaller
 
           // Cancel Button
           SizedBox(
             width: double.infinity,
-            height: 56,
+            height: 52, // Slightly smaller from 56
             child: OutlinedButton(
               onPressed: widget.onCancel,
               style: OutlinedButton.styleFrom(
@@ -162,7 +130,7 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
               child: Text(
                 'Cancel Search',
                 style: GoogleFonts.inter(
-                  fontSize: 16,
+                  fontSize: 15, // Slightly smaller
                   fontWeight: FontWeight.w600,
                   color: theme.primaryText,
                 ),

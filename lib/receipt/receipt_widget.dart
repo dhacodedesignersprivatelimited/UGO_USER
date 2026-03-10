@@ -9,16 +9,24 @@ class ReceiptWidget extends StatelessWidget {
   static String routeName = 'receipt';
   static String routePath = '/receipt';
 
+  /// GST rate for ride-hailing (India) - 5%
+  static const double _gstRate = 0.05;
+
   @override
   Widget build(BuildContext context) {
     final rideData = RideSession().rideData ?? {};
     final rideId = rideData['id']?.toString() ?? 'N/A';
     final pickup = rideData['pickup_location_address'] ?? 'Pickup';
     final drop = rideData['drop_location_address'] ?? 'Drop';
-    final fare = rideData['estimated_fare']?.toString() ?? '0';
+    final fareStr = rideData['estimated_fare']?.toString() ?? '0';
+    final totalAmount = double.tryParse(fareStr.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
     final payment =
         (rideData['payment_method'] ?? rideData['payment_type'] ?? 'cash')
             .toString();
+
+    // GST breakdown (inclusive): base = total / (1 + rate), gst = total - base
+    final baseFare = totalAmount / (1 + _gstRate);
+    final gstAmount = totalAmount - baseFare;
 
     return Scaffold(
       appBar: AppBar(
@@ -40,7 +48,20 @@ class ReceiptWidget extends StatelessWidget {
             _row('Ride ID', rideId),
             _row('Pickup', pickup),
             _row('Drop', drop),
-            _row('Fare', '₹$fare'),
+            const Padding(
+              padding: EdgeInsets.only(top: 12, bottom: 8),
+              child: Divider(height: 1),
+            ),
+            _row('Fare (before GST)', '₹${baseFare.toStringAsFixed(2)}'),
+            _row('GST (${(_gstRate * 100).toInt()}%)', '₹${gstAmount.toStringAsFixed(2)}'),
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: _row('Total', '₹${totalAmount.toStringAsFixed(2)}'),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(top: 12, bottom: 8),
+              child: Divider(height: 1),
+            ),
             _row('Payment', payment),
           ],
         ),

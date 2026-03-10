@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_remote_config/firebase_remote_config.dart';
 
 /// Payment configuration handler
@@ -35,7 +36,7 @@ class PaymentConfig {
       // Fetch and activate remote config
       await _remoteConfig.fetchAndActivate();
     } catch (e) {
-      print('Error fetching remote config: $e');
+      if (kDebugMode) debugPrint('PaymentConfig: Error fetching remote config: $e');
     }
 
     _initialized = true;
@@ -46,8 +47,8 @@ class PaymentConfig {
     try {
       return _remoteConfig.getString('razorpay_key');
     } catch (e) {
-      print('Error getting Razorpay key: $e');
-      return 'rzp_test_SAvHgTPEoPnNo7'; // Fallback
+      if (kDebugMode) debugPrint('PaymentConfig: Error getting Razorpay key: $e');
+      return 'rzp_test_SAvHgTPEoPnNo7'; // Fallback for dev only - set live key in Firebase Remote Config for prod
     }
   }
 }

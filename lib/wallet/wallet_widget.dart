@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'wallet_model.dart';
 export 'wallet_model.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:ugouser/config/payment_config.dart';
 /// Wallet Management Interface
 class WalletWidget extends StatefulWidget {
   const WalletWidget({super.key});
@@ -69,68 +70,100 @@ late Razorpay _razorpay;
   }
 }
 
-void _openRazorpay(double amount) {
-    var options = {
-      'key': 'rzp_test_SAvHgTPEoPnNo7',
-      'amount': (amount * 100).toInt(), // in paise
-      'name': 'Ugo App',
-      'description': 'Wallet Recharge',
-      'prefill': {
-        'contact': '9885881832',
-        'email': 'test@email.com',
-      },
-    };
-
+Future<void> _openRazorpay(double amount) async {
     try {
+      String? orderId;
+      try {
+        // Create order on backend for payment verification (if supported)
+        final orderRes = await CreateRazorpayOrderCall.call(
+          amount: amount,
+          token: FFAppState().accessToken,
+        );
+        orderId = CreateRazorpayOrderCall.orderId(orderRes.jsonBody);
+      } catch (_) {
+        // Backend may not support wallet orders; continue with amount only
+      }
+
+      final options = <String, dynamic>{
+        'key': PaymentConfig().getRazorpayKey(),
+        'amount': (amount * 100).toInt(), // paise
+        'name': 'Ugo App',
+        'description': 'Wallet Recharge',
+        'prefill': {
+          'contact': '9885881832',
+          'email': 'test@email.com',
+        },
+      };
+      if (orderId != null && orderId.isNotEmpty) {
+        options['order_id'] = orderId;
+      }
+
       _razorpay.open(options);
     } catch (e) {
       debugPrint("Razorpay Error: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('${FFLocalizations.of(context).getText('val_payment_start_fail')}: $e'),
+          backgroundColor: FlutterFlowTheme.of(context).error,
+        ));
+      }
     }
   }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response)async {
-   
-  final amount = double.tryParse(_amountController.text.trim());
-  if (amount == null) return;
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    final amount = double.tryParse(_amountController.text.trim());
+    if (amount == null || amount <= 0) return;
 
-  final apiResponse = await AddMoneyToWalletCall.call(
-    userId: FFAppState().userid,
-    amount: amount,
-    token: FFAppState().accessToken,
-  );
+    try {
+      final apiResponse = await AddMoneyToWalletCall.call(
+        userId: FFAppState().userid,
+        amount: amount,
+        token: FFAppState().accessToken,
+        razorpayPaymentId: response.paymentId,
+        razorpayOrderId: response.orderId,
+      );
 
-  if (AddMoneyToWalletCall.success(apiResponse.jsonBody) == true) {
-    final balanceString =
-    AddMoneyToWalletCall.walletBalance(apiResponse.jsonBody);
+      if (AddMoneyToWalletCall.success(apiResponse.jsonBody) == true) {
+        final balanceString =
+            AddMoneyToWalletCall.walletBalance(apiResponse.jsonBody);
+        final balance =
+            double.tryParse(balanceString ?? "0") ?? 0.0;
 
-final double balance =
-    double.tryParse(balanceString ?? "0") ?? 0.0;
-
-
-    setState(() {
-      FFAppState().walletBalance = balance;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Wallet Updated: ₹$balance")),
-    );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Wallet update failed")),
-    );
-  }
-
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Payment Successful")),
-    );
-
-    // TODO: Update Wallet Balance in Firestore
+        if (mounted) {
+          setState(() => FFAppState().walletBalance = balance);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("${FFLocalizations.of(context).getText('wallet_updated_success')}: ₹${balance.toStringAsFixed(2)}"),
+              backgroundColor: FlutterFlowTheme.of(context).success,
+            ),
+          );
+        }
+      } else {
+        final msg = AddMoneyToWalletCall.message(apiResponse.jsonBody);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(msg ?? FFLocalizations.of(context).getText('wallet_update_failed')),
+              backgroundColor: FlutterFlowTheme.of(context).error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: $e"),
+            backgroundColor: FlutterFlowTheme.of(context).error,
+          ),
+        );
+      }
+    }
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Payment Failed")),
+      SnackBar(content: Text(FFLocalizations.of(context).getText('payment_failed'))),
     );
   }
   @override
@@ -162,7 +195,7 @@ final double balance =
             buttonSize: 60.0,
             icon: Icon(
               Icons.arrow_back_rounded,
-              color: Colors.white,
+              color: FlutterFlowTheme.of(context).secondaryBackground,
               size: 30.0,
             ),
             onPressed: () async {
@@ -213,7 +246,7 @@ final double balance =
                         color: FlutterFlowTheme.of(context).secondaryBackground,
                         borderRadius: BorderRadius.circular(12.0),
                         border: Border.all(
-                          color: Color(0xFFFF7B10),
+                          color: FlutterFlowTheme.of(context).primary,
                           width: 2.0,
                         ),
                       ),
@@ -296,21 +329,21 @@ final double balance =
                                   controller: _amountController,
                                   keyboardType: TextInputType.number,
                                   decoration: InputDecoration(
-                                    hintText: "Enter Amount",
+                                    hintText: FFLocalizations.of(context).getText('val_enter_amount'),
                                     prefixIcon: Icon(Icons.currency_rupee),
                                     filled: true,
-                                    fillColor: Color(0xFFF5F5F5),
+                                    fillColor: FlutterFlowTheme.of(context).primaryBackground,
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return "Please enter amount";
+                                      return FFLocalizations.of(context).getText('val_amount_required');
                                     }
                                     final amount = double.tryParse(value);
                                     if (amount == null || amount <= 0) {
-                                      return "Enter valid amount";
+                                      return FFLocalizations.of(context).getText('val_amount_invalid');
                                     }
                                     return null;
                                   },
@@ -335,8 +368,8 @@ final double balance =
                                     }
                                   },
                                   child: Text(
-                                    "Add Amount",
-                                    style: TextStyle(color: Colors.white),
+                                      FFLocalizations.of(context).getText('add_amount_button'),
+                                      style: TextStyle(color: FlutterFlowTheme.of(context).secondaryBackground),
                                   ),
                                 ),
                               ],

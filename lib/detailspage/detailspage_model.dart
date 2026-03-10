@@ -20,6 +20,10 @@ class DetailspageModel extends FlutterFlowModel<DetailspageWidget> {
   TextEditingController? textController3;
   String? Function(BuildContext, String?)? textController3Validator;
 
+  FocusNode? textFieldFocusNode4;
+  TextEditingController? textController4;
+  String? Function(BuildContext, String?)? textController4Validator;
+
   // Logic fields
   ApiCallResponse? apiResultRegister;
   bool isRegistering = false;
@@ -37,6 +41,8 @@ class DetailspageModel extends FlutterFlowModel<DetailspageWidget> {
     textController2?.dispose();
     textFieldFocusNode3?.dispose();
     textController3?.dispose();
+    textFieldFocusNode4?.dispose();
+    textController4?.dispose();
   }
 
   // ✅ Validation Logic

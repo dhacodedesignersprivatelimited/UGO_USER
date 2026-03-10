@@ -106,7 +106,7 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
         final imgUrl = rawImg.isNotEmpty
             ? (rawImg.startsWith('http')
             ? rawImg
-            : 'https://ugo-api.icacorp.org/$rawImg')
+            : '${AppConfig.baseApiUrl}/$rawImg')
             : '';
 
         if (mounted) {
@@ -656,8 +656,7 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
               color: FlutterFlowTheme.of(context).secondaryBackground,
               size: 20,
             ),
-            onPressed: () =>
-                context.pushNamed(AccountManagementWidget.routeName),
+            onPressed: () => context.pop(),
           ),
           title: Text(
             'Profile Settings',

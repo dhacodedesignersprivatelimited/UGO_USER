@@ -2,9 +2,9 @@ import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
-import '/main.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../main.dart';
 
 import 'settings_page_model.dart';
 export 'settings_page_model.dart';
@@ -51,7 +51,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'App Settings',
+          FFLocalizations.of(context).getText('settings_title'),
           style: GoogleFonts.inter(
             color: theme.secondaryBackground,
             fontSize: 16,
@@ -76,20 +76,46 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _section(
-                    title: 'General',
+                    title: FFLocalizations.of(context).getText('general_section'),
                     children: [
                       _tile(
                         icon: Icons.home_outlined,
-                        title: 'Add Home',
+                        title: FFLocalizations.of(context).getText('add_home'),
                         onTap: () =>
                             context.pushNamed(AddHomeWidget.routeName),
                       ),
                        _tile(
                         icon: Icons.work_outlined,
-                        title: 'Add Work',
+                        title: FFLocalizations.of(context).getText('add_work'),
                         onTap: () =>
                             // context.pushNamed(AddHomeWidget.routeName),
                             {}
+                      ),
+                      SwitchListTile(
+                        title: Text(
+                          FFLocalizations.of(context).getText('dark_mode'),
+                          style: theme.bodyLarge,
+                        ),
+                        secondary: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: theme.primary.withValues(alpha:0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.dark_mode_outlined, color: theme.primary),
+                        ),
+                        value: Theme.of(context).brightness == Brightness.dark,
+                        activeColor: theme.primary,
+                        onChanged: (bool value) {
+                          if (value) {
+                            FlutterFlowTheme.saveThemeMode(ThemeMode.dark);
+                            MyApp.of(context).setThemeMode(ThemeMode.dark);
+                          } else {
+                            FlutterFlowTheme.saveThemeMode(ThemeMode.light);
+                            MyApp.of(context).setThemeMode(ThemeMode.light);
+                          }
+                        },
                       ),
                       // _tile(
                       //   icon: Icons.accessibility,

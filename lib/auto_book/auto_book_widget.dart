@@ -1,12 +1,14 @@
-import '/flutter_flow/flutter_flow_google_map.dart';
-import '/flutter_flow/flutter_flow_util.dart';
+import '../flutter_flow/flutter_flow_theme.dart';
+import '/flutter_flow/flutter_flow_google_map.dart' show GoogleMapStyle, googleMapStyleStrings;
+import '/flutter_flow/flutter_flow_util.dart' hide LatLng;
 import '/backend/api_requests/api_calls.dart';
 import '/index.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
-import 'package:pointer_interceptor/pointer_interceptor.dart';
 
 import 'auto_book_model.dart';
 export 'auto_book_model.dart';
@@ -17,17 +19,23 @@ import '/components/driver_details_component.dart';
 import '/components/ride_cancelled_component.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
 import '/ride_session.dart';
+import '/services/route_distance_service.dart';
 
 class AutoBookWidget extends StatefulWidget {
   const AutoBookWidget({
     super.key,
     required this.rideId,
-    this.initialRideStatus, // ✅ Added for smooth transition
+    this.initialRideStatus,
+    this.totalDistanceKm,
+    this.totalDuration,
   });
 
   final int rideId;
   final String? initialRideStatus;
+  final double? totalDistanceKm;
+  final String? totalDuration;
 
   static String routeName = 'auto-book';
   static String routePath = '/autoBook';
@@ -48,7 +56,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
   // Socket & API
   IO.Socket? socket;
-  final String _baseUrl = "https://ugo-api.icacorp.org";
+  String get _baseUrl => AppConfig.baseApiUrl;
 
   // Data Storage
   List<dynamic> ridesCache = [];
@@ -57,6 +65,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   // State Flags
   bool isLoadingDriver = false;
   bool _isCancelling = false;
+  bool _isRebooking = false; // ✅ Added for rebooking state
   bool _userInitiatedCancel = false;
   bool _cancelledByDriver = false;
   String? _rideOtp;
@@ -68,9 +77,21 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   Timer? _searchTimer;
   int _searchSeconds = 0;
   Timer? _distanceUpdateTimer;
+  Timer? _rideCheckTimer;
+  bool _rideCheckShown = false;
 
   // Distance tracking
   double? _currentRemainingDistance;
+  String? _liveEtaText;
+  double? _totalRoadDistanceKm;
+
+  // Map (like avaliable_options)
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
+  Set<Polyline> _polylines = {};
+  BitmapDescriptor? _bikeIcon;
+  BitmapDescriptor? _autoIcon;
+  BitmapDescriptor? _carIcon;
 
   // Status Constants
   static const STATUS_SEARCHING = 'searching';
@@ -89,6 +110,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     super.initState();
     print('🚀 AutoBookWidget: initState - Ride ID: ${widget.rideId}');
     _model = createModel(context, () => AutoBookModel());
+    
+    // Initialize with passed values if available
+    _totalRoadDistanceKm = widget.totalDistanceKm;
+    _liveEtaText = widget.totalDuration;
 
     // 1. Initialize Status from Constructor (if available) to avoid "Searching" flash
     if (widget.initialRideStatus != null) {
@@ -101,15 +126,303 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
     // 3. ✅ CRITICAL: Always fetch fresh status on load
     _fetchInitialRideStatus();
+    
+    // 4. Ensure total road distance is fetched
+    _ensureTotalRoadDistance();
+  }
+
+  Future<void> _ensureTotalRoadDistance() async {
+    if (_totalRoadDistanceKm != null) return;
+    final appState = FFAppState();
+    
+    double? pLat = appState.pickupLatitude;
+    double? pLng = appState.pickupLongitude;
+    double? dLat = appState.dropLatitude;
+    double? dLng = appState.dropLongitude;
+
+    if (pLat == null || pLng == null) return;
+    
+    if (dLat == null || dLng == null) {
+      if (ridesCache.isNotEmpty) {
+        dLat = double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '');
+        dLng = double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '');
+      }
+    }
+
+    if (pLat != null && pLng != null && dLat != null && dLng != null) {
+      final roadDistance = await RouteDistanceService().getDrivingDistanceKm(
+        originLat: pLat,
+        originLng: pLng,
+        destLat: dLat,
+        destLng: dLng,
+      );
+      if (roadDistance != null && mounted) {
+        setState(() => _totalRoadDistanceKm = roadDistance);
+      }
+    }
+  }
+
+  Future<void> _loadVehicleIconsIfNeeded() async {
+    if (_bikeIcon != null) return;
+    try {
+      final config = const ImageConfiguration(size: Size(48, 48));
+      final results = await Future.wait([
+        BitmapDescriptor.asset(config, 'assets/images/bike.png'),
+        BitmapDescriptor.asset(config, 'assets/images/auto.png'),
+        BitmapDescriptor.asset(config, 'assets/images/car.png'),
+      ]);
+      if (mounted) {
+        _bikeIcon = results[0];
+        _autoIcon = results[1];
+        _carIcon = results[2];
+      }
+    } catch (e) {
+      debugPrint('Error loading vehicle icons: $e');
+    }
+  }
+
+  List<LatLng> _decodePolyline(String encoded) {
+    List<LatLng> poly = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+    while (index < len) {
+      int b, shift = 0, result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.codeUnitAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+      poly.add(LatLng(lat / 1E5, lng / 1E5));
+    }
+    return poly;
+  }
+
+  void _animateCameraToBounds(List<LatLng> points) {
+    if (points.isEmpty) return;
+    double minLat = points.first.latitude, maxLat = points.first.latitude;
+    double minLng = points.first.longitude, maxLng = points.first.longitude;
+    for (var point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLng) minLng = point.longitude;
+      if (point.longitude > maxLng) maxLng = point.longitude;
+    }
+    _mapController?.animateCamera(CameraUpdate.newLatLngBounds(
+      LatLngBounds(
+        southwest: LatLng(minLat, minLng),
+        northeast: LatLng(maxLat, maxLng),
+      ),
+      80,
+    ));
+  }
+
+  Future<void> _initializeMap() async {
+    await _addMarkers();
+    await _getRoutePolyline();
+  }
+
+  Future<void> _addMarkers() async {
+    final appState = FFAppState();
+    final pickupLat = appState.pickupLatitude;
+    final pickupLng = appState.pickupLongitude;
+    final dropLat = appState.dropLatitude ?? (ridesCache.isNotEmpty
+        ? double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '')
+        : null);
+    final dropLng = appState.dropLongitude ?? (ridesCache.isNotEmpty
+        ? double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '')
+        : null);
+
+    final newMarkers = <Marker>{};
+
+    // Pickup (green)
+    if (pickupLat != null && pickupLng != null) {
+      newMarkers.add(Marker(
+        markerId: const MarkerId('pickup'),
+        position: LatLng(pickupLat, pickupLng),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      ));
+    }
+
+    // Drop (red)
+    if (dropLat != null && dropLng != null) {
+      newMarkers.add(Marker(
+        markerId: const MarkerId('drop'),
+        position: LatLng(dropLat, dropLng),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      ));
+    }
+
+    // Driver marker (when accepted/arriving/started)
+    if (_rideStatus != STATUS_SEARCHING && ridesCache.isNotEmpty) {
+      final ride = ridesCache[0];
+      final dLat = double.tryParse(ride['driver_latitude']?.toString() ?? '');
+      final dLng = double.tryParse(ride['driver_longitude']?.toString() ?? '');
+      if (dLat != null && dLng != null) {
+        await _loadVehicleIconsIfNeeded();
+        final vtId = getJsonField(ride, r'''$.vehicle_type_id''');
+        final vt = vtId is int ? vtId : int.tryParse(vtId?.toString() ?? '');
+        final orangeIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+        final driverIcon = (vt == 1 ? _autoIcon : vt == 2 ? _bikeIcon : _carIcon) ?? orangeIcon;
+        newMarkers.add(Marker(
+          markerId: const MarkerId('driver'),
+          position: LatLng(dLat, dLng),
+          icon: driverIcon,
+        ));
+      }
+    }
+
+    // Nearby drivers (during searching - like avaliable_options)
+    if (_rideStatus == STATUS_SEARCHING && pickupLat != null && pickupLng != null) {
+      try {
+        await _loadVehicleIconsIfNeeded();
+        final response = await GetNearbyDriversCall.call(
+          lat: pickupLat,
+          lon: pickupLng,
+          radius: 5.0,
+          token: appState.accessToken,
+        );
+        if (response.succeeded) {
+          final allDrivers = (getJsonField(response.jsonBody, r'''$.data''') as List?)?.toList() ?? [];
+          final category = appState.selectedRideCategory?.toLowerCase();
+          int? targetVt;
+          if (category == 'bike') targetVt = 2;
+          else if (category == 'auto') targetVt = 1;
+          else if (category == 'car') targetVt = 3;
+          final orangeIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+          int idx = 0;
+          for (final d in allDrivers) {
+            if (getJsonField(d, r'''$.is_active''') != true || getJsonField(d, r'''$.is_online''') != true) continue;
+            final dVt = getJsonField(d, r'''$.vehicle_type_id''');
+            final driverVt = dVt is int ? dVt : int.tryParse(dVt?.toString() ?? '');
+            if (targetVt != null && driverVt != targetVt) continue;
+            final lat = getJsonField(d, r'''$.current_location_latitude''');
+            final lng = getJsonField(d, r'''$.current_location_longitude''');
+            if (lat == null || lng == null) continue;
+            final latVal = lat is num ? lat.toDouble() : double.tryParse(lat.toString());
+            final lngVal = lng is num ? lng.toDouble() : double.tryParse(lng.toString());
+            if (latVal == null || lngVal == null) continue;
+            final driverIcon = (driverVt == 1 ? _autoIcon : driverVt == 2 ? _bikeIcon : _carIcon) ?? orangeIcon;
+            newMarkers.add(Marker(
+              markerId: MarkerId('driver_$idx'),
+              position: LatLng(latVal, lngVal),
+              icon: driverIcon,
+            ));
+            idx++;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error adding driver markers: $e');
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _markers.clear();
+        _markers.addAll(newMarkers);
+      });
+    }
+  }
+
+  Future<void> _getRoutePolyline() async {
+    final appState = FFAppState();
+    double? fromLat, fromLng, toLat, toLng;
+
+    if (_rideStatus == STATUS_ARRIVING || _rideStatus == STATUS_ACCEPTED) {
+      // Driver -> Pickup (current location)
+      if (ridesCache.isNotEmpty) {
+        final ride = ridesCache[0];
+        fromLat = double.tryParse(ride['driver_latitude']?.toString() ?? '');
+        fromLng = double.tryParse(ride['driver_longitude']?.toString() ?? '');
+      }
+      toLat = appState.pickupLatitude;
+      toLng = appState.pickupLongitude;
+    } else {
+      // Pickup -> Drop (searching or started)
+      fromLat = appState.pickupLatitude;
+      fromLng = appState.pickupLongitude;
+      toLat = appState.dropLatitude ?? (ridesCache.isNotEmpty
+          ? double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '')
+          : null);
+      toLng = appState.dropLongitude ?? (ridesCache.isNotEmpty
+          ? double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '')
+          : null);
+    }
+
+    if (fromLat == null || fromLng == null || toLat == null || toLng == null) return;
+
+    try {
+      final url = 'https://maps.googleapis.com/maps/api/directions/json?'
+          'origin=$fromLat,$fromLng&destination=$toLat,$toLng'
+          '&key=${AppConfig.googleMapsApiKey}';
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+          if (json['status'] == 'OK' && json['routes'] != null && (json['routes'] as List).isNotEmpty) {
+            final route = json['routes'][0];
+            final points = _decodePolyline(route['overview_polyline']['points']);
+            
+            // Extract Road Distance and ETA
+            double? roadDistance;
+            String? etaText;
+            if (route['legs'] != null && (route['legs'] as List).isNotEmpty) {
+              final leg = route['legs'][0];
+              final distanceMeters = leg['distance']?['value'] ?? 0;
+              roadDistance = distanceMeters / 1000.0;
+              etaText = leg['duration']?['text'];
+              
+              // Preservation logic: store as total distance if it's the ride distance
+              if (_rideStatus == STATUS_SEARCHING || _totalRoadDistanceKm == null) {
+                // If it's a Pickup->Drop route (indicated by fromLat/toLat matching pickup/drop)
+                if (fromLat == appState.pickupLatitude && toLat == appState.dropLatitude) {
+                  _totalRoadDistanceKm = roadDistance;
+                }
+              }
+            }
+
+            if (mounted) {
+              setState(() {
+                _polylines.clear();
+                _polylines.add(Polyline(
+                  polylineId: const PolylineId('route'),
+                  points: points,
+                  color: Colors.orange,
+                  width: 4,
+                  geodesic: true,
+                ));
+                if (roadDistance != null) _currentRemainingDistance = roadDistance;
+                if (etaText != null) _liveEtaText = etaText;
+              });
+            }
+          if (_mapController != null && points.isNotEmpty) {
+            await Future.delayed(const Duration(milliseconds: 300));
+            _animateCameraToBounds(points);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Route polyline error: $e');
+    }
   }
 
   void _mapInitialStatus(String status) {
     status = status.toLowerCase();
     if (status == 'started' ||
         status == 'in_progress' ||
-        status == 'picked_up') {
+        status == 'picked_up' ||
+        status == 'ontrip') {
       _rideStatus = STATUS_PICKED_UP;
-    } else if (status == 'arriving') {
+    } else if (status == 'arriving' || status == 'arrived') {
       _rideStatus = STATUS_ARRIVING;
     } else if (status == 'accepted') {
       _rideStatus = STATUS_ACCEPTED;
@@ -143,30 +456,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   // ============================================================================
   // 🗺️ MAP LOGIC
   // ============================================================================
-
-  List<FlutterFlowMarker> _getMarkers() {
-    if (ridesCache.isEmpty) return [];
-
-    final ride = ridesCache[0];
-    final lat = double.tryParse(ride['driver_latitude']?.toString() ?? '');
-    final lng = double.tryParse(ride['driver_longitude']?.toString() ?? '');
-
-    // Only show driver marker if status is relevant (Accepted/Arriving/Picked Up)
-    if (lat == null ||
-        lng == null ||
-        _rideStatus == STATUS_SEARCHING ||
-        _rideStatus == STATUS_CANCELLED) {
-      return [];
-    }
-
-    return [
-      FlutterFlowMarker(
-        'driver_marker',
-        LatLng(lat, lng),
-        // You can add a custom icon here if available
-      ),
-    ];
-  }
 
   // ============================================================================
   // API & SOCKET LOGIC
@@ -239,6 +528,32 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         }
       });
 
+      // Scan-to-Book flow: location_update, ride_completed
+      socket!.on("location_update", (data) {
+        if (data is Map && mounted) {
+          final m = Map<String, dynamic>.from(data);
+          final lat = m['lat'] ?? m['latitude'];
+          final lng = m['lng'] ?? m['longitude'];
+          if (lat != null && lng != null && ridesCache.isNotEmpty) {
+            final ride = Map<String, dynamic>.from(ridesCache.first);
+            ride['driver_latitude'] = lat is num ? lat.toDouble() : double.tryParse(lat.toString());
+            ride['driver_longitude'] = lng is num ? lng.toDouble() : double.tryParse(lng.toString());
+            if (m['eta'] != null) ride['eta'] = m['eta'];
+            setState(() => ridesCache = [ride]);
+            RideSession().rideData = ride;
+          }
+        }
+      });
+
+      socket!.on("ride_completed", (data) {
+        if (data != null && mounted) {
+          final m = data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+          m['ride_status'] = 'completed';
+          m['status'] = 'completed';
+          _processRideUpdate(m);
+        }
+      });
+
       // 4. Connect
       socket!.connect();
     } catch (e) {
@@ -273,12 +588,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           ridesCache = [updatedRide];
         }
 
-        // 2. OTP Extraction
+        // 2. OTP Extraction (sync to app state for Secure Ride Start UI)
         final incomingOtp = updatedRide['otp'] ??
             updatedRide['ride_otp'] ??
             updatedRide['booking_otp'];
         if (incomingOtp != null) {
           _rideOtp = incomingOtp.toString();
+
         }
 
         // 3. Status State Machine
@@ -286,6 +602,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           _rideStatus = STATUS_CANCELLED;
           _cancelledByDriver = !_userInitiatedCancel;
           _searchTimer?.cancel();
+          _rideCheckTimer?.cancel();
           _stopDistanceUpdateTimer();
           socket?.off("ride_updated");
           FFAppState().bookingInProgress = false;
@@ -296,12 +613,14 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             _rideStatus = STATUS_ACCEPTED;
           }
           _searchTimer?.cancel();
-        } else if (status == 'arriving') {
+        } else if (status == 'arriving' || status == 'arrived') {
+          // Backend/driver sends 'arrived' when driver reaches pickup; treat same as 'arriving'
           _rideStatus = STATUS_ARRIVING;
           _stopDistanceUpdateTimer();
         } else if (status == 'started' ||
             status == 'picked_up' ||
-            status == 'in_progress') {
+            status == 'in_progress' ||
+            status == 'ontrip') {
           // ✅ THIS HANDLES DIRECT START
           _rideStatus = STATUS_PICKED_UP;
           _searchTimer
@@ -310,11 +629,15 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           if (previousStatus != STATUS_PICKED_UP) {
             _updateRemainingDistance();
             _startDistanceUpdateTimer();
+            // PRD: In-trip RideCheck - show "Are you OK?" after 45s
+            _rideCheckTimer?.cancel();
+            _rideCheckTimer = Timer(const Duration(seconds: 45), _showRideCheckDialog);
           }
         } else if (status == 'completed' || status == 'complete') {
           if (_rideStatus != STATUS_COMPLETED) {
             _rideStatus = STATUS_COMPLETED;
             _searchTimer?.cancel();
+            _rideCheckTimer?.cancel();
             _stopDistanceUpdateTimer();
             navigateToComplete = true;
           }
@@ -325,6 +648,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       if (_rideStatus == STATUS_PICKED_UP) {
         _updateRemainingDistance();
       }
+      
+      _ensureTotalRoadDistance();
 
       // 5. Navigation Handling
       if (navigateToComplete) {
@@ -338,6 +663,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           (driverDetails == null || driverDetails!['id'] != driverId) &&
           !isLoadingDriver) {
         _fetchDriverDetails(driverId);
+      }
+
+      // 7. Refresh map when status changes (driver→pickup or pickup→drop)
+      if (_rideStatus == STATUS_ACCEPTED ||
+          _rideStatus == STATUS_ARRIVING ||
+          _rideStatus == STATUS_PICKED_UP) {
+        _initializeMap();
       }
     } catch (e) {
       print("❌ Error processing ride update: $e");
@@ -525,8 +857,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       );
       if (mounted) {
         if (response.succeeded) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Ride cancelled successfully'),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(FFLocalizations.of(context).getText('ride_cancelled_success')),
               backgroundColor: Colors.green));
           setState(() {
             _rideStatus = STATUS_CANCELLED;
@@ -540,13 +872,65 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             if (mounted) context.pop();
           });
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Failed to cancel ride.'),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(FFLocalizations.of(context).getText('ride_cancel_failed')),
               backgroundColor: Colors.red));
         }
       }
     } finally {
       if (mounted) setState(() => _isCancelling = false);
+    }
+  }
+
+  Future<void> _handleRebook() async {
+    if (_isRebooking) return;
+    setState(() => _isRebooking = true);
+
+    try {
+      final response = await RebookRideCall.call(
+        rideId: widget.rideId,
+        token: FFAppState().accessToken,
+      );
+
+      if (response.succeeded) {
+        // Clear cancel flags and reset status to searching
+        setState(() {
+          _rideStatus = STATUS_SEARCHING;
+          _cancelledByDriver = false;
+          _userInitiatedCancel = false;
+          _isRebooking = false;
+          _searchSeconds = 0;
+        });
+
+        // Restart search timer and re-initialize socket/map if needed
+        _startSearchTimer();
+        _initializeSocket();
+        _initializeMap();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Rebooking successful! Searching for drivers...'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Rebooking failed: ${RebookRideCall.message(response.jsonBody) ?? "Unknown error"}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isRebooking = false);
+      }
+    } catch (e) {
+      print('❌ Error during rebooking: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An error occurred during rebooking.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      setState(() => _isRebooking = false);
     }
   }
 
@@ -567,20 +951,20 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Cancel Ride?',
+          title: Text(FFLocalizations.of(context).getText('ride_cancel_dialog_title'),
               style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-          content: const Text('Are you sure you want to cancel this ride?'),
+          content: Text(FFLocalizations.of(context).getText('ride_cancel_dialog_text')),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('No')),
+                child: Text(FFLocalizations.of(context).getText('no'))),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 _cancelRide('Customer requested cancellation');
               },
-              child: const Text('Yes, Cancel',
-                  style: TextStyle(color: Colors.red)),
+              child: Text(FFLocalizations.of(context).getText('yes_cancel'),
+                  style: const TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -591,14 +975,15 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   Future<bool> _onBackPressed() async {
     if (_rideStatus == STATUS_CANCELLED || _rideStatus == STATUS_COMPLETED)
       return true;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Please continue the ride or cancel it first')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(FFLocalizations.of(context).getText('ride_back_restriction'))));
     return false;
   }
 
   @override
   void dispose() {
     _searchTimer?.cancel();
+    _rideCheckTimer?.cancel();
     _stopDistanceUpdateTimer();
     try {
       socket?.off("ride_updated");
@@ -626,7 +1011,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
         // If your logic says "yes, let's leave", trigger the pop manually
         if (shouldPop && context.mounted) {
-          Navigator.of(context).pop();
+          context.pop();
         }
       },
       child: Scaffold(
@@ -634,36 +1019,272 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         backgroundColor: Colors.white,
         body: Stack(
           children: [
-            // Map
+            // Map (Full Screen)
             Positioned.fill(
-              bottom: MediaQuery.of(context).size.height * 0.45,
-              child: FlutterFlowGoogleMap(
-                controller: _model.googleMapsController,
-                onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
-                initialLocation: _model.googleMapsCenter ??
-                    const LatLng(17.385044, 78.486671),
-                markers: _getMarkers(),
-                markerColor: GoogleMarkerColor.orange,
+              child: GoogleMap(
+                style: googleMapStyleStrings[GoogleMapStyle.uber],
+                onMapCreated: (c) {
+                  _mapController = c;
+                  _initializeMap();
+                },
+                initialCameraPosition: CameraPosition(
+                  target: LatLng(
+                    FFAppState().pickupLatitude ?? AppConfig.defaultLat,
+                    FFAppState().pickupLongitude ?? AppConfig.defaultLng,
+                  ),
+                  zoom: 14,
+                ),
+                markers: _markers,
+                polylines: _polylines,
+                zoomControlsEnabled: false,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: false,
                 mapType: MapType.normal,
-                initialZoom: 14.0,
-                allowInteraction: true,
-                showLocation: true,
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).size.height * 0.4, // Keep markers above collapsed sheet
+                ),
               ),
             ),
 
-            // Header
+            // Header (Stays on top)
             Positioned(top: 0, left: 0, right: 0, child: _buildHeader()),
 
-            // Bottom Component
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: PointerInterceptor(
-                intercepting: isWeb,
-                child: _buildBottomComponent(),
+            // 3. Draggable Bottom Sheet (Driver Details / Search)
+            DraggableScrollableSheet(
+              initialChildSize: _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED ? 0.45 : 0.35,
+              minChildSize: _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED ? 0.45 : 0.25,
+              maxChildSize: _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED ? 0.45 : 0.85,
+              builder: (context, scrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
+                  ),
+                  child: _buildBottomComponent(scrollController),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static const String _supportNumber = '+919100088718';
+  static const String _emergencyNumber = '112';
+
+  Future<void> _callEmergencySosApi() async {
+    final userId = FFAppState().userid;
+    if (userId == 0) return;
+    double lat = 0, lng = 0;
+    try {
+      final pos = await Geolocator.getCurrentPosition();
+      lat = pos.latitude;
+      lng = pos.longitude;
+    } catch (_) {}
+    try {
+      await EmergencySosCall.call(
+        rideId: widget.rideId,
+        userId: userId,
+        latitude: lat,
+        longitude: lng,
+        token: FFAppState().accessToken,
+      );
+    } catch (e) {
+      debugPrint('EmergencySos API error: $e');
+    }
+  }
+
+  Future<void> _createSupportTicketForIncident(String title, String source) async {
+    final userId = FFAppState().userid;
+    if (userId == 0) return;
+    final rideId = widget.rideId;
+    final desc = 'User triggered $source during active ride. Ride ID: $rideId.';
+    await CreateSupportTicketCall.call(
+      ticketType: 'ride_issue',
+      ticketTitle: title,
+      ticketDescription: desc,
+      userId: userId,
+      priorityLevel: 'high',
+      token: FFAppState().accessToken,
+    );
+  }
+
+  void _showRideCheckDialog() {
+    if (!mounted || _rideCheckShown) return;
+    _rideCheckShown = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.check_circle_outline, color: primaryColor, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(FFLocalizations.of(context).getText('ride_check_title'), style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+        content: Text(
+          FFLocalizations.of(context).getText('ride_check_text'),
+          style: GoogleFonts.inter(fontSize: 15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              _callEmergencySosApi();
+              _createSupportTicketForIncident('RideCheck - I need help', 'RideCheck');
+              launchUrl(Uri(scheme: 'tel', path: _supportNumber), mode: LaunchMode.externalApplication);
+            },
+            child: Text(FFLocalizations.of(context).getText('ride_check_help'), style: GoogleFonts.inter(color: Colors.red, fontWeight: FontWeight.w600)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: FilledButton.styleFrom(backgroundColor: primaryColor),
+            child: Text(FFLocalizations.of(context).getText('ride_check_fine'), style: GoogleFonts.inter(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleShareTrip() {
+    final ride = ridesCache.isNotEmpty ? ridesCache[0] : null;
+    final pickup = ride?['pickup_location_address'] ?? FFAppState().pickuplocation;
+    final drop = ride?['drop_location_address'] ?? FFAppState().droplocation;
+    final rideId = ride?['id'] ?? widget.rideId;
+    final eta = _currentRemainingDistance != null
+        ? '~${(_currentRemainingDistance! / 0.5).round() * 2} mins'
+        : 'En route';
+    final shareText = 'My UGO ride: $pickup → $drop. Ride ID: $rideId. ETA: $eta. Track: https://ugotaxiservices.com';
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(FFLocalizations.of(context).getText('ride_share_trip'), style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: const Color(0xFF25D366).withValues(alpha: 0.2), shape: BoxShape.circle),
+                  child: const Icon(Icons.chat, color: Color(0xFF25D366), size: 24),
+                ),
+                title: Text('WhatsApp', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(shareText)}'), mode: LaunchMode.externalApplication);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.2), shape: BoxShape.circle),
+                  child: Icon(Icons.sms, color: Colors.blue[700], size: 24),
+                ),
+                title: Text('SMS', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  launchUrl(Uri(scheme: 'sms', queryParameters: {'body': shareText}), mode: LaunchMode.externalApplication);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleSosPressed() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.emergency, color: Colors.red[700], size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                FFLocalizations.of(context).getText('sos_title'),
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
               ),
             ),
           ],
         ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              FFLocalizations.of(context).getText('sos_text'),
+              style: GoogleFonts.inter(fontSize: 14, height: 1.4),
+            ),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                launchUrl(Uri(scheme: 'tel', path: _emergencyNumber),
+                    mode: LaunchMode.externalApplication);
+              },
+              icon: Icon(Icons.emergency, size: 16, color: Colors.red),
+              label: Text(FFLocalizations.of(context).getText('sos_call_112'), style: GoogleFonts.inter(color: Colors.red, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(FFLocalizations.of(context).getText('no'), style: GoogleFonts.inter(color: FlutterFlowTheme.of(context).secondaryText)),
+          ),
+          const Spacer(),
+          FilledButton.icon(
+            onPressed: () async {
+              Navigator.pop(context);
+              _callEmergencySosApi();
+              _createSupportTicketForIncident('SOS - Emergency support requested', 'SOS');
+              launchUrl(Uri(scheme: 'tel', path: _supportNumber),
+                  mode: LaunchMode.externalApplication);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.white, size: 20),
+                        SizedBox(width: 8),
+                        Expanded(child: Text(FFLocalizations.of(context).getText('sos_calling'))),
+                      ],
+                    ),
+                    backgroundColor: Colors.green[700],
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            icon: Icon(Icons.phone, size: 18, color: Colors.white),
+            label: Text(FFLocalizations.of(context).getText('sos_call_support')),
+            style: FilledButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -677,7 +1298,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         bottom: 16,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: FlutterFlowTheme.of(context).secondaryBackground,
         boxShadow: [
           BoxShadow(
               color: Colors.black.withValues(alpha:0.05),
@@ -690,55 +1311,111 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           Expanded(
             child: Text(
               _rideStatus == STATUS_SEARCHING
-                  ? 'Finding your ride'
-                  : 'Your ride',
+                  ? FFLocalizations.of(context).getText('finding_ride')
+                  : FFLocalizations.of(context).getText('your_ride'),
               style:
                   GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700),
             ),
           ),
-          if (_rideStatus != STATUS_SEARCHING)
+          if (_rideStatus != STATUS_SEARCHING) ...[
+            GestureDetector(
+              onTap: _handleSosPressed,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: FlutterFlowTheme.of(context).error.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: FlutterFlowTheme.of(context).error.withValues(alpha: 0.4), width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.emergency, size: 18, color: Colors.red[700]),
+                    const SizedBox(width: 6),
+                    Text(
+                      FFLocalizations.of(context).getText('sos'),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: FlutterFlowTheme.of(context).error,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: FlutterFlowTheme.of(context).primaryBackground,
                   borderRadius: BorderRadius.circular(20)),
               child: Row(
                 children: [
                   const Icon(Icons.shield_outlined,
                       size: 16, color: primaryColor),
                   const SizedBox(width: 4),
-                  Text('Safety',
+                  Text(FFLocalizations.of(context).getText('safety'),
                       style: GoogleFonts.inter(
                           fontSize: 13, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildBottomComponent() {
+  Widget _buildBottomComponent(ScrollController scrollController) {
     if (_rideStatus == STATUS_SEARCHING) {
-      return SearchingRideComponent(
-          searchSeconds: _searchSeconds, onCancel: _showCancelDialog);
+      return SingleChildScrollView(
+        controller: scrollController,
+        child: SearchingRideComponent(
+          searchSeconds: _searchSeconds,
+          onCancel: _showCancelDialog,
+        ),
+      );
     } else if (_rideStatus == STATUS_CANCELLED) {
-      return RideCancelledComponent(
-        onBackToHome: () => context.pop(),
-        onFindNewRide: _cancelledByDriver ? () => context.pop() : null,
-        cancelledByDriver: _cancelledByDriver,
+      return SingleChildScrollView(
+        controller: scrollController,
+        child: RideCancelledComponent(
+          onBackToHome: () {
+            FFAppState().bookingInProgress = false;
+            FFAppState().currentRideId = null;
+            FFAppState().currentRideOtp = '';
+            if (context.mounted) context.goNamed(HomeWidget.routeName);
+          },
+          onFindNewRide: _cancelledByDriver
+              ? () {
+                  FFAppState().bookingInProgress = false;
+                  FFAppState().currentRideId = null;
+                  FFAppState().currentRideOtp = '';
+                  if (context.mounted) context.pop();
+                }
+              : null,
+          onRebook: _cancelledByDriver ? _handleRebook : null,
+          rebookingFee: 20,
+          cancelledByDriver: _cancelledByDriver,
+        ),
       );
     } else {
       return DriverDetailsComponent(
         isLoading: isLoadingDriver,
         driverDetails: driverDetails,
+        driverId: ridesCache.isNotEmpty ? ridesCache[0]['driver_id'] : null,
         rideOtp: _rideOtp,
         ridesCache: ridesCache,
         onCall: _makeCall,
         onCancel: _showCancelDialog,
+        onShare: _handleShareTrip,
         rideStatus: _rideStatus,
         currentRemainingDistance: _currentRemainingDistance,
+        liveEtaText: _liveEtaText,
+        totalRoadDistanceKm: _totalRoadDistanceKm,
+        scrollController: scrollController,
       );
     }
   }
+
 }

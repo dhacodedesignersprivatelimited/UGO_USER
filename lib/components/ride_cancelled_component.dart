@@ -5,12 +5,16 @@ import '/flutter_flow/flutter_flow_theme.dart';
 class RideCancelledComponent extends StatelessWidget {
   final VoidCallback onBackToHome;
   final VoidCallback? onFindNewRide;
+  final VoidCallback? onRebook;
+  final int rebookingFee;
   final bool cancelledByDriver;
 
   const RideCancelledComponent({
     Key? key,
     required this.onBackToHome,
     this.onFindNewRide,
+    this.onRebook,
+    this.rebookingFee = 20,
     this.cancelledByDriver = false,
   }) : super(key: key);
 
@@ -63,7 +67,7 @@ class RideCancelledComponent extends StatelessWidget {
           // Subtitle
           Text(
             cancelledByDriver
-                ? 'Driver cancelled the ride. You can search for another driver.'
+                ? 'Driver not available. You can rebook instantly.'
                 : 'Your ride has been cancelled successfully',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
@@ -72,6 +76,33 @@ class RideCancelledComponent extends StatelessWidget {
             ),
           ),
           SizedBox(height: 32),
+
+          // Rebook Ride Button (Rapido Style)
+          if (onRebook != null) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: onRebook,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Rebook Ride + ₹$rebookingFee',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
+          ],
 
           // Find new ride (primary when driver cancels)
           if (onFindNewRide != null) ...[
@@ -113,21 +144,20 @@ class RideCancelledComponent extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               height: 56,
-              child: ElevatedButton(
+              child: OutlinedButton(
                 onPressed: onBackToHome,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.primary,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: theme.primary, width: 2),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 0,
                 ),
                 child: Text(
                   'Back to Home',
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: theme.secondaryBackground,
+                    color: theme.primary,
                   ),
                 ),
               ),

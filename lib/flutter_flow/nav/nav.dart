@@ -42,8 +42,26 @@ class AppStateNotifier extends ChangeNotifier {
   void updateNotifyOnAuthChange(bool notify) => notifyOnAuthChange = notify;
 
   void update(BaseAuthUser newUser) {
+    final uidChanged = user?.uid != newUser.uid;
     final shouldUpdate =
-        user?.uid == null || newUser.uid == null || user?.uid != newUser.uid;
+        user?.uid == null || newUser.uid == null || uidChanged;
+
+    // ✅ Sync backend session with Firebase user
+    if (newUser.uid != null && newUser.uid!.isNotEmpty) {
+      if (FFAppState().firebaseUid != newUser.uid) {
+        print('🔄 User session sync: Firebase user changed or is new → Clearing backend state');
+        FFAppState().firebaseUid = newUser.uid!;
+        FFAppState().userid = 0;
+        FFAppState().accessToken = '';
+      }
+    } else if (user?.uid != null) {
+      // Explicit or implicit logout
+      print('🔄 User session sync: Logged out → Clearing backend state');
+      FFAppState().firebaseUid = '';
+      FFAppState().userid = 0;
+      FFAppState().accessToken = '';
+    }
+
     initialUser ??= newUser;
     user = newUser;
     if (notifyOnAuthChange && shouldUpdate) {
@@ -70,37 +88,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       name: '_initialize',
       path: '/',
       builder: (context, _) {
-        // ✅ FIXED: Proper initialization logic
+        // ✅ FIXED: Rely on AppStateNotifier.update for session sync
+        // Do not clear here, as it may fire before Firebase initializes its state.
+
         print('🔵 Router Init - Logged In: ${appStateNotifier.loggedIn}, UserID: ${FFAppState().userid}');
 
-        if (appStateNotifier.loggedIn) {
-          // User authenticated with Firebase
-
-          // Check if backend registration is complete (userid exists)
-          if (FFAppState().userid != 0) {
-            print('✅ User has backend ID → Going to Home');
-            return HomeWidget();
-          } else {
-            print('⚠️ User authenticated but no backend ID → Go to Registration');
-            // Extract mobile from Firebase phone number
-            int? mobileInt;
-            final phone = appStateNotifier.user?.phoneNumber;
-            if (phone != null && phone.isNotEmpty) {
-              String digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
-              if (digits.length >= 10) {
-                mobileInt = int.tryParse(digits.substring(digits.length - 10));
-              } else {
-                mobileInt = int.tryParse(digits);
-              }
-            }
-
-            if (mobileInt != null) {
-              return DetailspageWidget(mobile: mobileInt);
-            } else {
-              // Fallback: force logout if mobile can't be extracted
-              return LoginWidget();
-            }
-          }
+        if (appStateNotifier.loggedIn && FFAppState().userid != 0) {
+          print('✅ User has backend ID → Going to Home');
+          return HomeWidget();
         }
 
         print('❌ User not logged in → Go to Login');
@@ -204,7 +199,8 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       path: AutoBookWidget.routePath,
       requireAuth: true,
       builder: (context, params) => AutoBookWidget(
-        rideId: params.getParam('rideId', ParamType.int),
+        rideId: params.getParam('rideId', ParamType.int)!,
+        initialRideStatus: params.getParam('initialRideStatus', ParamType.String),
       ),
     ),
     FFRoute(
@@ -504,6 +500,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       path: SetLocationWidget.routePath,
       requireAuth: true,
       builder: (context, params) => SetLocationWidget(),
+    ),
+    FFRoute(
+      name: ReferAndEarnWidget.routeName,
+      path: ReferAndEarnWidget.routePath,
+      requireAuth: true,
+      builder: (context, params) => ReferAndEarnWidget(),
     )
   ].map((r) => r.toRoute(appStateNotifier)).toList(),
 );

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'customer_suport_model.dart';
 export 'customer_suport_model.dart';
+import 'ai_chat_widget.dart';
 
 /// Customer Support Chat Interface
 class CustomerSuportWidget extends StatefulWidget {
@@ -231,21 +232,70 @@ class _CustomerSuportWidgetState extends State<CustomerSuportWidget> {
                     ),
                   ),
                 ),
-                Align(
-                  alignment: AlignmentDirectional(-1.0, 0.0),
-                  child: Container(
-                    width: 40.0,
-                    height: 40.0,
-                    decoration: BoxDecoration(
-                      color: FlutterFlowTheme.of(context).accent1,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Align(
-                      alignment: AlignmentDirectional(0.0, 0.0),
-                      child: Icon(
-                        Icons.auto_awesome,
-                        color: FlutterFlowTheme.of(context).secondaryBackground,
-                        size: 20.0,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AiChatWidget(),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16.0),
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF7B10), Color(0xFFFF9F4D)],
+                        ),
+                        borderRadius: BorderRadius.circular(16.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFF7B10).withValues(alpha:0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: const BoxDecoration(
+                              color: Colors.white24,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.support_agent_rounded, color: Colors.white, size: 28),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Chat with UGO AI',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Get instant answers & support',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white.withValues(alpha:0.9),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 18),
+                        ],
                       ),
                     ),
                   ),

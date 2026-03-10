@@ -4,6 +4,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '/backend/api_requests/api_calls.dart';
 import 'serviceoptions_model.dart';
 export 'serviceoptions_model.dart';
 
@@ -22,10 +23,35 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
   late ServiceoptionsModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  // Our Services - vehicle types from API
+  List<Map<String, dynamic>> _vehicleTypes = [];
+  bool _vehicleTypesLoading = true;
+
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => ServiceoptionsModel());
+    _fetchVehicleTypes();
+  }
+
+  Future<void> _fetchVehicleTypes() async {
+    try {
+      final res = await GetVehicleTypesCall.call();
+      if (mounted && res.succeeded) {
+        final list = GetVehicleTypesCall.vehicles(res.jsonBody);
+        setState(() {
+          _vehicleTypes = (list ?? [])
+              .map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{})
+              .toList();
+          _vehicleTypesLoading = false;
+        });
+      } else {
+        if (mounted) setState(() => _vehicleTypesLoading = false);
+      }
+    } catch (e) {
+      debugPrint('Fetch vehicle types error: $e');
+      if (mounted) setState(() => _vehicleTypesLoading = false);
+    }
   }
 
   @override
@@ -133,7 +159,7 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
                       SizedBox(height: isNarrow ? 40 : 56),
 
                       // 2. Service Cards Grid
-                      _buildServiceCards(isNarrow),
+                      _buildOurServicesSection(isNarrow),
 
                       SizedBox(height: isNarrow ? 100 : 140),
                     ],
@@ -180,186 +206,186 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
     );
   }
 
-  Widget _buildServiceCards(bool isNarrow) {
-    final serviceCards = [
-      {
-        'image': 'assets/images/bike.png',
-        'label': FFLocalizations.of(context).getText('o76sscog' /* Book a bike */),
-        'color': const Color(0xFF2196F3),
-        // 'route': PlanYourRideWidget.routeName,
-      },
-      {
-        'image': 'assets/images/auto.png',
-        'label': FFLocalizations.of(context).getText('p3js2d3q' /* Book a auto */),
-        'color': const Color(0xFF4CAF50),
-        // 'route': PlanYourRideWidget.routeName,
-      },
-      {
-        'image':"assets/images/car.png" , // Use icon instead
-        'label': FFLocalizations.of(context).getText('a1vegvac' /* Book a Cab */),
-        'color': const Color(0xFFFF9800),
-        'icon': Icons.local_taxi,
-        // 'route': PlanYourRideWidget.routeName,
-      },
-    ];
+  Widget _buildOurServicesSection(bool isNarrow) {
+    if (_vehicleTypesLoading) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(
+            3,
+            (_) => Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    height: isNarrow ? 90 : 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 14,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Color(0xFFFF7B10)),
+                      ),
+                    ),
+                  ),
+                )),
+      );
+    }
+    final vehicles = _vehicleTypes.isEmpty
+        ? [
+            {'id': 2, 'name': 'bike', 'image': null},
+            {'id': 1, 'name': 'auto', 'image': null},
+            {'id': 3, 'name': 'car', 'image': null},
+          ]
+        : _vehicleTypes;
 
+    List<Widget> displayItems = [];
+    for (final v in vehicles) {
+      displayItems.add(_buildVehicleCard(v, context, isNarrow));
+    }
+
+    const rowSpacing = 16.0;
     return Column(
-      children: List.generate(serviceCards.length, (index) {
-        final card = serviceCards[index];
-
-        return Padding(
-          padding: EdgeInsets.only(bottom: isNarrow ? 16 : 20),
-          child: _buildServiceCard(
-            image: card['image'] as String?,
-            label: card['label'] as String,
-            color: card['color'] as Color,
-            icon: card['icon'] as IconData?,
-            // route: card['route'] as String,
-            isNarrow: isNarrow,
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildServiceCard({
-    String? image,
-    required String label,
-    required Color color,
-    IconData? icon,
-    // required String route,
-    required bool isNarrow,
-  }) {
-    return GestureDetector(
-      onTap: () {
-  if (label.toLowerCase().contains('auto')) {
-    // ✅ Auto → Where to go
-    context.pushNamed(PlanYourRideWidget.routeName);
-  } else {
-    // 🚧 Bike & Car → Snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '$label rides coming soon',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-        ),
-        backgroundColor: color,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-},
-
-      child: Container(
-        height: isNarrow ? 88 : 100,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.white,
-              color.withValues(alpha:0.05),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (int i = 0; i < displayItems.length; i += 3) ...[
+          if (i > 0) const SizedBox(height: rowSpacing),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              for (int j = 0; j < 3; j++)
+                (i + j) < displayItems.length
+                    ? displayItems[i + j]
+                    : Expanded(child: const SizedBox.shrink()),
             ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: color.withValues(alpha:0.3),
-            width: 2,
-          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildComingSoonCard(BuildContext context, bool isNarrow) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        height: isNarrow ? 90 : 100,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha:0.15),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: isNarrow ? 20 : 24,
-            vertical: isNarrow ? 16 : 20,
-          ),
-          child: Row(
+        child: InkWell(
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Vehicle coming soon!')),
+            );
+          },
+          borderRadius: BorderRadius.circular(18),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Icon/Image Container
-              Container(
-                width: isNarrow ? 52 : 60,
-                height: isNarrow ? 52 : 60,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [color, color.withValues(alpha:0.8)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: image != null
-                      ? Image.asset(
-                    image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Icon(
-                      Icons.two_wheeler,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  )
-                      : icon != null
-                      ? Icon(
-                    icon,
-                    color: Colors.white,
-                    size: isNarrow ? 28 : 32,
-                  )
-                      : const SizedBox(),
+              Icon(Icons.add_circle_outline,
+                  color: Colors.grey[500], size: isNarrow ? 28 : 32),
+              const SizedBox(height: 4),
+              Text(
+                'Coming soon',
+                style: GoogleFonts.poppins(
+                  fontSize: isNarrow ? 11 : 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[600],
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-              SizedBox(width: isNarrow ? 16 : 20),
+  Widget _buildVehicleCard(
+      Map<String, dynamic> v, BuildContext context, bool isNarrow) {
+    final name = (v['name'] ?? 'ride').toString().toLowerCase();
+    final label = name.length > 1
+        ? '${name[0].toUpperCase()}${name.substring(1)}'
+        : name.toUpperCase();
+    final imagePath = v['image']?.toString();
+    final imageUrl = imagePath != null && imagePath.isNotEmpty
+        ? (imagePath.startsWith('http')
+            ? imagePath
+            : '${AppConfig.baseApiUrl}${imagePath.startsWith('/') ? '' : '/'}$imagePath')
+        : null;
 
-              // Label
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          FFAppState().selectedRideCategory = name;
+          context.pushNamed(PlanYourRideWidget.routeName);
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 6),
+          height: isNarrow ? 90 : 100,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+            border: Border.all(color: Colors.grey[200]!, width: 1),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      label,
-                      style: GoogleFonts.poppins(
-                        fontSize: isNarrow ? 18 : 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                        height: 1.2,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Quick booking',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: imageUrl != null && imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Image.asset(
+                            'assets/images/$name.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                                Icons.directions_car,
+                                color: Color(0xFFFF7B10)),
+                          ),
+                        )
+                      : Image.asset(
+                          'assets/images/$name.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                              Icons.directions_car,
+                              color: Color(0xFFFF7B10))),
                 ),
               ),
-
-              // Arrow
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha:0.1),
-                  borderRadius: BorderRadius.circular(12),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: isNarrow ? 12 : 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
                 ),
-                child: Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: color,
-                  size: 18,
-                ),
+                textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 6),
             ],
           ),
         ),

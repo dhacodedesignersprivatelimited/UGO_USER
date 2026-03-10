@@ -21,6 +21,7 @@ class CreateUserCall {
     String? firstName = '',
     String? lastName = '',
     String? email = '',
+    String? referralCode = '',
     FFUploadedFile? profileImage,
     String? fcmToken,
   }) async {
@@ -34,6 +35,7 @@ class CreateUserCall {
         'first_name': firstName,
         'last_name': lastName,
         'email': email,
+        'referral_code': referralCode,
         'profile_image': profileImage,
         'fcm_token': fcmToken,
       },
@@ -46,6 +48,16 @@ class CreateUserCall {
       alwaysAllowBody: false,
     );
   }
+
+  static String? accessToken(dynamic response) =>
+      castToType<String>(getJsonField(
+        response,
+        r'''$.data.accessToken''',
+      ));
+  static int? userid(dynamic response) => castToType<int>(getJsonField(
+    response,
+    r'''$.data.user.id''',
+  ));
 }
 
 class LoginCall {
@@ -75,7 +87,7 @@ class LoginCall {
     );
   }
 
-  static String? accesToken(dynamic response) =>
+  static String? accessToken(dynamic response) =>
       castToType<String>(getJsonField(
         response,
         r'''$.data.accessToken''',
@@ -214,37 +226,71 @@ class UpdateProfileImageCall {
   }
 }
 
+class GetUserReferralStatsCall {
+  static Future<ApiCallResponse> call({
+    required int userId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getUserReferralStats',
+      apiUrl: '$_baseUrl/api/users/referral-stats/$userId',
+      callType: ApiCallType.GET,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static dynamic referralCode(dynamic response) => getJsonField(
+        response,
+        r'''$.data.referral_code''',
+      );
+  static dynamic totalReferrals(dynamic response) => getJsonField(
+        response,
+        r'''$.data.total_referrals''',
+      );
+  static dynamic totalEarned(dynamic response) => getJsonField(
+        response,
+        r'''$.data.total_earned''',
+      );
+}
+
 /// ---------------------------------------------------------------------------
 /// ADDRESS MANAGEMENT
 /// ---------------------------------------------------------------------------
 
 class SaveAddressCall {
   static Future<ApiCallResponse> call({
-    int? userId,
+    required int userId,
     String? addressLabel = '',
     String? addressText = '',
-    double? latitude,
-    double? longitude,
-    String? token = '',
+    required double latitude,
+    required double longitude,
+    String? token,
   }) async {
-    final ffApiRequestBody = '''
-{
-  "user_id": ${userId},
-  "address_label": "${escapeStringForJson(addressLabel)}",
-  "address_text": "${escapeStringForJson(addressText)}",
-  "latitude": ${latitude},
-  "longitude": ${longitude}
-}''';
+    final body = {
+      'user_id': userId,
+      'address_label': addressLabel ?? '',
+      'address_text': addressText ?? '',
+      'latitude': latitude,
+      'longitude': longitude,
+    };
     return ApiManager.instance.makeApiCall(
       callName: 'SaveAddress',
       apiUrl: '$_baseUrl/api/saved-addresses/post',
       callType: ApiCallType.POST,
       headers: {
-        'Authorization': 'Bearer ${token}',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
       params: {},
-      body: ffApiRequestBody,
+      body: jsonEncode(body),
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -286,7 +332,7 @@ class GetSavedAddressesCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'GetSavedAddresses',
-      apiUrl: '$_baseUrl/api/saved-addresses/$userId',
+      apiUrl: '$_baseUrl/api/saved-addresses/user/$userId',
       callType: ApiCallType.GET,
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -325,6 +371,16 @@ class GetSavedAddressesCall {
   static List<String>? addressTypes(dynamic response) => (getJsonField(
     response,
     r'''$.data[:].address_type''',
+    true,
+  ) as List?)
+      ?.withoutNulls
+      .map((x) => castToType<String>(x))
+      .withoutNulls
+      .toList();
+
+  static List<String>? addressNames(dynamic response) => (getJsonField(
+    response,
+    r'''$.data[:].address_name''',
     true,
   ) as List?)
       ?.withoutNulls
@@ -500,13 +556,22 @@ class AddMoneyToWalletCall {
     required int userId,
     required double amount,
     String? currency = "INR",
-    String? token = '',
+    String? razorpayPaymentId,
+    String? razorpayOrderId,
+    String? token,
   }) async {
-    final ffApiRequestBody = jsonEncode({
+    final body = <String, dynamic>{
       "user_id": userId,
       "amount": amount,
-      "currency": currency,
-    });
+      "currency": currency ?? "INR",
+    };
+    if (razorpayPaymentId != null && razorpayPaymentId.isNotEmpty) {
+      body['razorpay_payment_id'] = razorpayPaymentId;
+    }
+    if (razorpayOrderId != null && razorpayOrderId.isNotEmpty) {
+      body['razorpay_order_id'] = razorpayOrderId;
+    }
+    final ffApiRequestBody = jsonEncode(body);
 
     return ApiManager.instance.makeApiCall(
       callName: 'AddMoneyToWallet',
@@ -538,6 +603,146 @@ class AddMoneyToWalletCall {
 
   static String? walletBalance(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.wallet_balance'''));
+}
+
+class CreatePaymentCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    required int userId,
+    required num amount,
+    required String paymentMethod,
+    String paymentStatus = 'success',
+    String? token,
+  }) async {
+    final body = {
+      'ride_id': rideId,
+      'user_id': userId,
+      'amount': amount,
+      'payment_method': paymentMethod,
+      'payment_status': paymentStatus,
+    };
+    return ApiManager.instance.makeApiCall(
+      callName: 'CreatePayment',
+      apiUrl: '$_baseUrl/api/payments/post',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode(body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static bool? success(dynamic response) =>
+      castToType<bool>(getJsonField(response, r'$.success'));
+  static String? message(dynamic response) =>
+      castToType<String>(getJsonField(response, r'$.message'));
+}
+
+/// POST /api/payments/process - Process payment (wallet deduction or UPI initiation)
+class PaymentProcessCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    required String paymentMethod,
+    required num amount,
+    String? token,
+  }) async {
+    final body = {
+      'ride_id': rideId,
+      'payment_method': paymentMethod,
+      'amount': amount,
+    };
+    return ApiManager.instance.makeApiCall(
+      callName: 'PaymentProcess',
+      apiUrl: '$_baseUrl/api/payments/process',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode(body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static bool? success(dynamic response) =>
+      castToType<bool>(getJsonField(response, r'$.success'));
+  static String? razorpayOrderId(dynamic response) =>
+      castToType<String>(getJsonField(response, r'$.data.order_id'));
+}
+
+/// POST /api/payments/razorpay/create-order - Create Razorpay order for UPI/Card
+class CreateRazorpayOrderCall {
+  static Future<ApiCallResponse> call({
+    int? rideId,
+    num? amount,
+    String? token,
+  }) async {
+    final body = <String, dynamic>{};
+    if (rideId != null) body['ride_id'] = rideId;
+    if (amount != null) body['amount'] = amount;
+    return ApiManager.instance.makeApiCall(
+      callName: 'CreateRazorpayOrder',
+      apiUrl: '$_baseUrl/api/payments/razorpay/create-order',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode(body.isEmpty ? {} : body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static String? orderId(dynamic response) =>
+      castToType<String>(getJsonField(response, r'$.data.order_id'));
+}
+
+
+/// GET /api/vehicle-types/getall-vehicle - Fetch all vehicle types for Our Services
+class GetVehicleTypesCall {
+  static Future<ApiCallResponse> call() async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetVehicleTypes',
+      apiUrl: '$_baseUrl/api/vehicle-types/getall-vehicle',
+      callType: ApiCallType.GET,
+      headers: {},
+      params: {},
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static bool? success(dynamic response) =>
+      castToType<bool>(getJsonField(response, r'$.success'));
+  static List<dynamic>? vehicles(dynamic response) =>
+      (getJsonField(response, r'$.data') as List?)?.toList();
 }
 
 
@@ -853,6 +1058,174 @@ class GetRideStatus {
       .toList();
 }
 
+/// GET /api/rides/users/:userId/scheduled-rides
+class GetScheduledRidesCall {
+  static Future<ApiCallResponse> call({
+    required int userId,
+    String? token,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetScheduledRides',
+      apiUrl: '$_baseUrl/api/rides/users/$userId/scheduled-rides',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static List? rides(dynamic response) =>
+      getJsonField(response, r'$.data.rides', true) as List?;
+}
+
+/// POST /api/rides/estimate-fare - Route-based fare (Google Directions) + Pricing
+class EstimateFareCall {
+  static Future<ApiCallResponse> call({
+    required double pickupLat,
+    required double pickupLng,
+    required double dropLat,
+    required double dropLng,
+    required int adminVehicleId,
+    String? token,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'EstimateFare',
+      apiUrl: '$_baseUrl/api/rides/estimate-fare',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode({
+        'pickup_lat': pickupLat,
+        'pickup_lng': pickupLng,
+        'drop_lat': dropLat,
+        'drop_lng': dropLng,
+        'admin_vehicle_id': adminVehicleId,
+      }),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static double? distanceKm(dynamic r) =>
+      castToType<double>(getJsonField(r, r'$.data.distance_km'));
+  static int? durationMin(dynamic r) =>
+      castToType<int>(getJsonField(r, r'$.data.duration_min'));
+  static double? estimatedFare(dynamic r) =>
+      castToType<double>(getJsonField(r, r'$.data.estimated_fare'));
+  static double? surgeMultiplier(dynamic r) =>
+      castToType<double>(getJsonField(r, r'$.data.surge_multiplier'));
+  static double? baseFare(dynamic r) =>
+      castToType<double>(getJsonField(r, r'$.data.base_fare'));
+}
+
+/// GET /api/location/surge-multiplier?lat=&lng=
+/// Returns surge multiplier for pickup location (1.0 = no surge)
+class GetSurgeMultiplierCall {
+  static Future<ApiCallResponse> call({
+    required double lat,
+    required double lng,
+    String? token,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetSurgeMultiplier',
+      apiUrl: '$_baseUrl/api/location/surge-multiplier',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {'lat': lat, 'lng': lng},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static double? surgeMultiplier(dynamic r) =>
+      castToType<double>(getJsonField(r, r'$.data.surge_multiplier'));
+}
+
+/// Scan to Book: Uses same endpoint as normal booking - POST /api/rides/post
+/// Pass driver_id + admin_vehicle_id (from QR) so ride is created with status 'started'
+/// Scan booking is cash-only.
+class ScanBookRideCall {
+  static Future<ApiCallResponse> call({
+    required int driverId,
+    required int adminVehicleId,
+    required int userId,
+    required double pickupLatitude,
+    required double pickupLongitude,
+    required double dropLatitude,
+    required double dropLongitude,
+    required String pickupAddress,
+    required String dropAddress,
+    String? paymentMethod, // Ignored – scan booking always uses cash
+    required String estimatedFare,
+    String? token,
+    String? guestName,
+    String? guestPhone,
+    String? guestInstructions,
+  }) async {
+    return CreateRideCall.call(
+      token: token,
+      userId: userId,
+      pickupLocationAddress: pickupAddress,
+      dropLocationAddress: dropAddress,
+      pickupLatitude: pickupLatitude,
+      pickupLongitude: pickupLongitude,
+      dropLatitude: dropLatitude,
+      dropLongitude: dropLongitude,
+      adminVehicleId: adminVehicleId,
+      estimatedFare: estimatedFare,
+      rideStatus: 'started',
+      driverId: driverId,
+      paymentType: 'cash', // Scan booking: cash only
+      guestName: guestName,
+      guestPhone: guestPhone,
+      guestInstructions: guestInstructions,
+    );
+  }
+
+  static int? rideId(dynamic response) =>
+      castToType<int>(getJsonField(response, r'$.data.id')) ??
+      castToType<int>(getJsonField(response, r'$.data.rideId'));
+  static int? rideIdAlt(dynamic response) => castToType<int>(getJsonField(response, r'$.data.id'));
+  static String? status(dynamic response) => castToType<String>(getJsonField(response, r'$.data.status'));
+}
+
+/// Confirm Scan Start: POST /api/rides/confirm-scan-start
+class ConfirmScanStartCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    String? token,
+  }) async {
+    final body = {'ride_id': rideId};
+    return ApiManager.instance.makeApiCall(
+      callName: 'ConfirmScanStart',
+      apiUrl: '$_baseUrl/api/rides/confirm-scan-start',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode(body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+}
+
 class GetRideDetailsCall {
   static Future<ApiCallResponse> call({
     required int rideId,
@@ -870,6 +1243,13 @@ class GetRideDetailsCall {
       cache: false,
     );
   }
+}
+
+/// Returns valid payment_method (cash|online|wallet), defaults to "cash"
+String _createRidePaymentMethod(String? paymentType) {
+  final p = (paymentType ?? '').toString().trim().toLowerCase();
+  if (p == 'cash' || p == 'online' || p == 'wallet') return p;
+  return 'cash';
 }
 
 // Uses "admin_vehicle_id" (INT) instead of "ride_type"
@@ -899,7 +1279,8 @@ class CreateRideCall {
     return data;
   }
 
-  // ✅ STATIC CALL METHOD
+  /// Optional intermediate stops. Format: [{address, latitude, longitude}, ...]
+  /// Max 4 stops (per PRD). Backend must support this field.
   static Future<ApiCallResponse> call({
     String? token,
     int? userId,
@@ -918,6 +1299,8 @@ class CreateRideCall {
     int retryCount = 0,
     int? driverId,
     String? paymentType, // ✅ Added Payment Type (cash/online)
+    List<Map<String, dynamic>>? stops, // ✅ PRD: Multiple stops (max 4)
+    DateTime? scheduledAt, // ✅ Scheduled rides: ISO 8601 pickup time
   }) async {
     const int maxRetries = 3;
     const Duration delayDuration = Duration(seconds: 2);
@@ -926,6 +1309,10 @@ class CreateRideCall {
     int currentRetry = retryCount;
 
     while (currentRetry <= maxRetries) {
+      // Scan booking (driver_id present): always cash. Normal booking: use paymentType.
+      final isScanBooking = driverId != null;
+      final paymentMethod = isScanBooking ? 'cash' : _createRidePaymentMethod(paymentType);
+
       final Map<String, dynamic> requestBody = {
         "user_id": userId,
         "pickup_location_address": pickupLocationAddress,
@@ -937,7 +1324,7 @@ class CreateRideCall {
         "admin_vehicle_id": adminVehicleId, // Sending INT
         "estimated_fare": estimatedFare ?? "0",
         "ride_status": rideStatus ?? "pending",
-        if (paymentType != null) "payment_method": paymentType, // ✅ Optional Payment Type
+        "payment_method": paymentMethod,
       };
       if (driverId != null) {
         requestBody["driver_id"] = driverId;
@@ -952,6 +1339,18 @@ class CreateRideCall {
       }
       if (guestInstructions != null && guestInstructions.isNotEmpty) {
         requestBody["guest_instructions"] = guestInstructions;
+      }
+      // PRD: Multiple stops - send when backend supports it
+      if (stops != null && stops.isNotEmpty && stops.length <= 4) {
+        requestBody["stops"] = stops.map((s) => {
+          "address": s["address"] ?? "",
+          "latitude": (s["latitude"] ?? s["lat"])?.toDouble(),
+          "longitude": (s["longitude"] ?? s["lng"])?.toDouble(),
+        }).toList();
+      }
+      // Scheduled rides
+      if (scheduledAt != null) {
+        requestBody["scheduled_at"] = scheduledAt.toUtc().toIso8601String();
       }
 
       response = await ApiManager.instance.makeApiCall(
@@ -1106,6 +1505,44 @@ class Data {
 }
 
 /// ---------------------------------------------------------------------------
+/// ADD TIP TO RIDE
+/// ---------------------------------------------------------------------------
+
+class AddTipToRideCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    required int tipAmount,
+    String? token = '',
+  }) async {
+    final body = {
+      'ride_id': rideId,
+      'tip_amount': tipAmount,
+    };
+    return ApiManager.instance.makeApiCall(
+      callName: 'AddTipToRide',
+      apiUrl: '$_baseUrl/api/rides/add-tip',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode(body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static bool? success(dynamic response) => castToType<bool>(getJsonField(response, r'$.success'));
+  static String? message(dynamic response) => castToType<String>(getJsonField(response, r'$.message'));
+}
+
+/// ---------------------------------------------------------------------------
 /// DRIVER MANAGEMENT
 /// ---------------------------------------------------------------------------
 
@@ -1253,6 +1690,52 @@ class DriverIdfetchCall {
       castToType<String>(getJsonField(
         response,
         r'''$.data.account_status''',
+      ));
+}
+
+// ---------------------------------------------------------------------------
+// ✅ GetVehicleInfoByDriverCall
+// ---------------------------------------------------------------------------
+class GetVehicleInfoByDriverCall {
+  static Future<ApiCallResponse> call({
+    required int driverId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetVehicleInfoByDriver',
+      apiUrl: '$_baseUrl/api/users/by-driver/$driverId',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static int? vehicleId(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.vehicle_id''',
+      ));
+  static String? vehicleModel(dynamic response) =>
+      castToType<String>(getJsonField(
+        response,
+        r'''$.data.vehicle_model''',
+      ));
+  static String? licensePlate(dynamic response) =>
+      castToType<String>(getJsonField(
+        response,
+        r'''$.data.license_plate''',
+      ));
+  static String? vehicleName(dynamic response) =>
+      castToType<String>(getJsonField(
+        response,
+        r'''$.data.vehicle_name''',
+      ));
+  static String? vehicleColor(dynamic response) =>
+      castToType<String>(getJsonField(
+        response,
+        r'''$.data.vehicle_color''',
       ));
 }
 
@@ -1408,6 +1891,37 @@ class CancelRide {
   }
 
   // ✅ Added Response Helper Methods
+  static bool? success(dynamic response) => castToType<bool>(
+    getJsonField(response, r'''$.success'''),
+  );
+  static String? message(dynamic response) => castToType<String>(
+    getJsonField(response, r'''$.message'''),
+  );
+}
+
+class RebookRideCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'rebookRide',
+      apiUrl: '$_baseUrl/api/rides/rebook/$rideId',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: '{}',
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+    );
+  }
+
   static bool? success(dynamic response) => castToType<bool>(
     getJsonField(response, r'''$.success'''),
   );
@@ -1633,6 +2147,136 @@ class UpdateRideStatusCall {
 
   static int? rideId(dynamic response) =>
       castToType<int>(getJsonField(response, r'''$.data.ride_id'''));
+}
+
+/// ---------------------------------------------------------------------------
+/// EMERGENCY SOS
+/// ---------------------------------------------------------------------------
+
+class EmergencySosCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    required int userId,
+    required double latitude,
+    required double longitude,
+    String? token,
+  }) async {
+    final body = {
+      'ride_id': rideId,
+      'user_id': userId,
+      'latitude': latitude,
+      'longitude': longitude,
+    };
+    return ApiManager.instance.makeApiCall(
+      callName: 'EmergencySos',
+      apiUrl: '$_baseUrl/api/users/emergencysos',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode(body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static bool? success(dynamic response) => castToType<bool>(getJsonField(response, r'$.success'));
+}
+
+/// ---------------------------------------------------------------------------
+/// SUPPORT TICKETS
+/// ---------------------------------------------------------------------------
+
+class CreateSupportTicketCall {
+  static Future<ApiCallResponse> call({
+    required String ticketType,
+    required String ticketTitle,
+    required String ticketDescription,
+    required int userId,
+    String priorityLevel = 'medium',
+    String? token,
+  }) async {
+    final body = {
+      'ticket_type': ticketType,
+      'ticket_title': ticketTitle,
+      'ticket_description': ticketDescription,
+      'user_id': userId,
+      'priority_level': priorityLevel,
+    };
+    return ApiManager.instance.makeApiCall(
+      callName: 'CreateSupportTicket',
+      apiUrl: '$_baseUrl/api/support-tickets/post',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode(body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static bool? success(dynamic response) => castToType<bool>(getJsonField(response, r'$.success'));
+  static int? ticketId(dynamic response) => castToType<int>(getJsonField(response, r'$.data.id'));
+}
+
+class GetSupportTicketCall {
+  static Future<ApiCallResponse> call({
+    required int ticketId,
+    String? token,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetSupportTicket',
+      apiUrl: '$_baseUrl/api/support-tickets/$ticketId',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static Map<String, dynamic>? data(dynamic response) {
+    final d = getJsonField(response, r'$.data');
+    return d is Map ? Map<String, dynamic>.from(d) : null;
+  }
+}
+
+class DeleteSupportTicketCall {
+  static Future<ApiCallResponse> call({
+    required int ticketId,
+    String? token,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'DeleteSupportTicket',
+      apiUrl: '$_baseUrl/api/support-tickets/$ticketId',
+      callType: ApiCallType.DELETE,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static bool? success(dynamic response) => castToType<bool>(getJsonField(response, r'$.success'));
 }
 
 

@@ -1,3 +1,4 @@
+import '/flutter_flow/flutter_flow_google_map.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import 'add_home_widget.dart' show AddHomeWidget;
@@ -9,6 +10,10 @@ class AddHomeModel extends FlutterFlowModel<AddHomeWidget> {
   String? addressText;
   double? latitude;
   double? longitude;
+
+  // Map state
+  LatLng? googleMapsCenter;
+  final googleMapsController = Completer<GoogleMapController>();
   
   // Loading and error states
   bool isLoading = false;

@@ -7,6 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart'; // ✅ Import Scanner
 
 import '/driver_details/driver_details_widget.dart'; // Import destination
+import '../services/instant_scan_service.dart';
+import '../services/scan_booking_service.dart';
 import 'scan_to_book_model.dart';
 export 'scan_to_book_model.dart';
 
@@ -67,7 +69,7 @@ class _ScanToBookWidgetState extends State<ScanToBookWidget> {
   }
 
   // ✅ FUNCTIONALITY: Process Data & Navigate
-  void _handleScanResult(String rawData) {
+  Future<void> _handleScanResult(String rawData) async {
     print("🔍 Scanned Data: $rawData");
 
     int? driverId;
@@ -92,9 +94,22 @@ class _ScanToBookWidgetState extends State<ScanToBookWidget> {
           baseKmEnd = double.tryParse(pricing['base_km_end']?.toString() ?? '5');
         }
       }
-      // 2. Fallback: Assume raw string is just the Driver ID
+      // 2. Fallback: Assume raw string is just the Vehicle ID (Instant Booking Feature)
       else {
-        driverId = int.tryParse(rawData);
+        final vehicleId = rawData;
+        final success = await InstantScanService().processInstantScan(vehicleId);
+        
+        if (success) {
+           // Provide UI confirmation & redirect without visual changes to scanner logic itself
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Instant Ride Started!'), backgroundColor: Colors.green),
+          );
+          // Standard back flow allows the global state's updated RideId to take over map
+          context.safePop();
+          return; // Stop early
+        } else {
+           driverId = int.tryParse(rawData);
+        }
       }
 
       // 3. Navigate if we have a Driver ID

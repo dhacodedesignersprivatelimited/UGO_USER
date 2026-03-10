@@ -1,3 +1,4 @@
+import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -82,6 +83,166 @@ class _SupportWidgetState extends State<SupportWidget> {
         const SnackBar(content: Text('Could not launch website')),
       );
     }
+  }
+
+  Future<void> _showSubmitTicketSheet() async {
+    final userId = FFAppState().userid;
+    if (userId == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to submit a ticket')),
+      );
+      return;
+    }
+    String ticketType = 'app_issue';
+    String priorityLevel = 'medium';
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+
+    if (!context.mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Submit a support ticket',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    DropdownButtonFormField<String>(
+                      // ignore: deprecated_member_use
+                      value: ticketType,
+                      decoration: InputDecoration(
+                        labelText: 'Issue type',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'app_issue', child: Text('App issue')),
+                        DropdownMenuItem(value: 'ride_issue', child: Text('Ride issue')),
+                        DropdownMenuItem(value: 'payment_issue', child: Text('Payment issue')),
+                        DropdownMenuItem(value: 'other', child: Text('Other')),
+                      ],
+                      onChanged: (v) => setState(() => ticketType = v ?? ticketType),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: titleController,
+                      decoration: InputDecoration(
+                        labelText: 'Title',
+                        hintText: 'e.g. App crashing on ride book',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: descController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Description',
+                        hintText: 'Describe your issue in detail',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      // ignore: deprecated_member_use
+                      value: priorityLevel,
+                      decoration: InputDecoration(
+                        labelText: 'Priority',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'low', child: Text('Low')),
+                        DropdownMenuItem(value: 'medium', child: Text('Medium')),
+                        DropdownMenuItem(value: 'high', child: Text('High')),
+                      ],
+                      onChanged: (v) => setState(() => priorityLevel = v ?? priorityLevel),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      onPressed: () async {
+                        final title = titleController.text.trim();
+                        final desc = descController.text.trim();
+                        if (title.isEmpty || desc.isEmpty) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(content: Text('Title and description are required')),
+                          );
+                          return;
+                        }
+                        Navigator.of(ctx).pop();
+                        final resp = await CreateSupportTicketCall.call(
+                          ticketType: ticketType,
+                          ticketTitle: title,
+                          ticketDescription: desc,
+                          userId: userId,
+                          priorityLevel: priorityLevel,
+                          token: FFAppState().accessToken,
+                        );
+                        if (!context.mounted) return;
+                        if (CreateSupportTicketCall.success(resp.jsonBody) == true) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Support ticket created successfully'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                (getJsonField(resp.jsonBody, r'$.message') as String?) ??
+                                    'Failed to create ticket',
+                              ),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF7B10),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Submit ticket'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   // --- UI BUILD ---
@@ -206,6 +367,15 @@ class _SupportWidgetState extends State<SupportWidget> {
                     subtitle: 'ugotaxiservices.com',
                     color: const Color(0xFF9C27B0),
                     onTap: _openWebsite,
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildContactCard(
+                    icon: Icons.assistant_rounded,
+                    title: 'Submit a ticket',
+                    subtitle: 'Create a support ticket for your issue',
+                    color: const Color(0xFFFF7B10),
+                    onTap: _showSubmitTicketSheet,
                   ),
 
                   const SizedBox(height: 40),

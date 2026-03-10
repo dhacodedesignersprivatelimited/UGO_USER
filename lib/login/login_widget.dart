@@ -50,9 +50,9 @@ class _LoginWidgetState extends State<LoginWidget> {
       },
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: Colors.white,
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         appBar: AppBar(
-          backgroundColor: const Color(0xFFFF7B10), // Fixed: Solid Orange
+          backgroundColor: FlutterFlowTheme.of(context).primary, // Fixed: Solid Orange
           automaticallyImplyLeading: false,
           title: Text(
             FFLocalizations.of(context).getText('mc86snxk' /* LOGIN */),
@@ -82,7 +82,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                       font: GoogleFonts.interTight(
                         fontWeight: FontWeight.w600,
                       ),
-                      color: Colors.black,
+                      color: FlutterFlowTheme.of(context).primaryText,
                       fontSize: 24.0,
                       lineHeight: 1.5,
                     ),
@@ -126,22 +126,22 @@ class _LoginWidgetState extends State<LoginWidget> {
                                 style: GoogleFonts.inter(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                                  color: FlutterFlowTheme.of(context).primaryText,
                                 ),
                               ),
                             ),
                             prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                            hintText: 'Enter 10 digit number', // Clearer hint
+                            hintText: FFLocalizations.of(context).getText('kd9srmop' /* Phone number */), // Localized hint
                             enabledBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(
-                                color: Color(0xFFE0E0E0),
+                              borderSide: BorderSide(
+                                color: FlutterFlowTheme.of(context).alternate,
                                 width: 2.0,
                               ),
                               borderRadius: BorderRadius.circular(12.0),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderSide: const BorderSide(
-                                color: Color(0xFFFF7B10),
+                              borderSide: BorderSide(
+                                color: FlutterFlowTheme.of(context).primary,
                                 width: 2.0,
                               ),
                               borderRadius: BorderRadius.circular(12.0),
@@ -161,20 +161,20 @@ class _LoginWidgetState extends State<LoginWidget> {
                               borderRadius: BorderRadius.circular(12.0),
                             ),
                             filled: true,
-                            fillColor: const Color(0xFFFAFAFA),
+                            fillColor: FlutterFlowTheme.of(context).primaryBackground,
                             contentPadding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
                           ),
                           style: FlutterFlowTheme.of(context).bodyMedium.override(
                             font: GoogleFonts.inter(
                               fontWeight: FontWeight.w600,
                             ),
-                            color: Colors.black,
+                            color: FlutterFlowTheme.of(context).primaryText,
                             fontSize: 18.0, // Larger text for phone number
                             letterSpacing: 1.0,
                           ),
                           keyboardType: TextInputType.phone,
                           // FIX: Cursor was invisible (0x00FF7B10)
-                          cursorColor: const Color(0xFFFF7B10),
+                          cursorColor: FlutterFlowTheme.of(context).primary,
                           validator: _model.textControllerValidator.asValidator(context),
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp('[0-9]')),
@@ -193,8 +193,8 @@ class _LoginWidgetState extends State<LoginWidget> {
                       if (phoneText.isEmpty || phoneText.length != 10) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text('Please enter a valid 10-digit mobile number.'),
-                            backgroundColor: Colors.red,
+                            content: Text(FFLocalizations.of(context).getText('login_val_phone')),
+                            backgroundColor: FlutterFlowTheme.of(context).error,
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
@@ -227,10 +227,10 @@ class _LoginWidgetState extends State<LoginWidget> {
                       width: double.infinity,
                       height: 56.0,
                       padding: const EdgeInsets.all(8.0),
-                      color: const Color(0xFFFF7B10),
+                      color: FlutterFlowTheme.of(context).primary,
                       textStyle: FlutterFlowTheme.of(context).titleMedium.override(
                         font: GoogleFonts.interTight(),
-                        color: Colors.white,
+                        color: FlutterFlowTheme.of(context).secondaryBackground,
                         fontSize: 18.0,
                         fontWeight: FontWeight.bold,
                       ),
@@ -250,7 +250,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                               FFLocalizations.of(context).getText('hczr77o0' /* or connect with */),
                               style: FlutterFlowTheme.of(context).bodyMedium.override(
                                 font: GoogleFonts.inter(),
-                                color: Colors.grey[600],
+                                color: FlutterFlowTheme.of(context).secondaryText,
                               ),
                             ),
                           ),
@@ -304,7 +304,7 @@ class _LoginWidgetState extends State<LoginWidget> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.0),
-          border: Border.all(color: const Color(0xFFEEEEEE), width: 1.5),
+          border: Border.all(color: FlutterFlowTheme.of(context).alternate, width: 1.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha:0.05),

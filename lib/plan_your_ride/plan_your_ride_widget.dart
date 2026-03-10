@@ -51,6 +51,10 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   LatLng get _defaultCenter =>
       LatLng(AppConfig.defaultLat, AppConfig.defaultLng);
   late LatLng currentLocation;
+  bool isMapSelected = false;
+
+  List<Map<String, dynamic>> dynamicRecentSearchList = [];
+  bool isLoadingSavedAddresses = false;
 
   @override
   void initState() {
@@ -58,6 +62,56 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     currentLocation = _defaultCenter;
     _model = createModel(context, () => PlanYourRideModel());
     _initializeLocation();
+    _fetchDynamicRecentData();
+  }
+
+  Future<void> _fetchDynamicRecentData() async {
+    setState(() => isLoadingSavedAddresses = true);
+    
+    List<Map<String, dynamic>> combined = [];
+    
+    // 1. Fetch Saved Addresses (Home/Work)
+    try {
+      final response = await GetSavedAddressesCall.call(
+        userId: FFAppState().userid,
+        token: FFAppState().accessToken,
+      );
+      if (response.succeeded) {
+        final List<dynamic> data = getJsonField(response.jsonBody, r'''$.data''', true) as List<dynamic>;
+        for (var item in data) {
+          combined.add({
+            'name': item['address_name'] ?? (item['address_type'] == 'home' ? 'Home' : 'Work'),
+            'address': item['address_text'],
+            'lat': double.tryParse(item['latitude'].toString()) ?? 0.0,
+            'lng': double.tryParse(item['longitude'].toString()) ?? 0.0,
+            'icon': item['address_type'] == 'home' ? Icons.home_outlined : (item['address_type'] == 'work' ? Icons.work_outline : Icons.bookmark_outline),
+            'isSaved': true,
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching saved addresses: $e');
+    }
+
+    // 2. Add Persisted Recent Searches from AppState
+    for (var encoded in FFAppState().recentSearches) {
+      try {
+        final decoded = jsonDecode(encoded);
+        combined.add({
+          'name': decoded['name'] ?? 'Recent',
+          'address': decoded['address'],
+          'lat': decoded['lat'],
+          'lng': decoded['lng'],
+          'icon': Icons.history,
+          'isSaved': false,
+        });
+      } catch (_) {}
+    }
+
+    setState(() {
+      dynamicRecentSearchList = combined;
+      isLoadingSavedAddresses = false;
+    });
   }
 
   @override
@@ -225,21 +279,23 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   Future<void> _searchPlaces(String input, bool isPickup) async {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
-    if (input.isEmpty) {
-      setState(() {
-        if (isPickup) {
-          pickupPredictions = [];
-          showPickupDropdown = false;
-        } else {
-          dropPredictions = [];
-          showDropDropdown = false;
+      if (input.isEmpty) {
+        if (mounted) {
+          setState(() {
+            if (isPickup) {
+              pickupPredictions = [];
+              showPickupDropdown = false;
+            } else {
+              dropPredictions = [];
+              showDropDropdown = false;
+            }
+            isSearching = false;
+          });
         }
-        isSearching = false;
-      });
-      return;
-    }
+        return;
+      }
 
-    setState(() => isSearching = true);
+      if (mounted) setState(() => isSearching = true);
 
     try {
       final url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=${AppConfig.googleMapsApiKey}&components=country:in&radius=50000';
@@ -317,6 +373,16 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
               }
             });
 
+            // Save to dynamic recent searches
+            FFAppState().addToRecentSearches({
+              'name': prediction.mainText,
+              'address': address,
+              'lat': lat,
+              'lng': lng,
+              'icon_name': 'history',
+            });
+            _fetchDynamicRecentData(); // Refresh the list in the UI
+
             mapController?.animateCamera(
               CameraUpdate.newLatLngZoom(selectedLocation, 15),
             );
@@ -358,6 +424,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     });
   }
 
+  // ignore: unused_element
   Future<void> _setSavedLocationByLabel(String label) async {
     try {
       final res = await GetSavedAddressesCall.call(
@@ -372,7 +439,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       Map<String, dynamic>? match;
       final search = label.toLowerCase();
       for (final a in list) {
-        final l = (a['address_label'] ?? '').toString().toLowerCase();
+        final l = (a['address_name'] ?? a['address_label'] ?? a['address_type'] ?? '').toString().toLowerCase();
         if (l.contains(search)) {
           match = a is Map<String, dynamic> ? a : Map<String, dynamic>.from(a);
           break;
@@ -429,22 +496,6 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     }
   }
 
-  void _setAirportAsPickup() {
-    final airportLocation = const LatLng(17.2403, 78.4294);
-    setState(() {
-      _model.dropController.text = 'Rajiv Gandhi Airport, Shamshabad';
-      FFAppState().droplocation = 'Rajiv Gandhi Airport, Shamshabad';
-      FFAppState().dropLatitude = 17.2403;
-      FFAppState().dropLongitude = 78.4294;
-      _addDropMarker(airportLocation);
-      dropPredictions = [];
-      showDropDropdown = false;
-    });
-
-    mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(airportLocation, 15),
-    );
-  }
 
   void _confirmRide() {
     if (FFAppState().pickuplocation.isEmpty || FFAppState().droplocation.isEmpty) {
@@ -461,12 +512,12 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     });
   }
 
-  void _showSnackBar(String message, {bool isError = false}) {
+  void _showSnackBar(String message, {bool isError = false, bool isInfo = false}) {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
-        backgroundColor: isError ? Colors.red : Colors.green,
+        content: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500, color: Colors.white)),
+        backgroundColor: isError ? Colors.red : (isInfo ? const Color(0xFFFF7B10) : Colors.green),
         duration: const Duration(milliseconds: 2000),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -485,221 +536,292 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          GoogleMap(
-            style: googleMapStyleStrings[GoogleMapStyle.uber],
-            onMapCreated: (controller) => mapController = controller,
-            onTap: (position) {
-              if (activeSelection == LocationSelection.pickup) {
-                _addPickupMarker(position);
-                _reverseGeocode(position, true);
-              } else {
-                _addDropMarker(position);
-                _reverseGeocode(position, false);
-              }
-            },
-            initialCameraPosition: CameraPosition(
-              target: currentLocation,
-              zoom: 15,
+          // Background Map (visible during precise selection)
+          Positioned.fill(
+            child: GoogleMap(
+              style: googleMapStyleStrings[GoogleMapStyle.uber],
+              onMapCreated: (controller) => mapController = controller,
+              onTap: (position) {
+                if (!isMapSelected) return;
+                if (activeSelection == LocationSelection.pickup) {
+                  _addPickupMarker(position);
+                  _reverseGeocode(position, true);
+                } else {
+                  _addDropMarker(position);
+                  _reverseGeocode(position, false);
+                }
+              },
+              initialCameraPosition: CameraPosition(
+                target: currentLocation,
+                zoom: 15,
+              ),
+              markers: markers,
+              myLocationEnabled: true,
+              myLocationButtonEnabled: false,
+              zoomControlsEnabled: false,
+              compassEnabled: false,
             ),
-            markers: markers,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: false,
-            compassEnabled: false,
           ),
 
-          // Top Navigation Bar
+          // Main Search/List Content (List-First View)
+          if (!isMapSelected)
+            Positioned.fill(
+              child: Container(
+                color: Colors.white,
+                child: Padding(
+                  padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 270),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+
+                        // Search Results or Recent Locations
+                        if (activeSelection == LocationSelection.pickup && pickupPredictions.isNotEmpty)
+                          ...pickupPredictions.map((p) => _buildListEntry(
+                                icon: Icons.location_on_outlined,
+                                title: p.mainText,
+                                subtitle: p.secondaryText,
+                                onTap: () => _selectPlace(p, true),
+                              ))
+                        else if (activeSelection == LocationSelection.drop && dropPredictions.isNotEmpty)
+                          ...dropPredictions.map((p) => _buildListEntry(
+                                icon: Icons.location_on_outlined,
+                                title: p.mainText,
+                                subtitle: p.secondaryText,
+                                onTap: () => _selectPlace(p, false),
+                              ))
+                        else ...[
+                        // Recent Locations Section
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                          child: Row(
+                            children: [
+                              Text(
+                                'RECENT & SAVED LOCATIONS',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.grey[500],
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              if (isLoadingSavedAddresses)
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 8.0),
+                                  child: SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)),
+                                ),
+                            ],
+                          ),
+                        ),
+                        if (dynamicRecentSearchList.isEmpty && !isLoadingSavedAddresses)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                            child: Text(
+                              'No recent searches yet.',
+                              style: GoogleFonts.inter(color: Colors.grey[400], fontSize: 13),
+                            ),
+                          ),
+                        ...dynamicRecentSearchList.map((loc) => _buildListEntry(
+                              icon: (loc['icon'] is IconData) ? (loc['icon'] as IconData) : Icons.history,
+                              title: loc['name'].toString(),
+                              subtitle: loc['address'].toString(),
+                              onTap: () {
+                                final latLng = LatLng(loc['lat'] as double, loc['lng'] as double);
+                                if (activeSelection == LocationSelection.pickup) {
+                                  setState(() {
+                                    _model.pickupController.text = loc['address'].toString();
+                                    _addPickupMarker(latLng);
+                                    FFAppState().pickuplocation = loc['address'].toString();
+                                    FFAppState().pickupLatitude = latLng.latitude;
+                                    FFAppState().pickupLongitude = latLng.longitude;
+                                    pickupPredictions = [];
+                                  });
+                                } else {
+                                  setState(() {
+                                    _model.dropController.text = loc['address'].toString();
+                                    _addDropMarker(latLng);
+                                    FFAppState().droplocation = loc['address'].toString();
+                                    FFAppState().dropLatitude = latLng.latitude;
+                                    FFAppState().dropLongitude = latLng.longitude;
+                                    dropPredictions = [];
+                                  });
+                                }
+                                mapController?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
+                              },
+                            )),
+                      ],
+                        const SizedBox(height: 100), // Bottom padding for confirm button
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Header & Input Area (UGO Branding)
           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
+            top: 0, left: 0, right: 0,
             child: Container(
               padding: EdgeInsets.only(
                 top: MediaQuery.of(context).padding.top + 8,
-                left: 16,
-                right: 16,
-                bottom: 12,
+                left: 16, right: 16, bottom: 24,
               ),
               decoration: BoxDecoration(
-                color: const Color(0xFFFF7B10),
+                color: const Color(0xFFFF7B10), // UGO Orange
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha:0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  InkWell(
-                    onTap: () => context.pop(),
-                    child: const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: Icon(Icons.arrow_back, color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Plan Your Ride',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Location Input Card
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 70,
-            left: 16,
-            right: 16,
-            child: Material(
-              elevation: 8,
-              borderRadius: BorderRadius.circular(16),
-              shadowColor: Colors.black.withValues(alpha:0.15),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Pickup Input
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 10, height: 10,
-                            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF2DB854)),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextField(
-                              controller: _model.pickupController,
-                              onTap: () {
-                                setState(() {
-                                  activeSelection = LocationSelection.pickup;
-                                  showDropDropdown = false;
-                                });
-                              },
-                              style: GoogleFonts.inter(color: Colors.black, fontSize: 15),
-                              decoration: InputDecoration(
-                                hintText: 'Enter pickup location',
-                                hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                              onChanged: (value) => _searchPlaces(value, true),
-                            ),
-                          ),
-                          if (_model.pickupController.text.isNotEmpty)
-                            IconButton(
-                              icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
-                              onPressed: () {
-                                setState(() {
-                                  _model.pickupController.clear();
-                                  pickupPredictions = [];
-                                  showPickupDropdown = false;
-                                  FFAppState().pickuplocation = '';
-                                });
-                              },
-                            ),
-                          IconButton(
-                            onPressed: _setCurrentLocationAsPickup,
-                            icon: const Icon(Icons.my_location, size: 22, color: Color(0xFF2DB854)),
-                          ),
-                        ],
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => context.pop(),
+                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
                       ),
-                    ),
-                    Divider(height: 1, thickness: 1, color: Colors.grey[200]),
-                    // Drop Input
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 10, height: 10,
-                            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFFF5A5F)),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextField(
-                              controller: _model.dropController,
-                              onTap: () {
-                                setState(() {
-                                  activeSelection = LocationSelection.drop;
-                                  showPickupDropdown = false;
-                                });
-                              },
-                              style: GoogleFonts.inter(color: Colors.black, fontSize: 15),
-                              decoration: InputDecoration(
-                                hintText: 'Where to?',
-                                hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                              onChanged: (value) => _searchPlaces(value, false),
-                            ),
-                          ),
-                          if (_model.dropController.text.isNotEmpty)
-                            IconButton(
-                              icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
-                              onPressed: () {
-                                setState(() {
-                                  _model.dropController.clear();
-                                  dropPredictions = [];
-                                  showDropDropdown = false;
-                                  FFAppState().droplocation = '';
-                                });
-                              },
-                            ),
-                          IconButton(
-                            icon: Icon(Icons.swap_vert_rounded, color: Colors.grey[700], size: 24),
-                            onPressed: _swapLocations,
-                          ),
-                        ],
+                      Text(
+                        'Plan Your Ride',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-
-                    if (!showPickupDropdown && !showDropDropdown)
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      const Spacer(),
+                      if (isMapSelected)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: TextButton.icon(
+                            onPressed: () => setState(() => isMapSelected = false),
+                            icon: const Icon(Icons.search, size: 16, color: Colors.white),
+                            label: Text(
+                              'Search',
+                              style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Visual Connector (Premium)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 15),
                         child: Column(
                           children: [
-                            Divider(height: 1, thickness: 1, color: Colors.grey[200]),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                _buildQuickAction(icon: Icons.home_outlined, label: 'Home', onTap: () => _showSnackBar('Add home location in settings')),
-                                const SizedBox(width: 12),
-                                _buildQuickAction(icon: Icons.work_outline, label: 'Work', onTap: () => _showSnackBar('Add work location in settings')),
-                                const SizedBox(width: 12),
-                                _buildQuickAction(icon: Icons.flight_outlined, label: 'Airport', onTap: _setAirportAsPickup),
-                              ],
+                            Container(
+                              width: 12, height: 12,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                                border: Border.all(color: const Color(0xFF2DB854), width: 3),
+                              ),
+                            ),
+                            Container(
+                              width: 2, height: 48,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [Colors.white, Colors.white.withValues(alpha: 0.5)],
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 12, height: 12,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: const Color(0xFFFF5A5F), width: 3),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                  ],
-                ),
+                      const SizedBox(width: 16),
+                      // Inputs Redesign
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _buildPremiumTextField(
+                              controller: _model.pickupController,
+                              hintText: 'Pickup from?',
+                              iconColor: const Color(0xFF2DB854),
+                              onTap: () => setState(() {
+                                activeSelection = LocationSelection.pickup;
+                                isMapSelected = false;
+                              }),
+                              onChanged: (v) => _searchPlaces(v, true),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.my_location, size: 18, color: Colors.green),
+                                onPressed: _setCurrentLocationAsPickup,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            _buildPremiumTextField(
+                              controller: _model.dropController,
+                              hintText: 'Where to?',
+                              iconColor: const Color(0xFFFF5A5F),
+                              onTap: () => setState(() {
+                                activeSelection = LocationSelection.drop;
+                                isMapSelected = false;
+                              }),
+                              onChanged: (v) => _searchPlaces(v, false),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 38),
+                        child: IconButton(
+                          onPressed: _swapLocations,
+                          icon: const Icon(Icons.swap_vert_circle, color: Colors.white, size: 32),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Action Bar (Select from map / Add stops)
+                  Row(
+                    children: [
+                      _buildHeaderActionButton(
+                        icon: Icons.location_on,
+                        label: 'Select from map',
+                        onTap: () => setState(() => isMapSelected = true),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildHeaderActionButton(
+                        icon: Icons.add_circle_outline,
+                        label: 'Add stops',
+                        onTap: () => _showSnackBar('Add stops coming soon!', isInfo: true),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
 
-          if (showPickupDropdown && pickupPredictions.isNotEmpty)
-            _buildSuggestionsList(predictions: pickupPredictions, onSelect: (p) => _selectPlace(p, true)),
-
-          if (showDropDropdown && dropPredictions.isNotEmpty)
-            _buildSuggestionsList(predictions: dropPredictions, onSelect: (p) => _selectPlace(p, false)),
-
-          // Confirm Button
+          // Bottom Confirmation Button
           Positioned(
             bottom: 24, left: 16, right: 16,
             child: Container(
@@ -718,8 +840,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                   borderRadius: BorderRadius.circular(12),
                   child: Center(
                     child: Text(
-                      'Confirm Locations',
-                      style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 0.5),
+                      'Confirm',
+                      style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5),
                     ),
                   ),
                 ),
@@ -735,80 +857,154 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   // 🧩 HELPER WIDGETS
   // ---------------------------------------------------------------------------
 
-  Widget _buildSuggestionsList({
-    required List<PlacePrediction> predictions,
-    required Function(PlacePrediction) onSelect,
+  Widget _buildListEntry({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    Color? iconColor,
+    String? distance,
   }) {
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 200,
-      left: 16, right: 16, bottom: 100,
-      child: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            itemCount: predictions.length,
-            separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[200]),
-            itemBuilder: (context, index) {
-              final prediction = predictions[index];
-              return InkWell(
-                onTap: () => onSelect(prediction),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36, height: 36,
-                        decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
-                        child: Icon(Icons.location_on_outlined, color: Colors.grey[600], size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(prediction.mainText, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black)),
-                            if (prediction.secondaryText.isNotEmpty)
-                              Text(prediction.secondaryText, style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[600]), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          ],
-                        ),
-                      ),
-                    ],
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Row(
+          children: [
+            Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: (iconColor ?? const Color(0xFFFF7B10)).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
                   ),
+                  child: Icon(icon, size: 22, color: iconColor ?? const Color(0xFFFF7B10)),
                 ),
-              );
-            },
+                if (distance != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    distance,
+                    style: GoogleFonts.inter(fontSize: 10, color: Colors.grey[400], fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[500], fontWeight: FontWeight.w400),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.favorite_border, size: 20, color: Colors.grey[300]),
+              onPressed: () {}, // Future: Add to favorites logic
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 18, color: Colors.orange),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildQuickAction({
-    required IconData icon,
-    required String label,
+  Widget _buildPremiumTextField({
+    required TextEditingController controller,
+    required String hintText,
+    required Color iconColor,
     required VoidCallback onTap,
+    required Function(String) onChanged,
+    Widget? suffixIcon,
   }) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.grey[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.grey[200]!),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white, // White background for black text
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          child: Column(
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        onTap: onTap,
+        onChanged: onChanged,
+        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black),
+        cursorColor: Colors.black,
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: GoogleFonts.inter(color: Colors.grey[400], fontSize: 14),
+          prefixIcon: Icon(Icons.circle, size: 10, color: iconColor),
+          filled: false,
+          suffixIcon: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 22, color: Colors.grey[700]),
-              const SizedBox(height: 4),
-              Text(label, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w500)),
+              if (controller.text.isNotEmpty)
+                IconButton(
+                  icon: Icon(Icons.close_rounded, size: 18, color: Colors.red[400]),
+                  onPressed: () {
+                    controller.clear();
+                    onChanged('');
+                  },
+                ),
+              if (suffixIcon != null)
+                IconTheme(
+                  data: IconThemeData(color: Colors.grey[400]),
+                  child: suffixIcon,
+                ),
             ],
           ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
     );

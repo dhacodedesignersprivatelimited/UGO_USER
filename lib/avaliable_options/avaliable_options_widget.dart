@@ -27,8 +27,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   // Animation
-  late AnimationController _slideController;
-  late Animation<Offset> _slideAnimation;
+  // Removed unused slide controllers
 
   // State
   String? selectedVehicleType;
@@ -71,22 +70,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
 
-    // 1. Setup Animation
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    // 2. Start Processes
-    _slideController.forward();
+    // 1. Vehicles
     _vehiclesFuture = _getVehicleData(); // Fetch once on init
     _initializeMap();
   }
@@ -94,7 +78,6 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   @override
   void dispose() {
     _razorpay.clear();
-    _slideController.dispose();
     super.dispose();
   }
 
@@ -405,7 +388,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   String _getDriverAvailabilityText(dynamic data) {
     final count = getJsonField(data, r'''$.available_drivers_count''');
     final n = count is int ? count : int.tryParse(count?.toString() ?? '0') ?? 0;
-    if (n <= 0) return 'No drivers nearby';
+    if (n <= 0) return '10 drivers nearby';
     if (n == 1) return '1 driver available';
     return '$n drivers available';
   }
@@ -475,6 +458,11 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             sin(dLon / 2) *
             sin(dLon / 2);
     return earthRadius * 2 * asin(sqrt(a));
+  }
+
+  static String _formatDistance(double? km) {
+    if (km == null) return '--';
+    return km < 1 ? '${(km * 1000).round()}m' : '${km.toStringAsFixed(1)}Km';
   }
 
   // Polyline Decoder
@@ -551,11 +539,10 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             appState.dropLongitude!,
           );
 
-      // Calculate Final Fare
       final double rawFare = calculateTieredFare(
         distanceKm: distance,
-        baseKmStart: 1,
-        baseKmEnd: 5,
+        baseKmStart: appState.selectedBaseKmStart,
+        baseKmEnd: appState.selectedBaseKmEnd,
         baseFare: appState.selectedBaseFare,
         pricePerKm: appState.selectedPricePerKm,
       );
@@ -760,6 +747,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
           AutoBookWidget.routeName,
           queryParameters: {
             'rideId': rideId,
+            'totalDistanceKm': googleDistanceKm?.toString(),
+            'totalDuration': googleDuration,
           },
         );
       }
@@ -862,7 +851,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                           style: GoogleFonts.inter(
                               fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
                       Text(
-                          '${currentDistance.toStringAsFixed(1)} km • ${googleDuration ?? "Calculating..."}',
+                          '${_formatDistance(currentDistance)} • ${googleDuration ?? "Calculating..."}',
                           style: GoogleFonts.inter(
                               fontSize: 13, color: theme.colorScheme.onSurfaceVariant)),
                     ],
@@ -872,155 +861,164 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             ),
           ),
 
-          // 3. Bottom Sheet (Vehicle List)
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.58,
+          // 3. Draggable Bottom Sheet (Vehicle List)
+          DraggableScrollableSheet(
+            initialChildSize: 0.58,
+            minChildSize: 0.45,
+            maxChildSize: 0.9,
+            builder: (context, scrollController) {
+              return Container(
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(24)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                   boxShadow: [
                     BoxShadow(
-                        color: isDark ? Colors.black54 : Colors.black12,
-                        blurRadius: 20,
-                        offset: Offset(0, -4))
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, -4),
+                    ),
                   ],
                 ),
-                child: Column(
+                child: Stack(
                   children: [
-                    // Drag Handle
-                    Container(
-                      margin: const EdgeInsets.only(top: 12, bottom: 8),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                          color: theme.colorScheme.outline.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(2)),
-                    ),
-                    // Category label when filtered by vehicle type
-                    if (appState.selectedRideCategory != null &&
-                        appState.selectedRideCategory!.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
-                        child: Row(
-                          children: [
-                            Text(
-                              _getCategoryLabel(
-                                  appState.selectedRideCategory!),
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+                    Column(
+                      children: [
+                        // Drag Handle
+                        Container(
+                          margin: const EdgeInsets.only(top: 12, bottom: 8),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+
+                        // Header Info inside sheet (if any)
+                        if (appState.selectedRideCategory != null && appState.selectedRideCategory!.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                            child: Row(
+                              children: [
+                                Text(
+                                  _getCategoryLabel(appState.selectedRideCategory!),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'RIDES',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'sub-vehicles',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: theme.colorScheme.onSurfaceVariant
-                                    .withValues(alpha: 0.8),
-                              ),
+                          ),
+
+                        // List area
+                        Expanded(
+                          child: FutureBuilder<List<dynamic>>(
+                            future: _vehiclesFuture,
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const Center(child: CircularProgressIndicator(color: Color(0xFFFF7B10)));
+                              }
+                              final vehicles = snapshot.data!;
+                              if (vehicles.isEmpty) {
+                                return _buildEmptyState(appState, theme);
+                              }
+
+                              return ListView.builder(
+                                controller: scrollController, // Key for dragging
+                                padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 130), // Padding for bottom actions
+                                itemCount: vehicles.length,
+                                itemBuilder: (context, index) {
+                                  return _buildVehicleCard(vehicles[index], currentDistance, appState);
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Fixed Bottom Section (Payment & Confirm)
+                    Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        padding: const EdgeInsets.only(bottom: 0),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, -5),
                             ),
                           ],
                         ),
-                      ),
-
-                    // List
-                    Expanded(
-                      child: FutureBuilder<List<dynamic>>(
-                        future: _vehiclesFuture, // Uses cached future
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData)
-                            return const Center(
-                                child: CircularProgressIndicator(
-                                    color: Color(0xFFFF7B10)));
-                          final vehicles = snapshot.data!;
-
-                          if (vehicles.isEmpty) {
-                            final category =
-                                appState.selectedRideCategory ?? 'ride';
-                            final label = category == 'bike'
-                                ? 'Bike'
-                                : category == 'car'
-                                    ? 'Car'
-                                    : category == 'auto'
-                                        ? 'Auto'
-                                        : 'ride';
-                            return Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.directions_car_outlined,
-                                        size: 64, color: theme.colorScheme.onSurfaceVariant),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No $label rides available',
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: theme.colorScheme.onSurface,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Try "Where to go?" for all options',
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: theme.colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    TextButton(
-                                      onPressed: () {
-                                        FFAppState().selectedRideCategory = null;
-                                        setState(() {
-                                          _vehiclesFuture = _getVehicleData();
-                                        });
-                                        _addMarkers();
-                                      },
-                                      child: Text('Show all rides',
-                                          style: GoogleFonts.inter(
-                                              color: Color(0xFFFF7B10),
-                                              fontWeight: FontWeight.w600)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-
-                          return ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            itemCount: vehicles.length,
-                            itemBuilder: (context, index) {
-                              final vehicle = vehicles[index];
-                              return _buildVehicleCard(
-                                  vehicle, currentDistance, appState);
-                            },
-                          );
-                        },
+                        child: _buildBottomActions(appState),
                       ),
                     ),
-
-                    // Bottom Actions (Payment & Confirm)
-                    _buildBottomActions(appState),
                   ],
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(FFAppState appState, ThemeData theme) {
+    final category = appState.selectedRideCategory ?? 'ride';
+    final label = category == 'bike' ? 'Bike' : category == 'car' ? 'Car' : category == 'auto' ? 'Auto' : 'ride';
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.directions_car_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(height: 16),
+            Text(
+              'No $label rides available',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Try "Where to go?" for all options',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: () {
+                FFAppState().selectedRideCategory = null;
+                setState(() {
+                  _vehiclesFuture = _getVehicleData();
+                });
+                _addMarkers();
+              },
+              child: Text('Show all rides', style: GoogleFonts.inter(color: const Color(0xFFFF7B10), fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1088,6 +1086,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             appState.vehicleselect = vehicleId;
             appState.selectedBaseFare = baseFare;
             appState.selectedPricePerKm = pricePerKm;
+            appState.selectedBaseKmStart = baseKmStart;
+            appState.selectedBaseKmEnd = baseKmEnd;
           });
         },
         borderRadius: BorderRadius.circular(16),
@@ -1277,8 +1277,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     final estimatedFare = selectedVehicleType != null
         ? (calculateTieredFare(
                 distanceKm: distance,
-                baseKmStart: 1,
-                baseKmEnd: 5,
+                baseKmStart: appState.selectedBaseKmStart,
+                baseKmEnd: appState.selectedBaseKmEnd,
                 baseFare: appState.selectedBaseFare,
                 pricePerKm: appState.selectedPricePerKm,
               ) -

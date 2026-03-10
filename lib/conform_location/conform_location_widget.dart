@@ -61,9 +61,7 @@ class _ConformLocationWidgetState extends State<ConformLocationWidget> {
                 color: FlutterFlowTheme.of(context).secondaryBackground,
                 size: 24.0,
               ),
-              onPressed: () {
-                print('IconButton pressed ...');
-              },
+              onPressed: () => context.safePop(),
             ),
           ),
           title: Text(
