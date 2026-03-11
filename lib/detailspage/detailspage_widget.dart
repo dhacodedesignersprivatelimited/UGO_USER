@@ -155,6 +155,16 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
 
         if (token != null) FFAppState().accessToken = token;
         if (userId != null) FFAppState().userid = userId!;
+        
+        // --- AUTO-GENERATE REFERRAL CODE ---
+        try {
+          print('🎁 Auto-generating referral code for user $userId...');
+          await GenerateReferralCodeCall.call(userId: userId!, token: token);
+          print('✅ Referral code generated.');
+        } catch (e) {
+          print('⚠️ Failed to auto-generate referral code: $e');
+        }
+        // ------------------------------------
 
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(FFLocalizations.of(context).getText('welcome_to_ugo')), backgroundColor: FlutterFlowTheme.of(context).success));
