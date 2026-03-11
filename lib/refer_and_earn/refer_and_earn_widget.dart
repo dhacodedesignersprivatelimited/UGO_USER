@@ -44,13 +44,8 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget> {
     final token = FFAppState().accessToken;
     
     if (userId != null && token != null && token.isNotEmpty) {
-      // 1. Get Status (Code, Total, Conversions, Coins)
       final statusResp = await GetReferralStatusCall.call(userId: userId, token: token);
-      
-      // 2. Get Earnings (Money, Coins)
       final earningsResp = await GetReferralEarningsCall.call(userId: userId, token: token);
-
-      // 3. Get History
       final historyResp = await GetReferralHistoryCall.call(userId: userId, token: token);
       
       if (mounted) {
@@ -61,24 +56,17 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget> {
             _successfulConversions = GetReferralStatusCall.successfulConversions(statusResp.jsonBody) ?? 0;
             _coinsEarned = (GetReferralStatusCall.coinsEarned(statusResp.jsonBody) ?? 0).toDouble();
           }
-
           if (earningsResp.succeeded) {
             _moneyEarned = (GetReferralEarningsCall.moneyEarned(earningsResp.jsonBody) ?? 0).toDouble();
           }
-
           if (historyResp.succeeded) {
             _referralHistory = GetReferralHistoryCall.history(historyResp.jsonBody) ?? [];
           }
-          
           _isLoading = false;
         });
       }
     } else {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -86,16 +74,13 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget> {
     final userId = FFAppState().userid;
     final token = FFAppState().accessToken;
     if (userId == null) return;
-
     setState(() => _isLoading = true);
     final resp = await GenerateReferralCodeCall.call(userId: userId, token: token);
     if (resp.succeeded) {
       await _fetchStats();
     } else {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to generate referral code')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to generate referral code')));
     }
   }
 
@@ -111,24 +96,24 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: Colors.grey[50],
+        backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: const Color(0xFFFF7B10),
+          backgroundColor: Colors.white,
           automaticallyImplyLeading: false,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+            icon: const Icon(Icons.arrow_back, color: Colors.black, size: 24),
             onPressed: () => context.safePop(),
           ),
           title: Text(
-            'Refer & Earn',
+            'Refer and Earn',
             style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
+              color: Colors.black,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          centerTitle: true,
-          elevation: 0,
+          elevation: 0.5,
+          centerTitle: false,
         ),
         body: SafeArea(
           child: _isLoading 
@@ -140,36 +125,38 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget> {
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: Column(
                     children: [
-                      // Header Section with Welcome & Main Illustration
+                      // Top Banner / Illustration
                       Container(
                         width: double.infinity,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFF7B10),
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(32),
-                            bottomRight: Radius.circular(32),
-                          ),
-                        ),
-                        padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
+                        color: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
                         child: Column(
                           children: [
-                            const Icon(Icons.card_giftcard, size: 70, color: Colors.white),
-                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF7B10).withOpacity(0.05),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.stars_rounded, size: 80, color: Color(0xFFFF7B10)),
+                            ),
+                            const SizedBox(height: 24),
                             Text(
-                              'Share UGO, Reap Rewards!',
+                              'Refer Friends and Earn Money',
+                              textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
                                 fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 12),
                             Text(
-                              'Invite friends and earn money & coins when they ride with UGO.',
+                              'Share your code and get rewards on their first completed ride.',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
                                 fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.grey[600],
                                 height: 1.4,
                               ),
                             ),
@@ -177,201 +164,260 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget> {
                         ),
                       ),
 
+                      // Referral Code Box (Rapido style dashed border)
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Referral Code Card
-                            Center(
-                              child: _referralCode.isEmpty 
-                                ? FFButtonWidget(
-                                    onPressed: _generateCode,
-                                    text: 'Generate My Referral Code',
-                                    options: FFButtonOptions(
-                                      width: double.infinity,
-                                      height: 56,
-                                      color: const Color(0xFFFF7B10),
-                                      textStyle: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  )
-                                : Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: _referralCode.isEmpty 
+                          ? Center(
+                              child: FFButtonWidget(
+                                onPressed: _generateCode,
+                                text: 'Generate Referral Code',
+                                options: FFButtonOptions(
+                                  width: double.infinity,
+                                  height: 54,
+                                  color: const Color(0xFFFF7B10),
+                                  textStyle: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            )
+                          : Stack(
+                              children: [
+                                CustomPaint(
+                                  painter: DashedBorderPainter(color: const Color(0xFFFF7B10)),
+                                  child: Container(
                                     width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(20),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
-                                          blurRadius: 15,
-                                          offset: const Offset(0, 5),
-                                        ),
-                                      ],
-                                      border: Border.all(color: Colors.orange.shade50),
-                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 20),
                                     child: Column(
                                       children: [
                                         Text(
-                                          'YOUR UNIQUE CODE',
+                                          'YOUR REFERRAL CODE',
                                           style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.grey[500],
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.grey[400],
                                             letterSpacing: 1.5,
                                           ),
                                         ),
-                                        const SizedBox(height: 12),
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            const SizedBox(width: 48), // Spacer for centering
-                                            SelectableText(
-                                              _referralCode,
-                                              style: GoogleFonts.inter(
-                                                fontSize: 32,
-                                                fontWeight: FontWeight.w800,
-                                                color: Colors.black87,
-                                                letterSpacing: 3,
-                                              ),
-                                            ),
-                                            IconButton(
-                                              icon: const Icon(Icons.copy, size: 20, color: Color(0xFFFF7B10)),
-                                              onPressed: () {
-                                                Clipboard.setData(ClipboardData(text: _referralCode));
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(content: Text('Code copied to clipboard!'), duration: Duration(seconds: 1)),
-                                                );
-                                              },
-                                            ),
-                                          ],
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          _referralCode,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 28,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.black,
+                                            letterSpacing: 4,
+                                          ),
                                         ),
-                                        const SizedBox(height: 20),
-                                        FFButtonWidget(
-                                          onPressed: () {
-                                            Share.share('Join UGO built for Pro Rides! Use my code: $_referralCode to sign up.');
+                                        const SizedBox(height: 12),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Clipboard.setData(ClipboardData(text: _referralCode));
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Code copied!'), duration: Duration(seconds: 1)),
+                                            );
                                           },
-                                          text: 'Share via Invitation',
-                                          icon: const Icon(Icons.share_outlined, size: 20),
-                                          options: FFButtonOptions(
-                                            width: double.infinity,
-                                            height: 50,
-                                            color: const Color(0xFFFF7B10),
-                                            textStyle: GoogleFonts.inter(
-                                              color: Colors.white,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            borderRadius: BorderRadius.circular(14),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.copy, size: 16, color: Color(0xFFFF7B10)),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'COPY CODE',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: const Color(0xFFFF7B10),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                            ),
-
-                            const SizedBox(height: 32),
-                            // How it Works Guide
-                            Text(
-                              'How it Works',
-                              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildStepItem(Icons.send_rounded, 'First Step', 'Invite your friends by sharing your unique code.'),
-                            _buildStepItem(Icons.app_registration_rounded, 'Then', 'Your friends sign up using your referral code.'),
-                            _buildStepItem(Icons.stars_rounded, 'Finally', 'You both receive rewards after their first completed ride!'),
-
-                            const SizedBox(height: 32),
-                            // Stats Grid
-                            Text(
-                              'Your Impact',
-                              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-                            ),
-                            const SizedBox(height: 16),
-                            GridView.count(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 1.4,
-                              children: [
-                                _buildStatBox('Total Referred', _totalReferrals.toString(), Icons.people_alt_rounded),
-                                _buildStatBox('Conversions', _successfulConversions.toString(), Icons.verified_rounded),
-                                _buildStatBox('Money Earned', '\$${_moneyEarned.toStringAsFixed(2)}', Icons.account_balance_wallet_rounded),
-                                _buildStatBox('Coins Earned', _coinsEarned.toStringAsFixed(0), Icons.monetization_on_rounded),
+                                ),
                               ],
                             ),
+                      ),
 
-                            const SizedBox(height: 32),
-                            // History Section
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Referral History',
-                                  style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                      const SizedBox(height: 24),
+
+                      // Social Share Buttons (Rapido WhatsApp focus)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: FFButtonWidget(
+                                onPressed: () {
+                                  Share.share('Join UGO built for Pro Rides! Use my code: $_referralCode to sign up.');
+                                },
+                                text: 'WhatsApp Share',
+                                icon: const Icon(Icons.chat_bubble_rounded, size: 20),
+                                options: FFButtonOptions(
+                                  height: 52,
+                                  color: const Color(0xFF25D366),
+                                  textStyle: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                if (_referralHistory.isNotEmpty)
-                                  Text(
-                                    '${_referralHistory.length} total',
-                                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
-                                  ),
-                              ],
+                              ),
                             ),
-                            const SizedBox(height: 16),
-                            _referralHistory.isEmpty
-                              ? _buildEmptyHistory()
-                              : Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.03),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ListView.separated(
-                                    shrinkWrap: true,
-                                    physics: const NeverScrollableScrollPhysics(),
-                                    itemCount: _referralHistory.length,
-                                    separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey[100]),
-                                    itemBuilder: (context, index) {
-                                      final item = _referralHistory[index];
-                                      final status = item['status']?.toString().toLowerCase() ?? 'pending';
-                                      return ListTile(
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                        leading: CircleAvatar(
-                                          radius: 22,
-                                          backgroundColor: Colors.orange[50],
-                                          child: Icon(Icons.person_rounded, color: const Color(0xFFFF7B10)),
-                                        ),
-                                        title: Text(
-                                          item['referred_user_name'] ?? 'UGO Explorer',
-                                          style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                                        ),
-                                        subtitle: Padding(
-                                          padding: const EdgeInsets.only(top: 4),
-                                          child: Text(
-                                            item['date_referred'] != null 
-                                              ? DateFormat('MMM dd, yyyy').format(DateTime.parse(item['date_referred']))
-                                              : 'Recently joined',
-                                            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500]),
-                                          ),
-                                        ),
-                                        trailing: _buildStatusBadge(status),
-                                      );
-                                    },
-                                  ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 1,
+                              child: FFButtonWidget(
+                                onPressed: () {
+                                  Share.share('Join UGO! Code: $_referralCode');
+                                },
+                                text: '',
+                                icon: const Icon(Icons.share, size: 20, color: Colors.blue),
+                                options: FFButtonOptions(
+                                  height: 52,
+                                  color: Colors.blue[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Colors.blue, width: 1),
                                 ),
-                            const SizedBox(height: 40),
+                              ),
+                            ),
                           ],
                         ),
                       ),
+
+                      const SizedBox(height: 40),
+
+                      // How it works (Horizontal Stepper Style)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'How it Works',
+                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 24),
+                            _buildVerticalStep(1, 'Invite Friends', 'Share your referral code from the app.'),
+                            _buildVerticalStep(2, 'Friends Register', 'They use your code while signing up.'),
+                            _buildVerticalStep(3, 'Both Earn', 'Get rewards after their first completed ride!'),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // Dashboard / Earnings
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          border: Border(top: BorderSide(color: Colors.grey[200]!)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Referral Dashboard',
+                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                Expanded(child: _buildRapidoStatBox('₹${_moneyEarned.toStringAsFixed(0)}', 'CASH EARNED')),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildRapidoStatBox(_coinsEarned.toStringAsFixed(0), 'COINS EARNED')),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(child: _buildRapidoStatBox(_totalReferrals.toString(), 'INVITES')),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildRapidoStatBox(_successfulConversions.toString(), 'REDEEMED')),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // History List
+                      if (_referralHistory.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Referral History',
+                                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 16),
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _referralHistory.length,
+                                itemBuilder: (context, index) {
+                                  final item = _referralHistory[index];
+                                  final isCompleted = (item['status']?.toString().toLowerCase() == 'completed');
+                                  return Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.grey[200]!),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 18,
+                                          backgroundColor: Colors.grey[100],
+                                          child: const Icon(Icons.person, size: 18, color: Colors.grey),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item['referred_user_name'] ?? 'UGO User',
+                                                style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+                                              ),
+                                              Text(
+                                                item['date_referred'] != null 
+                                                  ? DateFormat('dd MMM yyyy').format(DateTime.parse(item['date_referred']))
+                                                  : 'Recently Joined',
+                                                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[500]),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: isCompleted ? Colors.green[50] : Colors.orange[50],
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            isCompleted ? 'EARNED' : 'PENDING',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 9, 
+                                              fontWeight: FontWeight.w800, 
+                                              color: isCompleted ? Colors.green[700] : Colors.orange[700]
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
@@ -381,134 +427,107 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget> {
     );
   }
 
-  Widget _buildStepItem(IconData icon, String title, String description) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF7B10).withOpacity(0.1),
-              shape: BoxShape.circle,
+  Widget _buildVerticalStep(int step, String title, String subtitle) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF7B10),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                step.toString(),
+                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
             ),
-            child: Icon(icon, size: 20, color: const Color(0xFFFF7B10)),
+            if (step < 3)
+              Container(
+                width: 2,
+                height: 40,
+                color: Colors.grey[200],
+              ),
+          ],
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 14)),
+              const SizedBox(height: 4),
+              Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600])),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)),
-                const SizedBox(height: 4),
-                Text(description, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600], height: 1.4)),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildStatBox(String title, String value, IconData icon) {
+  Widget _buildRapidoStatBox(String value, String label) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(color: Colors.grey.shade100),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 22, color: const Color(0xFFFF7B10)),
-          const SizedBox(height: 12),
           Text(
             value,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: Colors.black87,
-            ),
+            style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.black),
           ),
           const SizedBox(height: 4),
           Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              color: Colors.grey[500],
-              fontWeight: FontWeight.w500,
-            ),
+            label,
+            style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: Colors.grey[400], letterSpacing: 1),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStatusBadge(String status) {
-    Color color;
-    String label;
-    if (status == 'completed' || status == 'success') {
-      color = Colors.green;
-      label = 'COMPLETED';
-    } else if (status == 'failed' || status == 'cancelled') {
-      color = Colors.red;
-      label = 'CANCELLED';
-    } else {
-      color = Colors.orange;
-      label = 'PENDING';
+class DashedBorderPainter extends CustomPainter {
+  final Color color;
+  DashedBorderPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withOpacity(0.3)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final path = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        const Radius.circular(12),
+      ));
+
+    final dashWidth = 8.0;
+    final dashSpace = 4.0;
+    
+    final dashPath = Path();
+    for (final metric in path.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < metric.length) {
+        final length = dashWidth;
+        dashPath.addPath(metric.extractPath(distance, distance + length), Offset.zero);
+        distance += length + dashSpace;
+      }
     }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: color,
-        ),
-      ),
-    );
+    
+    canvas.drawPath(dashPath, paint);
   }
 
-  Widget _buildEmptyHistory() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Column(
-        children: [
-          Icon(Icons.history_rounded, size: 48, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          Text(
-            'No referrals yet',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey[400]),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Share your code to see history here!',
-            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400]),
-          ),
-        ],
-      ),
-    );
-  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

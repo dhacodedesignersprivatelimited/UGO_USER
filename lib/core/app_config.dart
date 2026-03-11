@@ -7,8 +7,8 @@ class AppConfig {
   static AppConfig get instance => _instance;
 
   // API
-  static const String baseApiUrl = 'https://ugo-api.icacorp.org';
-  //static const String baseApiUrl = ' http://localhost:5001';
+  //static const String baseApiUrl = 'https://ugo-api.icacorp.org';
+  static const String baseApiUrl = 'https://ugotaxi.icacorp.org';
 
   // Google Maps
   static const String googleMapsApiKey =
