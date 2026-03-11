@@ -166,6 +166,23 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
         }
         // ------------------------------------
 
+        // --- APPLY REFERRAL CODE (IF ENTERED) ---
+        final starterCode = _model.textController4!.text.trim();
+        if (starterCode.isNotEmpty) {
+          try {
+            print('🔗 Applying referral code: $starterCode for user $userId...');
+            await ApplyReferralCodeCall.call(
+              userId: userId!,
+              referralCode: starterCode,
+              token: token,
+            );
+            print('✅ Referral code applied.');
+          } catch (e) {
+            print('⚠️ Failed to apply referral code: $e');
+          }
+        }
+        // ----------------------------------------
+
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(FFLocalizations.of(context).getText('welcome_to_ugo')), backgroundColor: FlutterFlowTheme.of(context).success));
 
