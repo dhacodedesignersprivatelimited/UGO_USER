@@ -37,6 +37,7 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
+  late TextEditingController _referralCodeController;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -49,6 +50,7 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
     _nameController = TextEditingController();
     _phoneController = TextEditingController();
     _emailController = TextEditingController();
+    _referralCodeController = TextEditingController();
 
     _pulseController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -67,6 +69,7 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _referralCodeController.dispose();
     _model.dispose();
     _pulseController.dispose();
     super.dispose();
@@ -368,6 +371,44 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
         setState(() => _saving = false);
         _showError('Save failed. Please try again.');
       }
+    }
+  }
+
+  Future<void> _applyReferralCode() async {
+    final code = _referralCodeController.text.trim();
+    if (code.isEmpty) {
+      _showError('Please enter a referral code');
+      return;
+    }
+
+    final userId = FFAppState().userid;
+    final token = FFAppState().accessToken;
+
+    if (userId == 0 || token.isEmpty) {
+      _showError('Please login to apply code');
+      return;
+    }
+
+    setState(() => _saving = true);
+
+    try {
+      final res = await ApplyReferralCodeCall.call(
+        userId: userId,
+        referralCode: code,
+        token: token,
+      );
+
+      if (res.succeeded) {
+        _showSuccess('Referral code applied successfully!');
+        _referralCodeController.clear();
+      } else {
+        final msg = ApplyReferralCodeCall.message(res.jsonBody) ?? 'Failed to apply code';
+        _showError(msg);
+      }
+    } catch (e) {
+      _showError('An error occurred');
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -701,7 +742,29 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
                   keyboardType: TextInputType.emailAddress,
                   icon: Icons.email_outlined,
                 ).animate().fadeIn(delay: 600.ms),
-                const SizedBox(height: 48),
+                const SizedBox(height: 24),
+                _inputField(
+                  label: 'Referral Code (Optional)',
+                  controller: _referralCodeController,
+                  icon: Icons.card_giftcard_outlined,
+                  hintText: 'Enter friend\'s code',
+                ).animate().fadeIn(delay: 650.ms),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _saving ? null : _applyReferralCode,
+                    icon: Icon(Icons.check_circle_outline, size: 18, color: FlutterFlowTheme.of(context).primary),
+                    label: Text(
+                      'Apply Code',
+                      style: TextStyle(
+                        color: FlutterFlowTheme.of(context).primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ).animate().fadeIn(delay: 670.ms),
+                const SizedBox(height: 36),
                 SizedBox(
                   width: double.infinity,
                   height: 56,
