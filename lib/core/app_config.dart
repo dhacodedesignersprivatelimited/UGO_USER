@@ -8,7 +8,8 @@ class AppConfig {
 
   // API
   static const String baseApiUrl = 'https://ugo-api.icacorp.org';
-  
+  //static const String baseApiUrl = ' http://localhost:5001';
+
   // Google Maps
   static const String googleMapsApiKey =
       'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y';

@@ -261,6 +261,189 @@ class GetUserReferralStatsCall {
       );
 }
 
+class GenerateReferralCodeCall {
+  static Future<ApiCallResponse> call({
+    required int userId,
+    String? token = '',
+  }) async {
+    final ffApiRequestBody = '''
+{
+  "user_id": $userId
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'GenerateReferralCode',
+      apiUrl: '$_baseUrl/api/referral/Generate',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static String? referralCode(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.referral_code''',
+      ));
+}
+
+class ApplyReferralCodeCall {
+  static Future<ApiCallResponse> call({
+    required int userId,
+    required String referralCode,
+    String? token = '',
+  }) async {
+    final ffApiRequestBody = '''
+{
+  "user_id": $userId,
+  "referral_code": "$referralCode"
+}''';
+    return ApiManager.instance.makeApiCall(
+      callName: 'ApplyReferralCode',
+      apiUrl: '$_baseUrl/api/referral/Apply',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: ffApiRequestBody,
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static bool? success(dynamic response) => castToType<bool>(getJsonField(
+        response,
+        r'''$.success''',
+      ));
+  static String? message(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.message''',
+      ));
+}
+
+class GetReferralStatusCall {
+  static Future<ApiCallResponse> call({
+    required int userId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetReferralStatus',
+      apiUrl: '$_baseUrl/api/referral/Status',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {
+        'user_id': userId,
+      },
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static String? referralCode(dynamic response) => castToType<String>(getJsonField(
+        response,
+        r'''$.data.referral_code''',
+      ));
+  static int? totalReferrals(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.total_referrals''',
+      ));
+  static int? successfulConversions(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.successful_conversions''',
+      ));
+  static double? coinsEarned(dynamic response) => castToType<double>(getJsonField(
+        response,
+        r'''$.data.coins_earned''',
+      ));
+}
+
+class GetReferralHistoryCall {
+  static Future<ApiCallResponse> call({
+    required int userId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetReferralHistory',
+      apiUrl: '$_baseUrl/api/referral/History',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {
+        'user_id': userId,
+      },
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static List<dynamic>? history(dynamic response) => (getJsonField(
+        response,
+        r'''$.data''',
+        true,
+      ) as List?)?.toList();
+}
+
+class GetReferralEarningsCall {
+  static Future<ApiCallResponse> call({
+    required int userId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'GetReferralEarnings',
+      apiUrl: '$_baseUrl/api/referral/Earnings',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {
+        'user_id': userId,
+      },
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static double? moneyEarned(dynamic response) => castToType<double>(getJsonField(
+        response,
+        r'''$.data.money_earned''',
+      ));
+  static double? coinsEarned(dynamic response) => castToType<double>(getJsonField(
+        response,
+        r'''$.data.coins_earned''',
+      ));
+}
+
 /// ---------------------------------------------------------------------------
 /// ADDRESS MANAGEMENT
 /// ---------------------------------------------------------------------------
