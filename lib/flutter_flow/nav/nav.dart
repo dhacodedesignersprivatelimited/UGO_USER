@@ -51,15 +51,13 @@ class AppStateNotifier extends ChangeNotifier {
       if (FFAppState().firebaseUid != newUser.uid) {
         print('🔄 User session sync: Firebase user changed or is new → Clearing backend state');
         FFAppState().firebaseUid = newUser.uid!;
-        FFAppState().userid = 0;
-        FFAppState().accessToken = '';
+        FFAppState().clearAuthSession();
       }
     } else if (user?.uid != null) {
       // Explicit or implicit logout
       print('🔄 User session sync: Logged out → Clearing backend state');
       FFAppState().firebaseUid = '';
-      FFAppState().userid = 0;
-      FFAppState().accessToken = '';
+      FFAppState().clearAuthSession();
     }
 
     initialUser ??= newUser;

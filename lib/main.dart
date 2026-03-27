@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'auth/firebase_auth/firebase_user_provider.dart';
 import 'auth/firebase_auth/auth_util.dart';
 import 'backend/firebase/firebase_config.dart';
+import 'backend/api_requests/api_calls.dart';
 import 'config/payment_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import 'flutter_flow/flutter_flow_util.dart';
@@ -191,6 +193,43 @@ ThemeData _buildDarkTheme() {
   );
 }
 
+Future<void> _validatePersistedBackendSession(FFAppState appState) async {
+  final firebaseUser = FirebaseAuth.instance.currentUser;
+
+  // No Firebase session => remove any stale backend user/token from storage.
+  if (firebaseUser == null) {
+    appState.clearAuthSession();
+    return;
+  }
+
+  final userId = appState.userid;
+  final accessToken = appState.accessToken;
+  if (userId == 0 || accessToken.isEmpty) {
+    return;
+  }
+
+  try {
+    final response = await GetUserDetailsCall.call(
+      userId: userId,
+      token: accessToken,
+    );
+
+    if (response.succeeded) {
+      final resolvedUserId = GetUserDetailsCall.id(response.jsonBody);
+      if (resolvedUserId != null && resolvedUserId != userId) {
+        appState.clearAuthSession();
+      }
+      return;
+    }
+
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      appState.clearAuthSession();
+    }
+  } catch (_) {
+    // Keep current session on transient startup errors.
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   GoRouter.optionURLReflectsImperativeAPIs = true;
@@ -205,6 +244,7 @@ void main() async {
 
   final appState = FFAppState(); // Initialize FFAppState
   await appState.initializePersistedState();
+  await _validatePersistedBackendSession(appState);
 
   await initializeFirebaseAppCheck();
 

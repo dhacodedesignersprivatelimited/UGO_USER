@@ -184,6 +184,17 @@ class _HomeWidgetState extends State<HomeWidget>
         } else {
           FFAppState().bookingInProgress = false;
         }
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        FFAppState().clearAuthSession();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Your session expired. Please log in again.'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          context.goNamedAuth(LoginWidget.routeName, context.mounted);
+        }
       }
     } catch (e) {
       debugPrint('Ride status check failed: $e');

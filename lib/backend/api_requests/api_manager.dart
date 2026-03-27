@@ -13,6 +13,8 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:mime_type/mime_type.dart';
 
+import '/app_state.dart';
+import '/core/app_config.dart';
 import '/flutter_flow/uploaded_file.dart';
 
 import 'get_streamed_response.dart';
@@ -168,6 +170,24 @@ class ApiCallResponse {
       response?.body ??
       (jsonBody is String ? jsonBody as String : jsonEncode(jsonBody));
   String get exceptionMessage => exception.toString();
+  String get userFriendlyMessage {
+    if (statusCode == 401 || statusCode == 403) {
+      return 'Your session expired. Please sign in again.';
+    }
+    if (statusCode >= 500) {
+      return 'Server is busy right now. Please try again in a moment.';
+    }
+    if (statusCode == 0 || statusCode == -1) {
+      return 'Network issue detected. Check your connection and try again.';
+    }
+    final serverMessage = _extractServerMessage(jsonBody);
+    if (serverMessage != null && serverMessage.isNotEmpty) {
+      return serverMessage;
+    }
+    return succeeded
+        ? 'Request completed successfully.'
+        : 'Something went wrong. Please try again.';
+  }
 
   /// Creates a new [ApiCallResponse] with optionally updated parameters.
   ///
@@ -218,6 +238,15 @@ class ApiCallResponse {
         ApiManager.toStringMap(response['headers'] ?? {}),
         response['statusCode'] ?? 400,
       );
+
+  static String? _extractServerMessage(dynamic body) {
+    if (body is Map) {
+      final dynamic message = body['message'] ?? body['error'] ?? body['detail'];
+      if (message != null) return message.toString();
+    }
+    if (body is String && body.isNotEmpty) return body;
+    return null;
+  }
 }
 
 class ApiManager {
@@ -465,6 +494,118 @@ class ApiManager {
     return false;
   }
 
+  static bool _isAuthFailure(ApiCallResponse response) {
+    if (response.statusCode == 401 || response.statusCode == 403) return true;
+    final body = response.bodyText.toLowerCase();
+    return body.contains('invalid or expired access token') ||
+        body.contains('invalid token') ||
+        body.contains('token expired') ||
+        body.contains('jwt expired') ||
+        body.contains('unauthorized');
+  }
+
+  static String? _extractBearerToken(Map<String, dynamic> headers) {
+    for (final entry in headers.entries) {
+      if (entry.key.toLowerCase() == 'authorization') {
+        final value = entry.value?.toString() ?? '';
+        const prefix = 'bearer ';
+        if (value.toLowerCase().startsWith(prefix)) {
+          return value.substring(prefix.length).trim();
+        }
+      }
+    }
+    return null;
+  }
+
+  static Map<String, dynamic> _headersWithAccessToken(
+    Map<String, dynamic> headers,
+    String accessToken,
+  ) {
+    final updated = Map<String, dynamic>.from(headers);
+    String? existingAuthKey;
+    for (final key in updated.keys) {
+      if (key.toLowerCase() == 'authorization') {
+        existingAuthKey = key;
+        break;
+      }
+    }
+    updated[existingAuthKey ?? 'Authorization'] = 'Bearer $accessToken';
+    return updated;
+  }
+
+  static String? _extractTokenFromBody(dynamic body, List<String> keys) {
+    if (body is! Map) return null;
+    final data = body['data'];
+    for (final key in keys) {
+      final direct = body[key];
+      if (direct is String && direct.isNotEmpty) return direct;
+      if (data is Map) {
+        final nested = data[key];
+        if (nested is String && nested.isNotEmpty) return nested;
+      }
+    }
+    return null;
+  }
+
+  static Future<String?> _tryRefreshAccessToken(String oldAccessToken) async {
+    final appState = FFAppState();
+    final refreshToken = appState.refreshToken;
+    if (refreshToken.isEmpty) return null;
+
+    final endpoints = <String>[
+      '/api/users/refresh-token',
+      '/api/users/refresh',
+      '/api/auth/refresh-token',
+      '/api/auth/refresh',
+    ];
+
+    for (final path in endpoints) {
+      try {
+        final response = await TimeoutHttpClient.instance.post(
+          Uri.parse('${AppConfig.baseApiUrl}$path'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $refreshToken',
+          },
+          body: jsonEncode({
+            'refreshToken': refreshToken,
+            'refresh_token': refreshToken,
+            'accessToken': oldAccessToken,
+            'access_token': oldAccessToken,
+          }),
+        );
+        if (response.statusCode < 200 || response.statusCode >= 300) continue;
+
+        dynamic decoded;
+        try {
+          decoded = jsonDecode(response.body);
+        } catch (_) {
+          continue;
+        }
+
+        final newAccessToken = _extractTokenFromBody(
+          decoded,
+          const ['accessToken', 'access_token', 'token'],
+        );
+        if (newAccessToken == null || newAccessToken.isEmpty) continue;
+
+        final newRefreshToken = _extractTokenFromBody(
+          decoded,
+          const ['refreshToken', 'refresh_token'],
+        );
+
+        appState.accessToken = newAccessToken;
+        if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+          appState.refreshToken = newRefreshToken;
+        }
+        return newAccessToken;
+      } catch (_) {
+        // Try next endpoint candidate.
+      }
+    }
+    return null;
+  }
+
   Future<ApiCallResponse> makeApiCall({
     required String callName,
     required String apiUrl,
@@ -480,6 +621,7 @@ class ApiManager {
     bool cache = false,
     bool isStreamingApi = false,
     bool enableRetry = true,
+    bool hasRetriedAuth = false,
     ApiCallOptions? options,
     http.Client? client,
   }) async {
@@ -601,7 +743,43 @@ class ApiManager {
       attempt++;
     }
 
-    final response = result;
+    var response = result;
+
+    final requestToken = _extractBearerToken(headers);
+    final currentToken = FFAppState().accessToken;
+    final canAttemptRefresh = !hasRetriedAuth &&
+        response.statusCode > 0 &&
+        _isAuthFailure(response) &&
+        requestToken != null &&
+        requestToken.isNotEmpty &&
+        currentToken.isNotEmpty;
+
+    if (canAttemptRefresh) {
+      final refreshedToken = await _tryRefreshAccessToken(currentToken);
+      if (refreshedToken != null && refreshedToken.isNotEmpty) {
+        final updatedHeaders = _headersWithAccessToken(headers, refreshedToken);
+        response = await makeApiCall(
+          callName: callName,
+          apiUrl: apiUrl,
+          callType: callType,
+          headers: updatedHeaders,
+          params: params,
+          body: body,
+          bodyType: bodyType,
+          returnBody: returnBody,
+          encodeBodyUtf8: encodeBodyUtf8,
+          decodeUtf8: decodeUtf8,
+          alwaysAllowBody: alwaysAllowBody,
+          cache: cache,
+          isStreamingApi: isStreamingApi,
+          enableRetry: enableRetry,
+          hasRetriedAuth: true,
+          client: client,
+        );
+      } else {
+        FFAppState().clearAuthSession();
+      }
+    }
 
     if (cache && response.statusCode >= 200 && response.statusCode < 300) {
       _apiCache[callOptions] = response;

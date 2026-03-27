@@ -105,6 +105,17 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
           _isLoadingUser = false;
         });
       } else {
+        if (response.statusCode == 401 || response.statusCode == 403) {
+          FFAppState().clearAuthSession();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Session expired. Please sign in again.'),
+            ),
+          );
+          context.goNamedAuth(LoginWidget.routeName, context.mounted);
+          return;
+        }
         setState(() {
           _userDisplayName = FFLocalizations.of(context).getText('user_label');
           _profileImageUrl = '';
@@ -476,8 +487,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
         try {
           await FirebaseAuth.instance.signOut();
 
-          FFAppState().accessToken = '';
-          FFAppState().userid = 0;
+          FFAppState().clearAuthSession();
 
           context.goNamedAuth(LoginWidget.routeName, context.mounted);
 

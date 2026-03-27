@@ -283,10 +283,15 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                       if ((_model.apiResultx4u?.succeeded ?? false)) {
                         // User EXISTS
                         final token = LoginCall.accessToken(_model.apiResultx4u?.jsonBody);
+                        final refreshToken =
+                            LoginCall.refreshToken(_model.apiResultx4u?.jsonBody);
                         final userId = LoginCall.userid(_model.apiResultx4u?.jsonBody);
 
                         if (token != null) FFAppState().accessToken = token;
-                        if (userId != null) FFAppState().userid = userId!;
+                        if (refreshToken != null && refreshToken.isNotEmpty) {
+                          FFAppState().refreshToken = refreshToken;
+                        }
+                        if (userId != null) FFAppState().userid = userId;
 
                         context.goNamedAuth(HomeWidget.routeName, context.mounted);
                       } else {

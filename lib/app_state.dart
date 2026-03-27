@@ -21,6 +21,9 @@ class FFAppState extends ChangeNotifier {
       _accessToken = prefs.getString('ff_accessToken') ?? _accessToken;
     });
     _safeInit(() {
+      _refreshToken = prefs.getString('ff_refreshToken') ?? _refreshToken;
+    });
+    _safeInit(() {
       _userid = prefs.getInt('ff_userid') ?? _userid;
     });
     _safeInit(() {
@@ -200,6 +203,13 @@ class FFAppState extends ChangeNotifier {
     prefs.setString('ff_accessToken', value);
   }
 
+  String _refreshToken = '';
+  String get refreshToken => _refreshToken;
+  set refreshToken(String value) {
+    _refreshToken = value;
+    prefs.setString('ff_refreshToken', value);
+  }
+
   bool _bookingInProgress = false;
   bool get bookingInProgress => _bookingInProgress;
   set bookingInProgress(bool value) {
@@ -343,6 +353,16 @@ class FFAppState extends ChangeNotifier {
     currentRideOtp = '';
     _currentRideId = null;
     prefs.remove('ff_currentRideId');
+    notifyListeners();
+  }
+
+  void clearAuthSession() {
+    _accessToken = '';
+    _refreshToken = '';
+    _userid = 0;
+    prefs.remove('ff_accessToken');
+    prefs.remove('ff_refreshToken');
+    prefs.remove('ff_userid');
     notifyListeners();
   }
 }

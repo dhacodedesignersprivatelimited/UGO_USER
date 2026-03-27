@@ -151,10 +151,15 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
         // 5. Success - Save Session
         print('✅ Registration Successful. Saving session...');
         final token = CreateUserCall.accessToken(_model.apiResultRegister?.jsonBody);
+        final refreshToken =
+            CreateUserCall.refreshToken(_model.apiResultRegister?.jsonBody);
         final userId = CreateUserCall.userid(_model.apiResultRegister?.jsonBody);
 
         if (token != null) FFAppState().accessToken = token;
-        if (userId != null) FFAppState().userid = userId!;
+        if (refreshToken != null && refreshToken.isNotEmpty) {
+          FFAppState().refreshToken = refreshToken;
+        }
+        if (userId != null) FFAppState().userid = userId;
         
         // --- AUTO-GENERATE REFERRAL CODE ---
         try {
@@ -206,9 +211,13 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
           if (!mounted) return;
           if (loginRes.succeeded) {
             final token = LoginCall.accessToken(loginRes.jsonBody);
+            final refreshToken = LoginCall.refreshToken(loginRes.jsonBody);
             final userId = LoginCall.userid(loginRes.jsonBody);
             if (token != null) FFAppState().accessToken = token;
-            if (userId != null) FFAppState().userid = userId!;
+            if (refreshToken != null && refreshToken.isNotEmpty) {
+              FFAppState().refreshToken = refreshToken;
+            }
+            if (userId != null) FFAppState().userid = userId;
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(FFLocalizations.of(context).getText('login_welcome_back')),
                 backgroundColor: FlutterFlowTheme.of(context).success));

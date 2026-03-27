@@ -84,10 +84,24 @@ class _LocationWidgetState extends State<LocationWidget> {
         // 3. PERSIST SESSION DATA (Crucial for AppState)
         final responseData = _model.apiResultblh!.jsonBody;
 
-        FFAppState().accessToken = getJsonField(
+        final accessToken = getJsonField(
           responseData,
           r'$.data.accessToken',
-        ).toString();
+        )?.toString();
+        if (accessToken != null &&
+            accessToken.isNotEmpty &&
+            accessToken.toLowerCase() != 'null') {
+          FFAppState().accessToken = accessToken;
+        }
+        final refreshToken = getJsonField(
+          responseData,
+          r'$.data.refreshToken',
+        )?.toString();
+        if (refreshToken != null &&
+            refreshToken.isNotEmpty &&
+            refreshToken.toLowerCase() != 'null') {
+          FFAppState().refreshToken = refreshToken;
+        }
 
         FFAppState().userid = getJsonField(
           responseData,

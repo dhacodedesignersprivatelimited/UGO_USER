@@ -54,6 +54,15 @@ class CreateUserCall {
         response,
         r'''$.data.accessToken''',
       ));
+  static String? refreshToken(dynamic response) =>
+      castToType<String>(getJsonField(
+        response,
+        r'''$.data.refreshToken''',
+      )) ??
+      castToType<String>(getJsonField(
+        response,
+        r'''$.data.refresh_token''',
+      ));
   static int? userid(dynamic response) => castToType<int>(getJsonField(
     response,
     r'''$.data.user.id''',
@@ -91,6 +100,15 @@ class LoginCall {
       castToType<String>(getJsonField(
         response,
         r'''$.data.accessToken''',
+      ));
+  static String? refreshToken(dynamic response) =>
+      castToType<String>(getJsonField(
+        response,
+        r'''$.data.refreshToken''',
+      )) ??
+      castToType<String>(getJsonField(
+        response,
+        r'''$.data.refresh_token''',
       ));
   static int? userid(dynamic response) => castToType<int>(getJsonField(
     response,
