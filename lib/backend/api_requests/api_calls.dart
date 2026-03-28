@@ -2130,6 +2130,113 @@ class RebookRideCall {
     getJsonField(response, r'''$.message'''),
   );
 }
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// GetUserByIdCall
+// GET  $baseUrl/api/users/{userId}
+//
+// Sample response:
+// {
+//   "success": true,
+//   "statusCode": 200,
+//   "message": "User retrieved successfully",
+//   "data": {
+//     "id": 19,
+//     "first_name": "urvashi",
+//     "last_name": "s",
+//     "referral_code": "USR19THM3",
+//     "coins_balance": 0,
+//     ...
+//   }
+// }
+// ─────────────────────────────────────────────────────────────────────────────
+
+class GetUserByIdCall {
+  static Future<ApiCallResponse> call({
+    int? userId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getUserById',
+      apiUrl: '$_baseUrl/api/users/$userId',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  // ── Field extractors ──────────────────────────────────────────────────────
+  // All extract directly from $.data.* matching the real API shape.
+  // Using ?.toString() instead of castToType<String> to avoid silent null returns.
+
+  static dynamic userData(dynamic response) =>
+      getJsonField(response, r'''$.data''');
+
+  static String? referralCode(dynamic response) =>
+      getJsonField(response, r'''$.data.referral_code''')?.toString();
+
+  static int? coinsBalance(dynamic response) {
+    final raw = getJsonField(response, r'''$.data.coins_balance''');
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  static String? firstName(dynamic response) =>
+      getJsonField(response, r'''$.data.first_name''')?.toString();
+
+  static String? lastName(dynamic response) =>
+      getJsonField(response, r'''$.data.last_name''')?.toString();
+
+  static int? userId(dynamic response) {
+    final raw = getJsonField(response, r'''$.data.id''');
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  static String? mobileNumber(dynamic response) =>
+      getJsonField(response, r'''$.data.mobile_number''')?.toString();
+
+  static String? email(dynamic response) =>
+      getJsonField(response, r'''$.data.email''')?.toString();
+
+  static String? accountStatus(dynamic response) =>
+      getJsonField(response, r'''$.data.account_status''')?.toString();
+
+  static String? accountType(dynamic response) =>
+      getJsonField(response, r'''$.data.account_type''')?.toString();
+
+  static String? usedReferralCode(dynamic response) =>
+      getJsonField(response, r'''$.data.used_referral_code''')?.toString();
+
+  static double? overallRating(dynamic response) {
+    final raw = getJsonField(response, r'''$.data.overall_rating''');
+    if (raw == null) return null;
+    if (raw is double) return raw;
+    return double.tryParse(raw.toString());
+  }
+
+  static int? totalRides(dynamic response) {
+    final raw = getJsonField(response, r'''$.data.total_rides''');
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  static bool? isBlocked(dynamic response) =>
+      getJsonField(response, r'''$.data.is_blocked''') as bool?;
+
+  static String? profileImage(dynamic response) =>
+      getJsonField(response, r'''$.data.profile_image''')?.toString();
+
+  static String? fcmToken(dynamic response) =>
+      getJsonField(response, r'''$.data.fcm_token''')?.toString();
+}
 
 class GetAllNotificationsCall {
   static Future<ApiCallResponse> call({
