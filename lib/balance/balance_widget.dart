@@ -1,3 +1,5 @@
+import '/app_state.dart';
+import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -21,11 +23,89 @@ class _BalanceWidgetState extends State<BalanceWidget> {
   late BalanceModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _loading = true;
+  double _balance = 0;
+  double _totalAdded = 0;
+  double _totalSpent = 0;
+  List<Map<String, String>> _recentLines = [];
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => BalanceModel());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadBalanceData());
+  }
+
+  Future<void> _loadBalanceData() async {
+    final app = FFAppState();
+    final uid = app.userid;
+    final token = app.accessToken;
+    if (uid <= 0 || token.isEmpty) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+
+    double bal = 0;
+    double added = 0;
+    double spent = 0;
+    final List<Map<String, String>> lines = [];
+
+    try {
+      final w = await GetwalletCall.call(userId: uid, token: token);
+      if (w.succeeded) {
+        bal = GetwalletCall.walletBalanceDouble(w.jsonBody) ??
+            double.tryParse(GetwalletCall.walletBalance(w.jsonBody) ?? '') ??
+            0;
+        added = double.tryParse(GetwalletCall.totalRechargeAmount(w.jsonBody) ?? '') ?? 0;
+        spent = double.tryParse(GetwalletCall.totalSpentAmount(w.jsonBody) ?? '') ?? 0;
+      }
+    } catch (_) {}
+
+    try {
+      final t = await GetUserTransactionsCall.call(
+        userId: uid,
+        token: token,
+        page: 1,
+        limit: 15,
+      );
+      if (t.succeeded) {
+        final raw = GetUserTransactionsCall.transactions(t.jsonBody) ?? [];
+        for (final item in raw) {
+          if (item is! Map) continue;
+          final m = Map<String, dynamic>.from(item);
+          final amt = (m['amount'] is num)
+              ? (m['amount'] as num).toDouble()
+              : double.tryParse(m['amount']?.toString() ?? '') ?? 0;
+          final desc = m['description']?.toString() ?? m['type']?.toString() ?? 'Activity';
+          final type = m['type']?.toString() ?? '';
+          final when = m['created_at']?.toString() ?? m['date']?.toString() ?? '';
+          final sign = amt >= 0 ? '+' : '';
+          lines.add({
+            'title': desc,
+            'subtitle': '$type • ${_shortDate(when)}',
+            'amount': '$sign₹${amt.abs().toStringAsFixed(2)}',
+            'positive': amt >= 0 ? '1' : '0',
+          });
+          if (lines.length >= 15) break;
+        }
+      }
+    } catch (_) {}
+
+    if (!mounted) return;
+    setState(() {
+      _balance = bal;
+      _totalAdded = added;
+      _totalSpent = spent;
+      _recentLines = lines;
+      _loading = false;
+    });
+  }
+
+  String _shortDate(String iso) {
+    if (iso.isEmpty) return '';
+    final d = DateTime.tryParse(iso);
+    if (d == null) return iso;
+    return '${d.day}/${d.month}/${d.year}';
   }
 
   @override
@@ -92,27 +172,59 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                 alignment: AlignmentDirectional(0.0, 0.0),
                 child: Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
-                  child: Text(
-                    FFLocalizations.of(context).getText(
-                      'a8iy3nqi' /* ₹0.00 */,
-                    ),
-                    textAlign: TextAlign.center,
-                    style: FlutterFlowTheme.of(context).displaySmall.override(
-                          font: GoogleFonts.interTight(
-                            fontWeight: FontWeight.w500,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .displaySmall
-                                .fontStyle,
+                  child: _loading
+                      ? SizedBox(
+                          height: 44,
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: FlutterFlowTheme.of(context).accent1,
+                              strokeWidth: 2,
+                            ),
                           ),
-                          color: FlutterFlowTheme.of(context).accent1,
-                          fontSize: 36.0,
-                          letterSpacing: 0.0,
-                          fontWeight: FontWeight.w500,
-                          fontStyle: FlutterFlowTheme.of(context)
-                              .displaySmall
-                              .fontStyle,
+                        )
+                      : Column(
+                          children: [
+                            Text(
+                              '₹${_balance.toStringAsFixed(2)}',
+                              textAlign: TextAlign.center,
+                              style: FlutterFlowTheme.of(context)
+                                  .displaySmall
+                                  .override(
+                                    font: GoogleFonts.interTight(
+                                      fontWeight: FontWeight.w500,
+                                      fontStyle: FlutterFlowTheme.of(context)
+                                          .displaySmall
+                                          .fontStyle,
+                                    ),
+                                    color:
+                                        FlutterFlowTheme.of(context).accent1,
+                                    fontSize: 36.0,
+                                    letterSpacing: 0.0,
+                                    fontWeight: FontWeight.w500,
+                                    fontStyle: FlutterFlowTheme.of(context)
+                                        .displaySmall
+                                        .fontStyle,
+                                  ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8.0),
+                              child: Text(
+                                'Money you can pay with at checkout (wallet). Referral coins stay on the Wallet tab.',
+                                textAlign: TextAlign.center,
+                                style: FlutterFlowTheme.of(context)
+                                    .bodySmall
+                                    .override(
+                                      font: GoogleFonts.inter(
+                                        fontWeight: FontWeight.normal,
+                                      ),
+                                      color: FlutterFlowTheme.of(context)
+                                          .secondaryText,
+                                      fontSize: 12.0,
+                                    ),
+                              ),
+                            ),
+                          ],
                         ),
-                  ),
                 ),
               ),
               Padding(
@@ -179,9 +291,9 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                           ].divide(SizedBox(width: 12.0)),
                         ),
                         Text(
-                          FFLocalizations.of(context).getText(
-                            '0ewa2jk5' /* 0.00 */,
-                          ),
+                          _loading
+                              ? '…'
+                              : _totalAdded.toStringAsFixed(2),
                           style:
                               FlutterFlowTheme.of(context).bodyMedium.override(
                                     font: GoogleFonts.inter(
@@ -244,9 +356,9 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                           ].divide(SizedBox(width: 12.0)),
                         ),
                         Text(
-                          FFLocalizations.of(context).getText(
-                            'qtg8aa3s' /* 0.00 */,
-                          ),
+                          _loading
+                              ? '…'
+                              : _totalSpent.toStringAsFixed(2),
                           style:
                               FlutterFlowTheme.of(context).bodyMedium.override(
                                     font: GoogleFonts.inter(
@@ -271,6 +383,102 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                       thickness: 1.0,
                       color: Color(0xFFE0E0E0),
                     ),
+                    Align(
+                      alignment: AlignmentDirectional(-1.0, 0.0),
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          'Totals above are all-time (from your wallet record).',
+                          style: FlutterFlowTheme.of(context).bodySmall.override(
+                                font: GoogleFonts.inter(
+                                  fontWeight: FontWeight.normal,
+                                ),
+                                color: FlutterFlowTheme.of(context).secondaryText,
+                                fontSize: 12.0,
+                              ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 20.0),
+                      child: Text(
+                        'Recent wallet activity (last 30 days)',
+                        style: FlutterFlowTheme.of(context).titleMedium.override(
+                              font: GoogleFonts.interTight(
+                                fontWeight: FontWeight.w500,
+                              ),
+                              color: FlutterFlowTheme.of(context).accent1,
+                              fontSize: 16.0,
+                            ),
+                      ),
+                    ),
+                    if (_recentLines.isEmpty && !_loading)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12.0),
+                        child: Text(
+                          'No wallet transactions in the last 30 days. Add money from the Wallet screen or pay for a ride with wallet to see history here.',
+                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                font: GoogleFonts.inter(),
+                                color: FlutterFlowTheme.of(context).secondaryText,
+                                fontSize: 13.0,
+                              ),
+                        ),
+                      )
+                    else
+                      ..._recentLines.map(
+                        (row) => Padding(
+                          padding: const EdgeInsets.only(top: 12.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      row['title'] ?? '',
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            font: GoogleFonts.inter(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            fontSize: 14.0,
+                                          ),
+                                    ),
+                                    if ((row['subtitle'] ?? '').isNotEmpty)
+                                      Text(
+                                        row['subtitle']!,
+                                        style: FlutterFlowTheme.of(context)
+                                            .bodySmall
+                                            .override(
+                                              font: GoogleFonts.inter(),
+                                              color: FlutterFlowTheme.of(context)
+                                                  .secondaryText,
+                                              fontSize: 11.0,
+                                            ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                row['amount'] ?? '',
+                                style: FlutterFlowTheme.of(context)
+                                    .bodyMedium
+                                    .override(
+                                      font: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      color: row['positive'] == '1'
+                                          ? const Color(0xFF2E7D32)
+                                          : FlutterFlowTheme.of(context).accent1,
+                                      fontSize: 14.0,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                   ].divide(SizedBox(height: 16.0)),
                 ),
               ),

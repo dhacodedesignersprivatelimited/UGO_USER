@@ -1,6 +1,5 @@
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import '/flutter_flow/flutter_flow_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -27,8 +26,11 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
   bool _isLoading = true;
   String _referralCode = '';
   int _totalReferrals = 0;
+  int _referralsActivated = 0;
+  int _referralsPending = 0;
   double _totalEarned = 0.0;
   int _coinsBalance = 0;
+  List<dynamic> _referralRows = [];
   String _firstName = '';
   String _lastName = '';
   late AnimationController _animController;
@@ -50,11 +52,11 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
 
-    _fetchUserData();
+    _fetchUserData(showPageLoader: true);
   }
 
   // ─── API CALL: Get user by ID ─────────────────────────────────────────────
-  Future<void> _fetchUserData() async {
+  Future<void> _fetchUserData({bool showPageLoader = true}) async {
     // From app_state.dart:
     //   int _userid = 0;       → default 0 means NOT logged in (not null)
     //   String _accessToken = ''; → empty string means NOT authenticated
@@ -67,10 +69,16 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     if (userId <= 0 || token.isEmpty) {
       debugPrint('✖ Skipping API – userId=$userId  token.isEmpty=${token.isEmpty}');
       if (mounted) {
-        setState(() => _isLoading = false);
-        _animController.forward();
+        setState(() {
+          if (showPageLoader) _isLoading = false;
+        });
+        if (showPageLoader) _animController.forward();
       }
       return;
+    }
+
+    if (showPageLoader && mounted) {
+      setState(() => _isLoading = true);
     }
 
     // ── 1. Fetch user profile from GET /api/users/{userId} ───────────────
@@ -116,12 +124,17 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
         token: token,
       );
       if (statsResponse.statusCode >= 200 && statsResponse.statusCode < 300) {
-        final int    refs   = int.tryParse(getJsonField(statsResponse.jsonBody, r'''$.data.total_referrals''')?.toString() ?? '') ?? 0;
-        final double earned = double.tryParse(getJsonField(statsResponse.jsonBody, r'''$.data.total_earned''')?.toString() ?? '') ?? 0.0;
+        final body = statsResponse.jsonBody;
+        final int refs = int.tryParse(getJsonField(body, r'''$.data.total_referrals''')?.toString() ?? '') ?? 0;
+        final double earned = double.tryParse(getJsonField(body, r'''$.data.total_earned''')?.toString() ?? '') ?? 0.0;
+        final int act = int.tryParse(getJsonField(body, r'''$.data.referrals_activated''')?.toString() ?? '') ?? 0;
+        final int pend = int.tryParse(getJsonField(body, r'''$.data.referrals_pending''')?.toString() ?? '') ?? 0;
         if (mounted) {
           setState(() {
             _totalReferrals = refs;
-            _totalEarned    = earned;
+            _totalEarned = earned;
+            _referralsActivated = act;
+            _referralsPending = pend;
           });
         }
       }
@@ -129,9 +142,25 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       debugPrint('⚠ ReferralStats non-fatal: $e');
     }
 
+    try {
+      final refListRes = await GetUserReferralsCall.call(
+        userId: userId,
+        token: token,
+      );
+      if (refListRes.statusCode >= 200 && refListRes.statusCode < 300 && mounted) {
+        setState(() {
+          _referralRows = GetUserReferralsCall.referrals(refListRes.jsonBody);
+        });
+      }
+    } catch (e) {
+      debugPrint('⚠ Referrals list non-fatal: $e');
+    }
+
     if (mounted) {
-      setState(() => _isLoading = false);
-      _animController.forward();
+      setState(() {
+        if (showPageLoader) _isLoading = false;
+      });
+      if (showPageLoader) _animController.forward();
     }
   }
 
@@ -206,9 +235,14 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       opacity: _fadeAnim,
       child: SlideTransition(
         position: _slideAnim,
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
+        child: RefreshIndicator(
+          color: const Color(0xFFFF7B10),
+          onRefresh: () => _fetchUserData(showPageLoader: false),
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            slivers: [
             // ── Collapsible AppBar with gradient ──────────────────────────
             SliverAppBar(
               expandedHeight: 220,
@@ -334,7 +368,21 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
 
                     // Stats row
                     _buildStatsRow(),
+                    if (_totalReferrals > 0 || _referralsActivated > 0) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        '$_referralsActivated of $_totalReferrals friends have completed a Pro ride · $_referralsPending still pending',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
+
+                    _buildFriendsList(),
+                    if (_referralRows.isNotEmpty) const SizedBox(height: 20),
 
                     // Coins card
                     _buildCoinsCard(),
@@ -342,13 +390,140 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
 
                     // How it works
                     _buildHowItWorks(),
+                    const SizedBox(height: 20),
+                    _buildSignupTip(),
                   ],
                 ),
               ),
             ),
           ],
         ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildSignupTip() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F4FD),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF5B7BFE).withOpacity(0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.lightbulb_outline_rounded,
+              color: Colors.blue.shade700, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Missed entering a code at signup? Open Profile settings anytime and tap “Apply code” under Referral.',
+              style: GoogleFonts.inter(
+                fontSize: 12.5,
+                color: Colors.grey[800],
+                height: 1.45,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _statusLabel(dynamic status) {
+    final s = status?.toString().toLowerCase() ?? '';
+    if (s == 'completed') return 'Started earning';
+    if (s == 'pending') return 'Waiting for Pro ride';
+    return s.isEmpty ? '—' : s;
+  }
+
+  Widget _buildFriendsList() {
+    if (_referralRows.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Your invites',
+          style: GoogleFonts.poppins(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Status updates after each friend completes a Pro ride.',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 12),
+        ..._referralRows.take(20).map((r) {
+          if (r is! Map) return const SizedBox.shrink();
+          final ru = r['referred_user'];
+          String name = 'Friend';
+          if (ru is Map) {
+            name = (ru['name'] ?? '').toString().trim();
+            if (name.isEmpty) name = 'Friend';
+          }
+          final st = _statusLabel(r['status']);
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: const Color(0xFFFF7B10).withOpacity(0.15),
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFFF7B10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        st,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -383,7 +558,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
           const SizedBox(width: 14),
           Expanded(
             child: Text(
-              'Share your code with friends. When they complete a Pro Ride, you earn a commission!',
+              'Friends enter your code at signup (or later in Profile). You earn 10 coins (₹1 ride credit) every time they finish a Pro ride. Coins apply at checkout — not withdrawable cash.',
               style: GoogleFonts.inter(
                 fontSize: 13.5,
                 color: Colors.grey[700],
@@ -539,7 +714,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
             icon: Icons.currency_rupee_rounded,
             iconColor: const Color(0xFF34C759),
             bgColor: const Color(0xFFEAF9EE),
-            label: 'Total Earned',
+            label: 'From referrals',
             value: '₹${_totalEarned.toStringAsFixed(2)}',
           ),
         ),
@@ -773,14 +948,14 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       {
         'icon': Icons.directions_car_filled_rounded,
         'color': const Color(0xFF34C759),
-        'title': 'They Complete a Ride',
-        'desc': 'When your friend finishes their first Pro Ride, your reward is triggered.',
+        'title': 'They Take Pro Rides',
+        'desc': 'Each time your friend completes a Pro ride, you get 10 referral coins.',
       },
       {
         'icon': Icons.wallet_rounded,
         'color': const Color(0xFFFF9500),
         'title': 'You Earn Coins',
-        'desc': 'Coins are added to your wallet. 10 coins = ₹1 redeemable on rides!',
+        'desc': '10 coins = ₹1 off at checkout on future rides (in-app only).',
       },
     ];
 

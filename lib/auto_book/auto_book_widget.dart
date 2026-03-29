@@ -529,19 +529,35 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       });
 
       // Scan-to-Book flow: location_update, ride_completed
+      void applyDriverLatLng(Map<String, dynamic> m) {
+        final lat = m['lat'] ?? m['latitude'];
+        final lng = m['lng'] ?? m['longitude'];
+        if (lat != null && lng != null && ridesCache.isNotEmpty) {
+          final ride = Map<String, dynamic>.from(ridesCache.first);
+          ride['driver_latitude'] =
+              lat is num ? lat.toDouble() : double.tryParse(lat.toString());
+          ride['driver_longitude'] =
+              lng is num ? lng.toDouble() : double.tryParse(lng.toString());
+          if (m['eta'] != null) ride['eta'] = m['eta'];
+          setState(() => ridesCache = [ride]);
+          RideSession().rideData = ride;
+        }
+      }
+
       socket!.on("location_update", (data) {
         if (data is Map && mounted) {
-          final m = Map<String, dynamic>.from(data);
-          final lat = m['lat'] ?? m['latitude'];
-          final lng = m['lng'] ?? m['longitude'];
-          if (lat != null && lng != null && ridesCache.isNotEmpty) {
-            final ride = Map<String, dynamic>.from(ridesCache.first);
-            ride['driver_latitude'] = lat is num ? lat.toDouble() : double.tryParse(lat.toString());
-            ride['driver_longitude'] = lng is num ? lng.toDouble() : double.tryParse(lng.toString());
-            if (m['eta'] != null) ride['eta'] = m['eta'];
-            setState(() => ridesCache = [ride]);
-            RideSession().rideData = ride;
-          }
+          applyDriverLatLng(Map<String, dynamic>.from(data));
+        }
+      });
+
+      socket!.on("driver_location_update", (data) {
+        if (data is! Map || !mounted) return;
+        final m = Map<String, dynamic>.from(data);
+        final driver = m['driver'];
+        if (driver is Map) {
+          applyDriverLatLng(Map<String, dynamic>.from(driver));
+        } else {
+          applyDriverLatLng(m);
         }
       });
 
@@ -1367,6 +1383,33 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     );
   }
 
+  String _driverDisplayName() {
+    final d = driverDetails;
+    if (d == null) return 'Driver';
+    final f = d['first_name']?.toString() ?? '';
+    final l = d['last_name']?.toString() ?? '';
+    final n = '$f $l'.trim();
+    return n.isNotEmpty ? n : 'Driver';
+  }
+
+  void _openRideChat() {
+    final ride = ridesCache.isNotEmpty ? ridesCache[0] : null;
+    final id = ride?['id'] ?? widget.rideId;
+    if (!context.mounted) return;
+    context.pushNamed(
+      RideChatWidget.routeName,
+      queryParameters: {
+        'rideId': id.toString(),
+        'partnerName': _driverDisplayName(),
+      },
+    );
+  }
+
+  bool get _isChatAvailableForStatus {
+    final s = _rideStatus.toLowerCase();
+    return s == STATUS_ACCEPTED || s == STATUS_ARRIVING || s == STATUS_PICKED_UP;
+  }
+
   Widget _buildBottomComponent(ScrollController scrollController) {
     if (_rideStatus == STATUS_SEARCHING) {
       return SingleChildScrollView(
@@ -1409,6 +1452,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         onCall: _makeCall,
         onCancel: _showCancelDialog,
         onShare: _handleShareTrip,
+        onChat: _isChatAvailableForStatus ? _openRideChat : null,
         rideStatus: _rideStatus,
         currentRemainingDistance: _currentRemainingDistance,
         liveEtaText: _liveEtaText,

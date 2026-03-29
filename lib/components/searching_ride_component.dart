@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
+import '/flutter_flow/flutter_flow_util.dart';
 
 class SearchingRideComponent extends StatefulWidget {
   final int searchSeconds;
@@ -22,6 +23,9 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
   late Animation<double> _pulseAnimation;
 
   static const Color primaryColor = Color(0xFFFF7B10);
+  static const int _searchWindowSeconds = 120; // 2 mins
+  static const List<int> _extraOptions = [10, 20, 30, 40];
+  int? _selectedExtra;
 
   @override
   void initState() {
@@ -45,6 +49,16 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
   @override
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
+    final rideTypeRaw = (FFAppState().selectedRideCategory ?? '').trim();
+    final rideType = rideTypeRaw.isEmpty
+        ? 'Bike'
+        : '${rideTypeRaw[0].toUpperCase()}${rideTypeRaw.substring(1).toLowerCase()}';
+    final remainingSeconds =
+        (_searchWindowSeconds - widget.searchSeconds).clamp(0, _searchWindowSeconds);
+    final mins = (remainingSeconds ~/ 60).toString();
+    final secs = (remainingSeconds % 60).toString().padLeft(2, '0');
+    final progress = remainingSeconds / _searchWindowSeconds;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
       child: Column(
@@ -82,7 +96,7 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
 
           // Title
           Text(
-            'Finding your Ride',
+            'Finding your $rideType ride',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 20, // Reduced from 22
@@ -106,14 +120,88 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
 
           // Timer
           Text(
-            '${widget.searchSeconds}s',
+            '$mins:$secs · 2 mins',
             style: GoogleFonts.inter(
               fontSize: 16,
               color: primaryColor,
               fontWeight: FontWeight.w600,
             ),
           ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: const AlwaysStoppedAnimation<Color>(primaryColor),
+            ),
+          ),
           const SizedBox(height: 20), // Added spacing back but smaller
+
+          // Extra options
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Increase your chances by adding extra',
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: theme.primaryText,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: _extraOptions.map((amount) {
+                    final isSelected = _selectedExtra == amount;
+                    return GestureDetector(
+                      onTap: () => setState(() {
+                        _selectedExtra = isSelected ? null : amount;
+                      }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 9),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? primaryColor.withValues(alpha: 0.12)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(
+                            color: isSelected
+                                ? primaryColor
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Text(
+                          '+ ₹$amount',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? primaryColor
+                                : theme.secondaryText,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
 
           // Cancel Button
           SizedBox(

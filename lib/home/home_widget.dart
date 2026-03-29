@@ -213,8 +213,14 @@ class _HomeWidgetState extends State<HomeWidget>
       final response = await GetAllNotificationsCall.call(token: token);
 
       if (response.succeeded) {
+        final serverUnread = GetAllNotificationsCall.unreadCount(response.jsonBody);
+        if (serverUnread != null) {
+          _unreadCountNotifier.value = serverUnread;
+          return;
+        }
+
         final allNotifications =
-        GetAllNotificationsCall.notifications(response.jsonBody);
+            GetAllNotificationsCall.notifications(response.jsonBody);
 
         if (allNotifications != null) {
           final currentUserId = FFAppState().userid;
@@ -224,10 +230,10 @@ class _HomeWidgetState extends State<HomeWidget>
 
           for (var notification in allNotifications) {
             final notificationUserId =
-            getJsonField(notification, r'''$.user_id''');
+                getJsonField(notification, r'''$.user_id''');
             final isRead = getJsonField(notification, r'''$.is_read''');
             final createdAtString =
-            getJsonField(notification, r'''$.created_at''')?.toString();
+                getJsonField(notification, r'''$.created_at''')?.toString();
 
             if (notificationUserId?.toString() == currentUserId.toString() &&
                 isRead != true) {

@@ -18,6 +18,7 @@ class DriverDetailsComponent extends StatefulWidget {
   final double? currentRemainingDistance;
   final String? liveEtaText;
   final VoidCallback? onShare;
+  final VoidCallback? onChat;
   final double? totalRoadDistanceKm;
   final ScrollController? scrollController;
 
@@ -36,6 +37,7 @@ class DriverDetailsComponent extends StatefulWidget {
     this.currentRemainingDistance,
     this.liveEtaText,
     this.onShare,
+    this.onChat,
     this.totalRoadDistanceKm,
     this.scrollController,
   }) : super(key: key);
@@ -407,6 +409,21 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent> {
                         ),
                       ),
                     if (widget.onShare != null) const SizedBox(width: 10),
+                    if (widget.onChat != null)
+                      InkWell(
+                        onTap: widget.onChat,
+                        borderRadius: BorderRadius.circular(30),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.chat_bubble_rounded,
+                              color: Colors.grey[800], size: 22),
+                        ),
+                      ),
+                    if (widget.onChat != null) const SizedBox(width: 10),
                     // Call Button
                     InkWell(
                       onTap: () => widget.onCall(driverPhone?.toString()),

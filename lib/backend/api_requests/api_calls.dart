@@ -184,7 +184,15 @@ class GetUserDetailsCall {
           castToType<String>(getJsonField(response, r'''$.data[0].last_login'''));
   static bool? isBlocked(dynamic response) =>
       castToType<bool>(getJsonField(response, r'''$.data.is_blocked''')) ??
-          castToType<bool>(getJsonField(response, r'''$.data[0].is_blocked'''));
+      castToType<bool>(getJsonField(response, r'''$.data[0].is_blocked'''));
+  static int? referredByUserId(dynamic response) =>
+      castToType<int>(getJsonField(response, r'''$.data.referred_by_user_id''')) ??
+      castToType<int>(
+          getJsonField(response, r'''$.data[0].referred_by_user_id'''));
+  static String? usedReferralCodeField(dynamic response) =>
+      castToType<String>(getJsonField(response, r'''$.data.used_referral_code''')) ??
+      castToType<String>(
+          getJsonField(response, r'''$.data[0].used_referral_code'''));
   static String? fcmToken(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.fcm_token''')) ??
           castToType<String>(getJsonField(response, r'''$.data[0].fcm_token'''));
@@ -655,10 +663,14 @@ class GetRideHistoryCall {
   static Future<ApiCallResponse> call({
     required int userId,
     String? token = '',
+    int page = 1,
+    int pageSize = 50,
   }) async {
+    final q =
+        'page=${Uri.encodeComponent(page.toString())}&pageSize=${Uri.encodeComponent(pageSize.toString())}';
     return ApiManager.instance.makeApiCall(
       callName: 'getRideHistory',
-      apiUrl: '$_baseUrl/api/users/ride-history/$userId',
+      apiUrl: '$_baseUrl/api/users/ride-history/$userId?$q',
       callType: ApiCallType.GET,
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -2309,6 +2321,8 @@ class GetUserByIdCall {
 class GetAllNotificationsCall {
   static Future<ApiCallResponse> call({
     String? token = '',
+    int page = 1,
+    int pageSize = 50,
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'getAllNotifications',
@@ -2317,7 +2331,10 @@ class GetAllNotificationsCall {
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       },
-      params: {},
+      params: {
+        'page': page,
+        'pageSize': pageSize,
+      },
       returnBody: true,
       cache: false,
     );
@@ -2332,6 +2349,49 @@ class GetAllNotificationsCall {
     response,
     r'''$.data.total''',
   ));
+
+  /// Server-computed unread count for the authenticated rider inbox.
+  static int? unreadCount(dynamic response) => castToType<int>(getJsonField(
+        response,
+        r'''$.data.unread_count''',
+      ));
+}
+
+class MarkNotificationReadCall {
+  static Future<ApiCallResponse> call({
+    required int notificationId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'markNotificationRead',
+      apiUrl: '$_baseUrl/api/notifications/mark-read/$notificationId',
+      callType: ApiCallType.PATCH,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+}
+
+class MarkAllNotificationsReadCall {
+  static Future<ApiCallResponse> call({
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'markAllNotificationsRead',
+      apiUrl: '$_baseUrl/api/notifications/read-all',
+      callType: ApiCallType.PATCH,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
 }
 class GetwalletCall {
   static Future<ApiCallResponse> call({
@@ -2365,6 +2425,64 @@ class GetwalletCall {
       r'''$.data.wallet_balance''',
     )?.toString();
     return value != null ? double.tryParse(value) : null;
+  }
+
+  static String? totalRechargeAmount(dynamic response) => getJsonField(
+        response,
+        r'''$.data.total_recharge_amount''',
+      )?.toString();
+
+  static String? totalSpentAmount(dynamic response) => getJsonField(
+        response,
+        r'''$.data.total_spent_amount''',
+      )?.toString();
+}
+
+/// GET /api/payments/transactions?user_id=&page=&limit=
+/// Authenticated user must match user_id (enforced by backend).
+class GetUserTransactionsCall {
+  static Future<ApiCallResponse> call({
+    required int userId,
+    required String token,
+    int? page,
+    int? limit,
+  }) async {
+    final p = page ?? 1;
+    final lim = limit ?? 20;
+    return ApiManager.instance.makeApiCall(
+      callName: 'getUserTransactions',
+      apiUrl:
+          '$_baseUrl/api/payments/transactions?user_id=$userId&page=$p&limit=$lim',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static List<dynamic>? transactions(dynamic response) =>
+      getJsonField(response, r'$.data.transactions', true) as List?;
+
+  static String? itemDescription(dynamic item) =>
+      castToType<String>(getJsonField(item, r'$.description'));
+
+  static String? itemType(dynamic item) =>
+      castToType<String>(getJsonField(item, r'$.type'));
+
+  static double? itemAmount(dynamic item) {
+    final v = getJsonField(item, r'$.amount');
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
+
+  static String? itemDate(dynamic item) {
+    final d = getJsonField(item, r'$.created_at') ?? getJsonField(item, r'$.date');
+    return d?.toString();
   }
 }
 

@@ -139,22 +139,18 @@ class ScanBookingService {
       }
     });
 
-    _socket!.on('location_update', (data) {
-      if (data is Map) {
-        final m = Map<String, dynamic>.from(data);
+    void handleLiveDriverMap(Map<String, dynamic> m) {
         final latVal = m['lat'] ?? m['latitude'];
         final lngVal = m['lng'] ?? m['longitude'];
         final lat = latVal != null ? (latVal is num ? latVal.toDouble() : double.tryParse(latVal.toString())) : null;
         final lng = lngVal != null ? (lngVal is num ? lngVal.toDouble() : double.tryParse(lngVal.toString())) : null;
         
-        // State machine status sync
         final status = m['ride_status']?.toString().toUpperCase();
 
         if (lat != null && lng != null) {
           _locationUpdateController.add(LocationUpdateData(lat: lat, lng: lng, eta: m['eta']?.toString()));
         }
 
-        // Update global context silently
         final state = FFAppState();
         if (status == 'COMPLETED') {
           state.bookingInProgress = false;
@@ -163,6 +159,22 @@ class ScanBookingService {
           state.bookingInProgress = false;
           _errorController.add("Ride Cancelled by Driver.");
         }
+    }
+
+    _socket!.on('location_update', (data) {
+      if (data is Map) {
+        handleLiveDriverMap(Map<String, dynamic>.from(data));
+      }
+    });
+
+    _socket!.on('driver_location_update', (data) {
+      if (data is! Map) return;
+      final m = Map<String, dynamic>.from(data);
+      final driver = m['driver'];
+      if (driver is Map) {
+        handleLiveDriverMap(Map<String, dynamic>.from(driver));
+      } else {
+        handleLiveDriverMap(m);
       }
     });
 

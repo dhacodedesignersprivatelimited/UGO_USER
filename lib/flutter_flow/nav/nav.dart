@@ -217,6 +217,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       ),
     ),
     FFRoute(
+      name: RideChatWidget.routeName,
+      path: RideChatWidget.routePath,
+      requireAuth: true,
+      builder: (context, params) => RideChatWidget(
+        rideId: params.getParam('rideId', ParamType.int)!,
+        partnerName:
+            params.getParam('partnerName', ParamType.String) ?? 'Driver',
+      ),
+    ),
+    FFRoute(
       name: BikebookWidget.routeName,
       path: BikebookWidget.routePath,
       requireAuth: true,

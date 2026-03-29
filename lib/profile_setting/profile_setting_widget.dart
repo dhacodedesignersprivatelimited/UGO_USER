@@ -29,6 +29,8 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
   // UI State
   bool _loading = true;
   bool _saving = false;
+  bool _referralLocked = false;
+  String? _linkedReferralCode;
 
   String _profileImageUrl = '';
   FFUploadedFile? _pickedProfileImage;
@@ -112,12 +114,19 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
             : '${AppConfig.baseApiUrl}/$rawImg')
             : '';
 
+        final refBy = GetUserDetailsCall.referredByUserId(res.jsonBody);
+        final usedCode =
+            (GetUserDetailsCall.usedReferralCodeField(res.jsonBody) ?? '')
+                .trim();
         if (mounted) {
           setState(() {
             _nameController.text = fullName.isNotEmpty ? fullName : 'User';
             _phoneController.text = mobile;
             _emailController.text = email;
             _profileImageUrl = imgUrl;
+            _referralLocked =
+                (refBy != null && refBy > 0) || usedCode.isNotEmpty;
+            _linkedReferralCode = usedCode.isNotEmpty ? usedCode : null;
             _loading = false;
           });
         }
@@ -399,10 +408,15 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
       );
 
       if (res.succeeded) {
-        _showSuccess('Referral code applied successfully!');
+        _showSuccess(
+          ApplyReferralCodeCall.message(res.jsonBody) ??
+              'Referral linked. Your friend earns when you take Pro rides.',
+        );
         _referralCodeController.clear();
+        await _loadProfile();
       } else {
-        final msg = ApplyReferralCodeCall.message(res.jsonBody) ?? 'Failed to apply code';
+        final msg = ApplyReferralCodeCall.message(res.jsonBody) ??
+            'Could not apply this code. Check spelling or ask your friend for their code in Refer & Earn.';
         _showError(msg);
       }
     } catch (e) {
@@ -743,27 +757,83 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
                   icon: Icons.email_outlined,
                 ).animate().fadeIn(delay: 600.ms),
                 const SizedBox(height: 24),
-                _inputField(
-                  label: 'Referral Code (Optional)',
-                  controller: _referralCodeController,
-                  icon: Icons.card_giftcard_outlined,
-                  hintText: 'Enter friend\'s code',
-                ).animate().fadeIn(delay: 650.ms),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: _saving ? null : _applyReferralCode,
-                    icon: Icon(Icons.check_circle_outline, size: 18, color: FlutterFlowTheme.of(context).primary),
-                    label: Text(
-                      'Apply Code',
-                      style: TextStyle(
-                        color: FlutterFlowTheme.of(context).primary,
-                        fontWeight: FontWeight.bold,
+                if (_referralLocked)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Referral code',
+                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: FlutterFlowTheme.of(context).primary,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _linkedReferralCode ?? 'Linked at signup',
+                                style: FlutterFlowTheme.of(context)
+                                    .bodyMedium
+                                    .override(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'A friend\'s code is already linked. For security, referral codes can\'t be changed later.',
+                                style: FlutterFlowTheme.of(context)
+                                    .bodySmall
+                                    .override(
+                                      color: FlutterFlowTheme.of(context)
+                                          .secondaryText,
+                                      fontSize: 12,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ).animate().fadeIn(delay: 650.ms)
+                else ...[
+                  _inputField(
+                    label: 'Friend\'s referral code (optional)',
+                    controller: _referralCodeController,
+                    icon: Icons.card_giftcard_outlined,
+                    hintText: 'From Refer & Earn in their app',
+                  ).animate().fadeIn(delay: 650.ms),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: _saving ? null : _applyReferralCode,
+                      icon: Icon(Icons.check_circle_outline,
+                          size: 18,
+                          color: FlutterFlowTheme.of(context).primary),
+                      label: Text(
+                        'Apply code',
+                        style: TextStyle(
+                          color: FlutterFlowTheme.of(context).primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                ).animate().fadeIn(delay: 670.ms),
+                  ).animate().fadeIn(delay: 670.ms),
+                ],
                 const SizedBox(height: 36),
                 SizedBox(
                   width: double.infinity,

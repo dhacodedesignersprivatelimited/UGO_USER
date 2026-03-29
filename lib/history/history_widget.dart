@@ -1,4 +1,5 @@
 import 'package:ugouser/home/home_widget.dart';
+import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
@@ -49,6 +50,40 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
     if (mounted) {
       setState(() {});
     }
+  }
+
+  Future<void> _rebookRide(dynamic rideItem) async {
+    final rawRideId = getJsonField(rideItem, r'''$.ride_id''');
+    final rideId = rawRideId is int ? rawRideId : int.tryParse(rawRideId?.toString() ?? '');
+    if (rideId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid trip id for rebooking')),
+      );
+      return;
+    }
+
+    final token = FFAppState().accessToken;
+    if (token.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login again to continue')),
+      );
+      return;
+    }
+
+    final response = await RebookRideCall.call(rideId: rideId, token: token);
+    if (!mounted) return;
+    if (response.succeeded) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ride booked again. Finding nearby driver...')),
+      );
+      context.goNamed(HomeWidget.routeName);
+      return;
+    }
+
+    final message = RebookRideCall.message(response.jsonBody) ?? 'Unable to rebook this trip';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -322,14 +357,31 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
                           fontSize: 12,
                         ),
                       ),
-                      Text(
-                        'DETAILS',
-                        style: GoogleFonts.inter(
-                          color: const Color(0xFFFF7B10),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                          letterSpacing: 0.5,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            'DETAILS',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFFFF7B10),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          GestureDetector(
+                            onTap: () => _rebookRide(rideItem),
+                            child: Text(
+                              'BOOK AGAIN',
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF111827),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -422,18 +474,51 @@ class _HistoryWidgetState extends State<HistoryWidget> with TickerProviderStateM
               ),
             ),
             const SizedBox(height: 24),
-            SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 56,
+                    child: OutlinedButton(
+                      onPressed: () => _rebookRide(rideItem),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFFF7B10), width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: Text(
+                        'BOOK AGAIN',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFFF7B10),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SizedBox(
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF7B10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 0
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        'DONE',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                    child: Text('DONE', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white))
-                )
+                  ),
+                ),
+              ],
             ),
           ],
         ),

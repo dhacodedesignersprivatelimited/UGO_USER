@@ -15,7 +15,7 @@
     </queries>
 
     <application
-        android:label="UGO-USER"
+        android:label="Ugo"
         android:enableOnBackInvokedCallback="true"
         tools:replace="android:label"
         android:icon="@mipmap/launcher_icon">

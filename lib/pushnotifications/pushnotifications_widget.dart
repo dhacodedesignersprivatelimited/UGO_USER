@@ -87,6 +87,34 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
               fontSize: 18.0,
             ),
           ),
+          actions: [
+            Builder(
+              builder: (context) {
+                final raw = GetAllNotificationsCall.notifications(
+                    _model.notificationsResponse?.jsonBody);
+                final hasUnread = raw?.any(
+                        (n) => getJsonField(n, r'''$.is_read''') != true) ??
+                    false;
+                if (!hasUnread) return const SizedBox.shrink();
+                return TextButton(
+                  onPressed: () async {
+                    final token = FFAppState().accessToken;
+                    if (token.isEmpty) return;
+                    await MarkAllNotificationsReadCall.call(token: token);
+                    if (mounted) await _loadNotifications();
+                  },
+                  child: Text(
+                    'Mark all read',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
           centerTitle: false,
           elevation: 0.0,
         ),
@@ -105,19 +133,10 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
       );
     }
 
-    final allNotifications = GetAllNotificationsCall.notifications(_model.notificationsResponse?.jsonBody);
-    
-    // Filter notifications for current user
-    final currentUserId = FFAppState().userid;
-    final userNotifications = allNotifications?.where((notification) {
-      final notificationUserId = getJsonField(notification, r'''$.user_id''');
-      // Match user_id with current user's ID
-      return notificationUserId?.toString() == currentUserId.toString();
-    }).toList();
+    final userNotifications = GetAllNotificationsCall.notifications(
+        _model.notificationsResponse?.jsonBody);
 
-    debugPrint('📊 Total notifications: ${allNotifications?.length ?? 0}');
-    debugPrint('👤 Current user ID: $currentUserId');
-    debugPrint('✅ Filtered notifications for user: ${userNotifications?.length ?? 0}');
+    debugPrint('📊 Inbox notifications: ${userNotifications?.length ?? 0}');
 
     if (userNotifications == null || userNotifications.isEmpty) {
       return Center(
@@ -153,16 +172,67 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
       onRefresh: _loadNotifications,
       color: const Color(0xFFFF7B10),
       backgroundColor: Colors.white,
-      child: ListView.separated(
+      child: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: userNotifications.length,
-        separatorBuilder: (context, index) => const Divider(height: 1, indent: 72, color: Color(0xFFEEEEEE)),
-        itemBuilder: (context, index) {
-          final item = userNotifications[index];
-          return _buildNotificationItem(item);
-        },
+        children: _buildGroupedNotificationList(userNotifications),
       ),
     );
+  }
+
+  String _dayBucket(DateTime d) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final day = DateTime(d.year, d.month, d.day);
+    if (day == today) return 'Today';
+    if (day == yesterday) return 'Yesterday';
+    return 'Earlier';
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Text(
+        title,
+        style: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: Colors.grey[700],
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildGroupedNotificationList(List<dynamic> items) {
+    final sorted = List<dynamic>.from(items);
+    sorted.sort((a, b) {
+      final da = DateTime.tryParse(
+              getJsonField(a, r'''$.created_at''')?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final db = DateTime.tryParse(
+              getJsonField(b, r'''$.created_at''')?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      return db.compareTo(da);
+    });
+
+    String? lastBucket;
+    final out = <Widget>[];
+    for (final item in sorted) {
+      final createdAt =
+          getJsonField(item, r'''$.created_at''')?.toString() ?? '';
+      final date =
+          DateTime.tryParse(createdAt) ?? DateTime.now();
+      final bucket = _dayBucket(date);
+      if (bucket != lastBucket) {
+        out.add(_buildSectionHeader(bucket));
+        lastBucket = bucket;
+      }
+      out.add(_buildNotificationItem(item));
+      out.add(
+          const Divider(height: 1, indent: 72, color: Color(0xFFEEEEEE)));
+    }
+    return out;
   }
 
   Widget _buildNotificationItem(dynamic item) {
@@ -197,8 +267,14 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
     }
 
     return InkWell(
-      onTap: () {
-        // Handle notification tap - mark as read
+      onTap: () async {
+        final idRaw = getJsonField(item, r'''$.id''');
+        final nid = idRaw is int ? idRaw : int.tryParse(idRaw?.toString() ?? '');
+        final token = FFAppState().accessToken;
+        if (!isRead && nid != null && token.isNotEmpty) {
+          await MarkNotificationReadCall.call(notificationId: nid, token: token);
+          if (mounted) await _loadNotifications();
+        }
       },
       child: Container(
         color: isRead ? Colors.white : const Color(0xFFFFF9F5),

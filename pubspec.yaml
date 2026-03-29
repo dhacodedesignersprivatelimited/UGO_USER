@@ -3,7 +3,7 @@ description: this is taxi project for flutter app.
 
 publish_to: 'none'
 
-version: 1.2.0+7
+version: 3.2.0+8
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -135,6 +135,7 @@ dependencies:
   firebase_remote_config: ^5.4.5
   share_plus: ^12.0.1
   google_generative_ai: ^0.4.7
+  firebase_crashlytics: ^4.1.2
 
 dependency_overrides:
   google_api_headers: 4.5.3
