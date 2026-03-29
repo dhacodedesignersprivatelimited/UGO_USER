@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -49,13 +50,18 @@ class AppStateNotifier extends ChangeNotifier {
     // ✅ Sync backend session with Firebase user
     if (newUser.uid != null && newUser.uid!.isNotEmpty) {
       if (FFAppState().firebaseUid != newUser.uid) {
-        print('🔄 User session sync: Firebase user changed or is new → Clearing backend state');
+        if (kDebugMode) {
+          debugPrint(
+              '🔄 User session sync: Firebase user changed or is new → Clearing backend state');
+        }
         FFAppState().firebaseUid = newUser.uid!;
         FFAppState().clearAuthSession();
       }
     } else if (user?.uid != null) {
       // Explicit or implicit logout
-      print('🔄 User session sync: Logged out → Clearing backend state');
+      if (kDebugMode) {
+        debugPrint('🔄 User session sync: Logged out → Clearing backend state');
+      }
       FFAppState().firebaseUid = '';
       FFAppState().clearAuthSession();
     }
@@ -76,7 +82,7 @@ class AppStateNotifier extends ChangeNotifier {
 
 GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
   initialLocation: '/',
-  debugLogDiagnostics: true,
+  debugLogDiagnostics: kDebugMode,
   refreshListenable: appStateNotifier,
   navigatorKey: appNavigatorKey,
   errorBuilder: (context, state) =>
@@ -89,14 +95,21 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         // ✅ FIXED: Rely on AppStateNotifier.update for session sync
         // Do not clear here, as it may fire before Firebase initializes its state.
 
-        print('🔵 Router Init - Logged In: ${appStateNotifier.loggedIn}, UserID: ${FFAppState().userid}');
+        if (kDebugMode) {
+          debugPrint(
+              '🔵 Router Init - Logged In: ${appStateNotifier.loggedIn}, UserID: ${FFAppState().userid}');
+        }
 
         if (appStateNotifier.loggedIn && FFAppState().userid != 0) {
-          print('✅ User has backend ID → Going to Home');
+          if (kDebugMode) {
+            debugPrint('✅ User has backend ID → Going to Home');
+          }
           return HomeWidget();
         }
 
-        print('❌ User not logged in → Go to Login');
+        if (kDebugMode) {
+          debugPrint('❌ User not logged in → Go to Login');
+        }
         return LoginWidget();
       },
     ),
@@ -161,7 +174,9 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       builder: (context, params) {
         // ✅ Additional check: redirect to registration if no userid
         if (FFAppState().userid == 0) {
-          print('⚠️ Accessing Home without backend ID → Redirect to Details');
+          if (kDebugMode) {
+            debugPrint('⚠️ Accessing Home without backend ID → Redirect to Details');
+          }
           // This shouldn't happen due to router logic, but safe fallback
           Future.microtask(() => context.go('/detailspage'));
         }

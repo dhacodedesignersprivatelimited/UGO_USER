@@ -279,6 +279,43 @@ class GetUserReferralStatsCall {
       );
 }
 
+/// GET /api/users/referrals/:userId — people you referred (userController.getReferrals).
+class GetUserReferralsCall {
+  static Future<ApiCallResponse> call({
+    required int userId,
+    String? token = '',
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getUserReferrals',
+      apiUrl: '$_baseUrl/api/users/referrals/$userId',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static int? total(dynamic response) {
+    final raw = getJsonField(response, r'''$.data.total''');
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  static List<dynamic> referrals(dynamic response) {
+    final list = getJsonField(response, r'''$.data.referrals''');
+    if (list is List) return List<dynamic>.from(list);
+    return [];
+  }
+}
+
 class GenerateReferralCodeCall {
   static Future<ApiCallResponse> call({
     required int userId,
@@ -1453,6 +1490,22 @@ String _createRidePaymentMethod(String? paymentType) {
   return 'cash';
 }
 
+/// Backend [createRideSchema] only allows these uppercase values. Omit to let server default to SEARCHING.
+String? _createRideStatusForApi(String? rideStatus) {
+  if (rideStatus == null || rideStatus.trim().isEmpty) return null;
+  final u = rideStatus.trim().toUpperCase();
+  const allowed = {
+    'SEARCHING',
+    'ACCEPTED',
+    'STARTED',
+    'COMPLETED',
+    'CANCELLED',
+  };
+  if (allowed.contains(u)) return u;
+  if (u == 'PENDING') return 'SEARCHING';
+  return null;
+}
+
 // Uses "admin_vehicle_id" (INT) instead of "ride_type"
 class CreateRideCall {
   bool? success;
@@ -1502,6 +1555,7 @@ class CreateRideCall {
     String? paymentType, // ✅ Added Payment Type (cash/online)
     List<Map<String, dynamic>>? stops, // ✅ PRD: Multiple stops (max 4)
     DateTime? scheduledAt, // ✅ Scheduled rides: ISO 8601 pickup time
+    int? coinsToUse, // Referral coins; backend: multiple of 10, 10 coins = ₹1 discount
   }) async {
     const int maxRetries = 3;
     const Duration delayDuration = Duration(seconds: 2);
@@ -1524,9 +1578,12 @@ class CreateRideCall {
         "drop_longitude": dropLongitude,
         "admin_vehicle_id": adminVehicleId, // Sending INT
         "estimated_fare": estimatedFare ?? "0",
-        "ride_status": rideStatus ?? "pending",
         "payment_method": paymentMethod,
       };
+      final statusForApi = _createRideStatusForApi(rideStatus);
+      if (statusForApi != null) {
+        requestBody["ride_status"] = statusForApi;
+      }
       if (driverId != null) {
         requestBody["driver_id"] = driverId;
       }
@@ -1553,6 +1610,9 @@ class CreateRideCall {
       if (scheduledAt != null) {
         requestBody["scheduled_at"] = scheduledAt.toUtc().toIso8601String();
       }
+      if (coinsToUse != null && coinsToUse > 0) {
+        requestBody["coins_to_use"] = coinsToUse;
+      }
 
       response = await ApiManager.instance.makeApiCall(
         callName: 'CreateRide',
@@ -1575,15 +1635,23 @@ class CreateRideCall {
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return response;
-      } else {
+      }
+      // 4xx: validation / business rules — retrying the same body will not help.
+      if (response.statusCode >= 400 && response.statusCode < 500) {
         if (kDebugMode) {
           print(
-              'CreateRideCall failed with status code: ${response.statusCode}. Retrying...');
+              'CreateRideCall failed (${response.statusCode}): ${response.jsonBody}');
         }
-        currentRetry++;
-        if (currentRetry <= maxRetries) {
-          await Future.delayed(delayDuration);
-        }
+        return response;
+      }
+      if (kDebugMode) {
+        print(
+            'CreateRideCall failed with status code: ${response.statusCode}. Retrying...');
+        print('CreateRideCall body: ${response.jsonBody}');
+      }
+      currentRetry++;
+      if (currentRetry <= maxRetries) {
+        await Future.delayed(delayDuration);
       }
     }
     return response!;

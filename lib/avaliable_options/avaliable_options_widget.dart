@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'dart:math' show cos, sqrt, asin, sin;
+import 'dart:math' show cos, sqrt, asin, sin, min;
 import 'dart:async';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 export 'avaliable_options_model.dart';
@@ -55,9 +55,14 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
 
   // Razorpay & Wallet
   late Razorpay _razorpay;
-  int? _rideAmountForPayment;
+  /// Rupees to add to wallet after Razorpay (shortfall only).
+  double? _pendingWalletShortfall;
   int? _pendingFinalFare;
+  int? _pendingCoinsToUse;
   String? _pendingVehicleType;
+
+  /// Referral coins to apply on this booking (multiple of 10; 10 = ₹1).
+  int _coinsToUse = 0;
 
   @override
   void initState() {
@@ -73,6 +78,31 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     // 1. Vehicles
     _vehiclesFuture = _getVehicleData(); // Fetch once on init
     _initializeMap();
+    _refreshCoinsFromBackend();
+  }
+
+  /// Backend rule: coins multiple of 10; discount ₹ = coins/10; discount must be less than fare.
+  int _maxCoinsUsableForFare(int balance, int fareAfterPromoRupees) {
+    if (fareAfterPromoRupees <= 0 || balance < 10) return 0;
+    final maxByFare = fareAfterPromoRupees * 10 - 1;
+    if (maxByFare < 10) return 0;
+    final cap = min(balance, maxByFare);
+    return (cap ~/ 10) * 10;
+  }
+
+  Future<void> _refreshCoinsFromBackend() async {
+    final app = FFAppState();
+    if (app.userid <= 0 || app.accessToken.isEmpty) return;
+    try {
+      final res = await GetUserByIdCall.call(
+        userId: app.userid,
+        token: app.accessToken,
+      );
+      if (!res.succeeded || !mounted) return;
+      final c = GetUserByIdCall.coinsBalance(res.jsonBody) ?? 0;
+      app.coinsBalance = c;
+      if (mounted) setState(() {});
+    } catch (_) {}
   }
 
   @override
@@ -550,16 +580,22 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
       final int finalFare =
           (rawFare - appState.discountAmount).round().clamp(0, 999999);
 
+      final maxCoins = _maxCoinsUsableForFare(
+          appState.coinsBalance, finalFare);
+      final coinsToSend =
+          _coinsToUse > maxCoins ? maxCoins : _coinsToUse;
+
       // ✅ WALLET PAYMENT LOGIC
       if (selectedPaymentMethod == 'Wallet') {
-        final proceedToCreate = await _handleWalletPayment(appState, finalFare);
+        final proceedToCreate =
+            await _handleWalletPayment(appState, finalFare, coinsToSend);
         if (!proceedToCreate) {
           if (mounted) setState(() => isLoadingRide = false);
           return; // Wait for Razorpay success callback
         }
       }
 
-      await _createRideAndNavigate(finalFare);
+      await _createRideAndNavigate(finalFare, coinsToSend);
     } catch (e) {
       print('❌ Booking Error: $e');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -572,9 +608,17 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   }
 
   // ✅ WALLET PAYMENT HANDLING
-  Future<bool> _handleWalletPayment(FFAppState appState, int rideAmount) async {
+  Future<bool> _handleWalletPayment(
+    FFAppState appState,
+    int rideAmount,
+    int coinsToUse,
+  ) async {
+    final double coinDiscountRs = coinsToUse / 10.0;
+    final double amountDue = rideAmount - coinDiscountRs;
+
     print('💳 Starting Wallet Payment Process...');
-    print('🚗 Ride Amount: ₹$rideAmount');
+    print('🚗 Ride Amount (after promo): ₹$rideAmount');
+    print('🪙 Coin discount: ₹$coinDiscountRs → pay from wallet: ₹$amountDue');
 
     try {
       // 1️⃣ FETCH WALLET BALANCE
@@ -596,22 +640,23 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
           double.tryParse(walletBalanceStr ?? '0') ?? 0.0;
 
       print('💰 Wallet Balance: ₹$walletBalance');
-      print('💰 Difference: ₹${rideAmount - walletBalance}');
+      print('💰 Shortfall: ₹${amountDue - walletBalance}');
 
-      // 2️⃣ CHECK IF WALLET HAS SUFFICIENT BALANCE
-      if (walletBalance >= rideAmount) {
+      // 2️⃣ CHECK IF WALLET HAS SUFFICIENT BALANCE (after coin discount)
+      if (walletBalance >= amountDue) {
         print('✅ Wallet has sufficient balance');
-        // Direct wallet deduction - proceed to CreateRideCall
         return true;
       }
 
-      // 3️⃣ INSUFFICIENT BALANCE - CALCULATE DIFFERENCE
-      final int differenceAmount = (rideAmount - walletBalance.toInt()).abs();
+      // 3️⃣ INSUFFICIENT BALANCE - top up shortfall only
+      final double shortfall = amountDue - walletBalance;
+      final int differenceAmount = shortfall.ceil().clamp(1, 999999);
       print(
           '🔴 Insufficient balance, opening Razorpay for: ₹$differenceAmount');
 
-      _rideAmountForPayment = rideAmount;
+      _pendingWalletShortfall = shortfall;
       _pendingFinalFare = rideAmount;
+      _pendingCoinsToUse = coinsToUse;
       _pendingVehicleType = selectedVehicleType;
 
       // 4️⃣ OPEN RAZORPAY FOR DIFFERENCE
@@ -656,7 +701,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     print('✅ Payment Success: ${response.paymentId}');
 
     final appState = FFAppState();
-    final amountToAdd = (_rideAmountForPayment ?? 0).toDouble();
+    final amountToAdd = _pendingWalletShortfall ?? 0.0;
 
     if (amountToAdd <= 0) {
       print('❌ Invalid amount');
@@ -696,8 +741,13 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         // Proceed to create ride after wallet top-up
         if (_pendingFinalFare != null) {
           if (mounted) setState(() => isLoadingRide = true);
-          await _createRideAndNavigate(_pendingFinalFare!);
+          await _createRideAndNavigate(
+            _pendingFinalFare!,
+            _pendingCoinsToUse ?? 0,
+          );
           _pendingFinalFare = null;
+          _pendingCoinsToUse = null;
+          _pendingWalletShortfall = null;
           _pendingVehicleType = null;
         }
       } else {
@@ -717,7 +767,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     }
   }
 
-  Future<void> _createRideAndNavigate(int finalFare) async {
+  Future<void> _createRideAndNavigate(int finalFare, int coinsToUse) async {
     final appState = FFAppState();
     final String vehicleTypeToUse =
         _pendingVehicleType ?? selectedVehicleType ?? '1';
@@ -734,6 +784,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
       adminVehicleId: int.tryParse(vehicleTypeToUse) ?? 1,
       estimatedFare: finalFare.toString(),
       paymentType: selectedPaymentMethod.toLowerCase(),
+      coinsToUse: coinsToUse > 0 ? coinsToUse : null,
     );
 
     if (createRideRes.succeeded) {
@@ -742,6 +793,11 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
       if (rideId != null) {
         appState.currentRideId = int.parse(rideId);
         appState.bookingInProgress = true;
+        if (coinsToUse > 0) {
+          final next = appState.coinsBalance - coinsToUse;
+          appState.coinsBalance = next < 0 ? 0 : next;
+        }
+        _refreshCoinsFromBackend();
 
         context.pushNamed(
           AutoBookWidget.routeName,
@@ -1083,6 +1139,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         onTap: () {
           setState(() {
             selectedVehicleType = vehicleId;
+            _coinsToUse = 0;
             appState.vehicleselect = vehicleId;
             appState.selectedBaseFare = baseFare;
             appState.selectedPricePerKm = pricePerKm;
@@ -1288,6 +1345,15 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         : null;
 
     const primaryOrange = Color(0xFFFF7B10);
+    final maxCoinsForRide = estimatedFare != null
+        ? _maxCoinsUsableForFare(appState.coinsBalance, estimatedFare)
+        : 0;
+    final coinsApplied =
+        maxCoinsForRide > 0 ? (min(_coinsToUse, maxCoinsForRide)) : 0;
+    final coinDiscountRs = coinsApplied / 10.0;
+    final int amountToPay = estimatedFare == null
+        ? 0
+        : (estimatedFare - coinDiscountRs).round().clamp(0, 999999);
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -1365,13 +1431,92 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                 children: [
                   Icon(Icons.account_balance_wallet, size: 18, color: primaryOrange),
                   const SizedBox(width: 8),
-                  Text(
-                    'Wallet: ₹${appState.walletBalance.toStringAsFixed(2)}',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                  Expanded(
+                    child: Text(
+                      coinsApplied > 0
+                          ? 'Wallet: ₹${appState.walletBalance.toStringAsFixed(2)} • due ₹$amountToPay after coins'
+                          : 'Wallet: ₹${appState.walletBalance.toStringAsFixed(2)}',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (maxCoinsForRide >= 10) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A2E).withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text('🪙', style: TextStyle(fontSize: 18)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Referral coins (${appState.coinsBalance} avail.) · 10 = ₹1',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[800],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      IconButton.filledTonal(
+                        onPressed: coinsApplied < 10
+                            ? null
+                            : () => setState(() {
+                                  _coinsToUse = (coinsApplied - 10)
+                                      .clamp(0, maxCoinsForRide);
+                                }),
+                        icon: const Icon(Icons.remove, size: 20),
+                        style: IconButton.styleFrom(
+                          padding: const EdgeInsets.all(8),
+                          minimumSize: const Size(40, 40),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '$coinsApplied coins → −₹${coinDiscountRs.toStringAsFixed(1)}',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: primaryOrange,
+                          ),
+                        ),
+                      ),
+                      IconButton.filledTonal(
+                        onPressed: coinsApplied >= maxCoinsForRide
+                            ? null
+                            : () => setState(() {
+                                  final next = coinsApplied + 10;
+                                  _coinsToUse =
+                                      next.clamp(0, maxCoinsForRide);
+                                }),
+                        icon: const Icon(Icons.add, size: 20),
+                        style: IconButton.styleFrom(
+                          padding: const EdgeInsets.all(8),
+                          minimumSize: const Size(40, 40),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1400,7 +1545,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                           color: Colors.white, strokeWidth: 2.5))
                   : Text(
                       selectedVehicleType != null && estimatedFare != null
-                          ? 'Pay ₹$estimatedFare via ${_paymentDisplayLabel(selectedPaymentMethod)}'
+                          ? 'Pay ₹$amountToPay via ${_paymentDisplayLabel(selectedPaymentMethod)}'
                           : 'Select a ride to continue',
                       style: GoogleFonts.inter(
                           fontSize: 15,

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:ugouser/home/home_widget.dart';
 import 'package:ugouser/ride_session.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -293,6 +294,8 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
   }
 
   Future<void> _submitRating() async {
+    if (_isSubmitting) return;
+
     if (_rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -370,13 +373,15 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
       String ratingComment =
       _selectedComments.isEmpty ? '' : _selectedComments.join(', ');
 
-      print('🎯 Submitting Rating:');
-      print('   ride_id: $rideId');
-      print('   user_id: $userId');
-      print('   driver_id: $driverId');
-      print('   rating_given_by: user');
-      print('   rating_score: $_rating');
-      print('   rating_comment: $ratingComment');
+      if (kDebugMode) {
+        debugPrint('🎯 Submitting Rating:');
+        debugPrint('   ride_id: $rideId');
+        debugPrint('   user_id: $userId');
+        debugPrint('   driver_id: $driverId');
+        debugPrint('   rating_given_by: user');
+        debugPrint('   rating_score: $_rating');
+        debugPrint('   rating_comment: $ratingComment');
+      }
 
       // Call API
       final response = await SubmitRideRatingCall.call(
@@ -434,24 +439,39 @@ if (isSuccess) {
 
         }
       } else {
-        print('❌ Rating submission failed');
-        print('   Status: ${response.statusCode}');
-        print('   Response: ${response.jsonBody}');
+        if (kDebugMode) {
+          debugPrint('❌ Rating submission failed');
+          debugPrint('   Status: ${response.statusCode}');
+          debugPrint('   Response: ${response.jsonBody}');
+        }
+
+        final msg = getJsonField(response.jsonBody, r'''$.message''')?.toString();
+        final isRateLimited = response.statusCode == 429;
+        final userMsg = isRateLimited
+            ? (msg?.isNotEmpty == true
+                ? msg!
+                : 'Too many requests. Please wait a few minutes, then try again.')
+            : (msg?.isNotEmpty == true
+                ? msg!
+                : 'Failed to submit rating. Please try again.');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  Icon(Icons.error, color: Colors.white),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text('Failed to submit rating. Please try again.'),
+                  Icon(
+                    isRateLimited ? Icons.hourglass_bottom : Icons.error,
+                    color: Colors.white,
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(userMsg)),
                 ],
               ),
-              backgroundColor: Colors.red,
+              backgroundColor:
+                  isRateLimited ? const Color(0xFFE65100) : Colors.red,
               behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: isRateLimited ? 6 : 4),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

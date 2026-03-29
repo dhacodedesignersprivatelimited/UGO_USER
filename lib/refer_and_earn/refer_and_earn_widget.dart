@@ -94,6 +94,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
         debugPrint('✔ code=$code  coins=$coins  name="$fName $lName"');
 
         if (mounted) {
+          FFAppState().coinsBalance = coins;
           setState(() {
             _referralCode = code;
             _coinsBalance = coins;

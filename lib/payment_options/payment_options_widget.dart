@@ -41,7 +41,9 @@ class _PaymentOptionsWidgetState extends State<PaymentOptionsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final double walletBalance = FFAppState().walletBalance; // Ensure this exists in AppState
+    final app = FFAppState();
+    final double walletBalance = app.walletBalance;
+    final double referralRs = app.referralCoinsValueRs;
 
     return Scaffold(
       key: scaffoldKey,
@@ -101,7 +103,8 @@ class _PaymentOptionsWidgetState extends State<PaymentOptionsWidget> {
               name: 'Wallet',
               icon: Icons.account_balance_wallet,
               color: const Color(0xFFFF7B10),
-              subtitle: 'Balance: ₹${walletBalance.toStringAsFixed(2)}',
+              subtitle:
+                  '₹${walletBalance.toStringAsFixed(2)} Ugo cash + ≈₹${referralRs.toStringAsFixed(1)} referral ride credit (not withdrawable)',
             ),
 
             // ONLINE

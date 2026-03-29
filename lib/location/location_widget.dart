@@ -103,10 +103,10 @@ class _LocationWidgetState extends State<LocationWidget> {
           FFAppState().refreshToken = refreshToken;
         }
 
-        FFAppState().userid = getJsonField(
-          responseData,
-          r'$.data.user.id',
-        );
+        final registeredUserId = CreateUserCall.userid(responseData);
+        if (registeredUserId != null) {
+          FFAppState().userid = registeredUserId;
+        }
 
         // 4. Navigate to Home
         if (mounted) {

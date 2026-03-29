@@ -46,29 +46,174 @@ late Razorpay _razorpay;
       Razorpay.EVENT_PAYMENT_ERROR,
       _handlePaymentError,
     );
-    _loadWallet(); 
-
+    _loadWalletData();
   }
 
-  
-  Future<void> _loadWallet() async {
-  final response = await GetwalletCall.call(
-    userId: FFAppState().userid,
-    token: FFAppState().accessToken,
-  );
+  /// Wallet (withdrawable / UPI cash) + referral coins (rides only, from backend).
+  Future<void> _loadWalletData() async {
+    final app = FFAppState();
+    final response = await GetwalletCall.call(
+      userId: app.userid,
+      token: app.accessToken,
+    );
 
-  if (response.succeeded) {
-    final balanceString =
-        GetwalletCall.walletBalance(response.jsonBody);
+    if (response.succeeded) {
+      final balanceString = GetwalletCall.walletBalance(response.jsonBody);
+      final double balance =
+          double.tryParse(balanceString ?? "0") ?? 0.0;
+      app.walletBalance = balance;
+    }
 
-    final double balance =
-        double.tryParse(balanceString ?? "0") ?? 0.0;
+    if (app.userid > 0 && app.accessToken.isNotEmpty) {
+      try {
+        final userRes = await GetUserByIdCall.call(
+          userId: app.userid,
+          token: app.accessToken,
+        );
+        if (userRes.succeeded) {
+          final coins = GetUserByIdCall.coinsBalance(userRes.jsonBody) ?? 0;
+          app.coinsBalance = coins;
+        }
+      } catch (_) {}
+    }
 
-    setState(() {
-      FFAppState().walletBalance = balance;
-    });
+    if (mounted) setState(() {});
   }
-}
+
+  /// Referral coins shown as in-wallet ride credit (Mana Savari–style: in-app only, no withdrawal).
+  Widget _buildReferralRewardsCard(BuildContext context) {
+    final app = FFAppState();
+    final coins = app.coinsBalance;
+    final rs = app.referralCoinsValueRs;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('🪙', style: TextStyle(fontSize: 22)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Referral rewards',
+                    style: GoogleFonts.interTight(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Rides only',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFFFFB366),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '$coins',
+                  style: GoogleFonts.interTight(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    'coins',
+                    style: GoogleFonts.inter(color: Colors.white70, fontSize: 14),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '≈ ₹${rs.toStringAsFixed(1)} on rides',
+                  style: GoogleFonts.inter(
+                    color: const Color(0xFFFFB366),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '10 coins = ₹1 off fare · Apply when you book a ride · Not withdrawable (not bank/UPI cash)',
+              style: GoogleFonts.inter(
+                color: Colors.white.withValues(alpha: 0.75),
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () {
+                    context.pushNamed(ReferAndEarnWidget.routeName);
+                  },
+                  child: Text(
+                    'Invite friends',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFFFFB366),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    context.pushNamed(VoucherWidget.routeName);
+                  },
+                  child: Text(
+                    'Promotions',
+                    style: GoogleFonts.inter(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
 Future<void> _openRazorpay(double amount) async {
     try {
@@ -130,7 +275,7 @@ Future<void> _openRazorpay(double amount) async {
             double.tryParse(balanceString ?? "0") ?? 0.0;
 
         if (mounted) {
-          setState(() => FFAppState().walletBalance = balance);
+          await _loadWalletData();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("${FFLocalizations.of(context).getText('wallet_updated_success')}: ₹${balance.toStringAsFixed(2)}"),
@@ -321,6 +466,14 @@ Future<void> _openRazorpay(double amount) async {
                                 ),
                               ],
                             ),
+                            Text(
+                              'Use with Wallet at checkout. This balance is separate from referral coins (rides only, not cash out).',
+                              style: FlutterFlowTheme.of(context).bodySmall.override(
+                                    font: GoogleFonts.inter(),
+                                    color: FlutterFlowTheme.of(context).secondaryText,
+                                    fontSize: 12.0,
+                                  ),
+                            ),
                             Form(
                             key: _formKey,
                             child: Column(
@@ -381,6 +534,10 @@ Future<void> _openRazorpay(double amount) async {
                       ),
                     ),
                   ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: _buildReferralRewardsCard(context),
                 ),
                 // Column(
                 //   mainAxisSize: MainAxisSize.max,

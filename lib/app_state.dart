@@ -69,6 +69,9 @@ class FFAppState extends ChangeNotifier {
       _walletBalance = prefs.getDouble('ff_walletBalance') ?? _walletBalance;
     });
     _safeInit(() {
+      _coinsBalance = prefs.getInt('ff_coinsBalance') ?? _coinsBalance;
+    });
+    _safeInit(() {
       _recentSearches = prefs.getStringList('ff_recentSearches') ?? _recentSearches;
     });
     _safeInit(() {
@@ -287,6 +290,17 @@ class FFAppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Referral reward coins from backend (10 coins = ₹1 off rides).
+  int _coinsBalance = 0;
+  int get coinsBalance => _coinsBalance;
+  /// Rupee value of coins for display only (not withdrawable cash).
+  double get referralCoinsValueRs => _coinsBalance / 10.0;
+  set coinsBalance(int value) {
+    _coinsBalance = value < 0 ? 0 : value;
+    prefs.setInt('ff_coinsBalance', _coinsBalance);
+    notifyListeners();
+  }
+
   // Dynamic Recent Searches
   List<String> _recentSearches = [];
   List<String> get recentSearches => _recentSearches;
@@ -360,9 +374,11 @@ class FFAppState extends ChangeNotifier {
     _accessToken = '';
     _refreshToken = '';
     _userid = 0;
+    _coinsBalance = 0;
     prefs.remove('ff_accessToken');
     prefs.remove('ff_refreshToken');
     prefs.remove('ff_userid');
+    prefs.remove('ff_coinsBalance');
     notifyListeners();
   }
 }
