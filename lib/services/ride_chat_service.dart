@@ -8,6 +8,7 @@ import '/core/app_config.dart';
 /// In-ride chat (WebSocket) — same events as backend `chatHandler.js`.
 class RideChatMessage {
   RideChatMessage({
+    this.dbId,
     required this.rideId,
     required this.text,
     required this.senderId,
@@ -15,6 +16,8 @@ class RideChatMessage {
     required this.timestamp,
   });
 
+  /// Server row id (for dedupe when replaying [chat_history] after reconnect).
+  final int? dbId;
   final int rideId;
   final String text;
   final int senderId;
@@ -27,11 +30,17 @@ class RideChatMessage {
     final rid = m['rideId'] ?? m['ride_id'];
     final sid = m['senderId'] ?? m['sender_id'];
     final ts = m['timestamp']?.toString();
+    final idRaw = m['id'];
+    final dbId = idRaw is int
+        ? idRaw
+        : (idRaw != null ? int.tryParse(idRaw.toString()) : null);
     return RideChatMessage(
+      dbId: dbId,
       rideId: rid is int ? rid : int.tryParse(rid?.toString() ?? '') ?? 0,
       text: m['message']?.toString() ?? '',
       senderId: sid is int ? sid : int.tryParse(sid?.toString() ?? '') ?? 0,
-      senderType: m['senderType']?.toString() ?? m['sender_type']?.toString() ?? '',
+      senderType:
+          m['senderType']?.toString() ?? m['sender_type']?.toString() ?? '',
       timestamp: DateTime.tryParse(ts ?? '') ?? DateTime.now(),
     );
   }
@@ -53,11 +62,13 @@ class RideChatService {
 
   IO.Socket? _socket;
   final _messages = StreamController<RideChatMessage>.broadcast();
+  final _history = StreamController<List<RideChatMessage>>.broadcast();
   final _typingOther = StreamController<bool>.broadcast();
   final _errors = StreamController<String>.broadcast();
   final _joined = StreamController<bool>.broadcast();
 
   Stream<RideChatMessage> get messages => _messages.stream;
+  Stream<List<RideChatMessage>> get chatHistory => _history.stream;
   Stream<bool> get typingFromOther => _typingOther.stream;
   Stream<String> get errors => _errors.stream;
   Stream<bool> get joined => _joined.stream;
@@ -78,7 +89,6 @@ class RideChatService {
           .disableAutoConnect()
           .enableReconnection()
           .setReconnectionAttempts(5)
-          // Send token via both auth + query for backend compatibility.
           .setAuth({'token': token})
           .setQuery({'token': token})
           .build(),
@@ -87,6 +97,18 @@ class RideChatService {
     _socket!.onConnect((_) {
       if (kDebugMode) debugPrint('[RideChat] connected');
       _socket!.emit('join_chat', {'rideId': rideId, 'ride_id': rideId});
+    });
+
+    _socket!.on('chat_history', (data) {
+      if (data is! Map) return;
+      final list = data['messages'];
+      if (list is! List) return;
+      final batch = <RideChatMessage>[];
+      for (final raw in list) {
+        final msg = RideChatMessage.fromPayload(raw);
+        if (msg != null && msg.text.isNotEmpty) batch.add(msg);
+      }
+      if (batch.isNotEmpty) _history.add(batch);
     });
 
     _socket!.on('chat_joined', (_) {
@@ -102,7 +124,8 @@ class RideChatService {
       if (data is! Map) return;
       final m = Map<String, dynamic>.from(data);
       final sid = m['senderId'] ?? m['sender_id'];
-      final otherId = sid is int ? sid : int.tryParse(sid?.toString() ?? '') ?? -1;
+      final otherId =
+          sid is int ? sid : int.tryParse(sid?.toString() ?? '') ?? -1;
       if (otherId == myUserId) return;
       final typing = m['isTyping'] != false;
       _typingOther.add(typing);
@@ -150,6 +173,7 @@ class RideChatService {
     _socket?.dispose();
     _socket = null;
     _messages.close();
+    _history.close();
     _typingOther.close();
     _errors.close();
     _joined.close();

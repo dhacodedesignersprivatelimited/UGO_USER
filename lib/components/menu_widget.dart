@@ -485,6 +485,10 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
     return InkWell(
       onTap: () async {
         try {
+          final token = FFAppState().accessToken;
+          if (token.isNotEmpty) {
+            await UserLogoutCall.call(token: token);
+          }
           await FirebaseAuth.instance.signOut();
 
           FFAppState().clearAuthSession();

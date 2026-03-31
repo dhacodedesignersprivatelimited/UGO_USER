@@ -3,7 +3,7 @@ description: this is taxi project for flutter app.
 
 publish_to: 'none'
 
-version: 3.2.0+8
+version: 3.2.0+9
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -126,6 +126,7 @@ dependencies:
   latlng: ^2.0.7
   image_picker: ^1.0.4
   flutter_rating_bar: ^4.0.1
+  flutter_secure_storage: ^9.2.2
 
   # Explicitly defined here but overridden below
   google_maps_webservice: any

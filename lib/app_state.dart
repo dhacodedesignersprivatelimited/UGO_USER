@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '/services/secure_storage_service.dart';
 
 class FFAppState extends ChangeNotifier {
   static FFAppState _instance = FFAppState._internal();
@@ -17,12 +18,37 @@ class FFAppState extends ChangeNotifier {
 
   Future initializePersistedState() async {
     prefs = await SharedPreferences.getInstance();
+    SecureStorageService.instance.init();
     _safeInit(() {
-      _accessToken = prefs.getString('ff_accessToken') ?? _accessToken;
+      // no-op: token loaded securely below
     });
     _safeInit(() {
-      _refreshToken = prefs.getString('ff_refreshToken') ?? _refreshToken;
+      // no-op: token loaded securely below
     });
+    try {
+      final sec = SecureStorageService.instance;
+      var token = await sec.read(SecureStorageService.keyAccessToken);
+      if (token == null || token.isEmpty) {
+        token = prefs.getString('ff_accessToken');
+        if (token != null && token.isNotEmpty) {
+          await sec.write(SecureStorageService.keyAccessToken, token);
+          await prefs.remove('ff_accessToken');
+        }
+      }
+      if (token != null && token.isNotEmpty) _accessToken = token;
+    } catch (_) {}
+    try {
+      final sec = SecureStorageService.instance;
+      var token = await sec.read(SecureStorageService.keyRefreshToken);
+      if (token == null || token.isEmpty) {
+        token = prefs.getString('ff_refreshToken');
+        if (token != null && token.isNotEmpty) {
+          await sec.write(SecureStorageService.keyRefreshToken, token);
+          await prefs.remove('ff_refreshToken');
+        }
+      }
+      if (token != null && token.isNotEmpty) _refreshToken = token;
+    } catch (_) {}
     _safeInit(() {
       _userid = prefs.getInt('ff_userid') ?? _userid;
     });
@@ -203,14 +229,26 @@ class FFAppState extends ChangeNotifier {
   String get accessToken => _accessToken;
   set accessToken(String value) {
     _accessToken = value;
-    prefs.setString('ff_accessToken', value);
+    final sec = SecureStorageService.instance;
+    if (value.isEmpty) {
+      sec.delete(SecureStorageService.keyAccessToken);
+      prefs.remove('ff_accessToken');
+    } else {
+      sec.write(SecureStorageService.keyAccessToken, value);
+    }
   }
 
   String _refreshToken = '';
   String get refreshToken => _refreshToken;
   set refreshToken(String value) {
     _refreshToken = value;
-    prefs.setString('ff_refreshToken', value);
+    final sec = SecureStorageService.instance;
+    if (value.isEmpty) {
+      sec.delete(SecureStorageService.keyRefreshToken);
+      prefs.remove('ff_refreshToken');
+    } else {
+      sec.write(SecureStorageService.keyRefreshToken, value);
+    }
   }
 
   bool _bookingInProgress = false;
@@ -375,6 +413,9 @@ class FFAppState extends ChangeNotifier {
     _refreshToken = '';
     _userid = 0;
     _coinsBalance = 0;
+    final sec = SecureStorageService.instance;
+    sec.delete(SecureStorageService.keyAccessToken);
+    sec.delete(SecureStorageService.keyRefreshToken);
     prefs.remove('ff_accessToken');
     prefs.remove('ff_refreshToken');
     prefs.remove('ff_userid');

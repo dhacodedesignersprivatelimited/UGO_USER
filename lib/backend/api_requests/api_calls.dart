@@ -116,6 +116,27 @@ class LoginCall {
   ));
 }
 
+class UserLogoutCall {
+  static Future<ApiCallResponse> call({
+    required String token,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'userLogout',
+      apiUrl: '$_baseUrl/api/users/logout',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: '{}',
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      cache: false,
+    );
+  }
+}
+
 class GetUserDetailsCall {
   static Future<ApiCallResponse> call({
     required int userId,
@@ -2773,6 +2794,38 @@ class DeleteSupportTicketCall {
   static bool? success(dynamic response) => castToType<bool>(getJsonField(response, r'$.success'));
 }
 
+/// ---------------------------------------------------------------------------
+/// AI AGENT (LLM + server-side database snapshot)
+/// ---------------------------------------------------------------------------
+
+class AiAgentChatCall {
+  static Future<ApiCallResponse> call({
+    required String message,
+    String? token,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'AiAgentChat',
+      apiUrl: '$_baseUrl/api/ai/agent/chat',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode({'message': message}),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: false,
+    );
+  }
+
+  static String? replyText(dynamic response) =>
+      getJsonField(response, r'$.data.reply')?.toString();
+}
 
 class ApiPagingParams {
   int nextPageNumber = 0;

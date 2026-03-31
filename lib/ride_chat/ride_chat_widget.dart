@@ -34,6 +34,7 @@ class _RideChatWidgetState extends State<RideChatWidget> {
   final _items = <RideChatMessage>[];
   RideChatService? _svc;
   StreamSubscription? _subMsg;
+  StreamSubscription? _subHistory;
   StreamSubscription? _subErr;
   StreamSubscription? _subTyping;
   bool _otherTyping = false;
@@ -62,10 +63,25 @@ class _RideChatWidgetState extends State<RideChatWidget> {
       myUserId: uid,
     );
 
-    _subMsg = _svc!.messages.listen((m) {
+    _subHistory = _svc!.chatHistory.listen((batch) {
       if (!mounted) return;
       setState(() {
+        for (final m in batch) {
+          if (m.dbId != null && _items.any((x) => x.dbId == m.dbId)) continue;
+          _items.add(m);
+        }
+        _items.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+        _otherTyping = false;
+      });
+      _scrollToEnd();
+    });
+
+    _subMsg = _svc!.messages.listen((m) {
+      if (!mounted) return;
+      if (m.dbId != null && _items.any((x) => x.dbId == m.dbId)) return;
+      setState(() {
         _items.add(m);
+        _items.sort((a, b) => a.timestamp.compareTo(b.timestamp));
         _otherTyping = false;
       });
       _scrollToEnd();
@@ -99,13 +115,17 @@ class _RideChatWidgetState extends State<RideChatWidget> {
     });
   }
 
-  bool _isMine(RideChatMessage m) =>
-      m.senderId == FFAppState().userid && m.senderType.toLowerCase() == 'user';
+  bool _isMine(RideChatMessage m) {
+    if (m.senderId != FFAppState().userid) return false;
+    final t = m.senderType.toLowerCase();
+    return t.isEmpty || t == 'user';
+  }
 
   @override
   void dispose() {
     _typingDebounce?.cancel();
     _subMsg?.cancel();
+    _subHistory?.cancel();
     _subErr?.cancel();
     _subTyping?.cancel();
     _svc?.dispose();
@@ -156,6 +176,8 @@ class _RideChatWidgetState extends State<RideChatWidget> {
             Expanded(
               child: ListView.builder(
                 controller: _scroll,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                 itemCount: _items.length + (_otherTyping ? 1 : 0),
                 itemBuilder: (context, i) {

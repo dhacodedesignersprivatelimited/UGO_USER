@@ -1,6 +1,10 @@
+import 'dart:math' as math;
+
+import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_google_map.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,7 +13,10 @@ export 'bikebook_model.dart';
 
 /// Enhanced Uber-Style Ride Booking Screen
 class BikebookWidget extends StatefulWidget {
-  const BikebookWidget({super.key});
+  const BikebookWidget({super.key, this.rideId});
+
+  /// Optional; falls back to [FFAppState.currentRideId] for live fare / driver phone.
+  final int? rideId;
 
   static String routeName = 'bikebook';
   static String routePath = '/bikebook';
@@ -25,10 +32,18 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  Map<String, dynamic>? _ride;
+
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => BikebookModel());
+    final app = FFAppState();
+    final plat = app.pickupLatitude;
+    final plng = app.pickupLongitude;
+    if (plat != null && plng != null && plat != 0 && plng != 0) {
+      _model.googleMapsCenter = LatLng(plat, plng);
+    }
 
     _animationController = AnimationController(
       vsync: this,
@@ -40,6 +55,126 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
     );
 
     _animationController.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchRideDetails());
+  }
+
+  int? get _effectiveRideId => widget.rideId ?? FFAppState().currentRideId;
+
+  double? _asDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
+
+  double? _tripKmFromState() {
+    final app = FFAppState();
+    final lat1 = app.pickupLatitude;
+    final lng1 = app.pickupLongitude;
+    final lat2 = app.dropLatitude;
+    final lng2 = app.dropLongitude;
+    if (lat1 == null || lng1 == null || lat2 == null || lng2 == null) return null;
+    if (lat1 == 0 && lng1 == 0) return null;
+    return _haversineKm(lat1, lng1, lat2, lng2);
+  }
+
+  double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
+    const p = math.pi / 180;
+    final a = 0.5 -
+        math.cos((lat2 - lat1) * p) / 2 +
+        math.cos(lat1 * p) * math.cos(lat2 * p) * (1 - math.cos((lon2 - lon1) * p)) / 2;
+    return 12742 * math.asin(math.sqrt(a));
+  }
+
+  Future<void> _fetchRideDetails() async {
+    final id = _effectiveRideId;
+    if (id == null) return;
+    try {
+      final res = await GetRideDetailsCall.call(
+        rideId: id,
+        token: FFAppState().accessToken,
+      );
+      if (!mounted || !res.succeeded) return;
+      final raw = getJsonField(res.jsonBody, r'$.data');
+      if (raw == null) return;
+      final ride = raw is Map<String, dynamic>
+          ? Map<String, dynamic>.from(raw)
+          : Map<String, dynamic>.from(raw as Map);
+      setState(() => _ride = ride);
+    } catch (_) {}
+  }
+
+  String _vehicleTitle() {
+    final v = _ride?['vehicle'];
+    if (v is Map) {
+      final n = v['vehicle_name']?.toString().trim();
+      if (n != null && n.isNotEmpty) return n.toUpperCase();
+    }
+    final vs = FFAppState().vehicleselect.trim();
+    return vs.isNotEmpty ? vs.toUpperCase() : 'UGO RIDE';
+  }
+
+  String _vehicleSubtitle() {
+    final v = _ride?['vehicle'];
+    if (v is Map) {
+      final m = v['vehicle_model']?.toString().trim();
+      if (m != null && m.isNotEmpty) return m;
+    }
+    return FFAppState().vehicleselect.trim().isNotEmpty ? FFAppState().vehicleselect : 'Ride';
+  }
+
+  String _fareDisplay() {
+    final est = _asDouble(_ride?['estimated_fare']);
+    final fin = _asDouble(_ride?['final_fare']);
+    final fromRide = fin ?? est;
+    if (fromRide != null && fromRide > 0) return '₹${fromRide.toStringAsFixed(2)}';
+    final f = FFAppState().selectedBaseFare;
+    if (f > 0) return '₹${f.toStringAsFixed(2)}';
+    return '—';
+  }
+
+  String _distanceSubtitle() {
+    final apiKm = _asDouble(_ride?['ride_distance_km']);
+    final km = apiKm ?? _tripKmFromState();
+    if (km == null || km <= 0) return '—';
+    return '${km.toStringAsFixed(km < 10 ? 1 : 0)} km';
+  }
+
+  String? _etaSubtitle() {
+    final dLat = _asDouble(_ride?['driver_latitude']);
+    final dLng = _asDouble(_ride?['driver_longitude']);
+    final pLat = _asDouble(_ride?['pickup_latitude']) ?? FFAppState().pickupLatitude;
+    final pLng = _asDouble(_ride?['pickup_longitude']) ?? FFAppState().pickupLongitude;
+    if (dLat == null || dLng == null || pLat == null || pLng == null) return null;
+    final km = _haversineKm(dLat, dLng, pLat, pLng);
+    if (km <= 0) return null;
+    const avgKmh = 22.0;
+    final mins = (km / avgKmh * 60).round().clamp(1, 999);
+    return '~$mins min away';
+  }
+
+  String _pickupAddress() {
+    final r = _ride;
+    final fromApi = r?['pickup_location_address']?.toString().trim();
+    if (fromApi != null && fromApi.isNotEmpty) return fromApi;
+    final a = FFAppState().pickuplocation.trim();
+    return a.isNotEmpty ? a : 'Pickup';
+  }
+
+  String _dropAddress() {
+    final r = _ride;
+    final fromApi = r?['drop_location_address']?.toString().trim();
+    if (fromApi != null && fromApi.isNotEmpty) return fromApi;
+    final a = FFAppState().droplocation.trim();
+    return a.isNotEmpty ? a : 'Drop-off';
+  }
+
+  String? _driverPhoneDigits() {
+    final d = _ride?['driver'];
+    if (d is! Map) return null;
+    final raw = d['mobile_number']?.toString();
+    if (raw == null || raw.isEmpty) return null;
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    return digits.isEmpty ? null : digits;
   }
 
   Future<void> _makeCall(String phoneNumber) async {
@@ -63,9 +198,25 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
     super.dispose();
   }
 
+  Future<void> _contactDriver() async {
+    final digits = _driverPhoneDigits();
+    if (digits == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Driver number not available yet')),
+        );
+      }
+      return;
+    }
+    await _makeCall(digits);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return ListenableBuilder(
+      listenable: FFAppState(),
+      builder: (context, _) {
+        return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
         FocusManager.instance.primaryFocus?.unfocus();
@@ -163,7 +314,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                           ],
                         ),
                         child: Text(
-                          'UGO BIKE',
+                          _vehicleTitle(),
                           style: GoogleFonts.interTight(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -441,7 +592,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
-                                            'Moto',
+                                            _vehicleSubtitle(),
                                             style: GoogleFonts.interTight(
                                               fontSize: 20,
                                               fontWeight: FontWeight.w700,
@@ -465,7 +616,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                                               ],
                                             ),
                                             child: Text(
-                                              '₹34.22',
+                                              _fareDisplay(),
                                               style: GoogleFonts.interTight(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w700,
@@ -478,20 +629,22 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                                       SizedBox(height: 8),
                                       Row(
                                         children: [
-                                          Icon(
-                                            Icons.access_time,
-                                            size: 16,
-                                            color: Color(0xFF757575),
-                                          ),
-                                          SizedBox(width: 6),
-                                          Text(
-                                            '5 mins away',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 13,
+                                          if (_etaSubtitle() != null) ...[
+                                            Icon(
+                                              Icons.access_time,
+                                              size: 16,
                                               color: Color(0xFF757575),
                                             ),
-                                          ),
-                                          SizedBox(width: 16),
+                                            SizedBox(width: 6),
+                                            Text(
+                                              _etaSubtitle()!,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13,
+                                                color: Color(0xFF757575),
+                                              ),
+                                            ),
+                                            SizedBox(width: 16),
+                                          ],
                                           Icon(
                                             Icons.route,
                                             size: 16,
@@ -499,7 +652,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                                           ),
                                           SizedBox(width: 6),
                                           Text(
-                                            '3.2 km',
+                                            _distanceSubtitle(),
                                             style: GoogleFonts.inter(
                                               fontSize: 13,
                                               color: Color(0xFF757575),
@@ -549,7 +702,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                                             ),
                                             SizedBox(height: 2),
                                             Text(
-                                              'Dilsukhnagar',
+                                              _pickupAddress(),
                                               style: GoogleFonts.inter(
                                                 fontSize: 15,
                                                 color: Colors.black87,
@@ -600,7 +753,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                                             ),
                                             SizedBox(height: 2),
                                             Text(
-                                              'Kothapet',
+                                              _dropAddress(),
                                               style: GoogleFonts.inter(
                                                 fontSize: 15,
                                                 color: Colors.black87,
@@ -629,7 +782,7 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                               width: double.infinity,
                               height: 54,
                               child: ElevatedButton(
-                                onPressed: () => _makeCall('9123456789'),
+                                onPressed: _contactDriver,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: Color(0xFF3D8033),
@@ -666,9 +819,8 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
                               width: double.infinity,
                               height: 54,
                               child: ElevatedButton(
-                                onPressed: () {
-                                  print('Cancel ride pressed');
-                                },
+                                onPressed: () =>
+                                    context.pushNamed(CancelRideWidget.routeName),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Color(0xFFFF7B10),
                                   foregroundColor: Colors.white,
@@ -698,6 +850,8 @@ class _BikebookWidgetState extends State<BikebookWidget> with SingleTickerProvid
           ),
         ),
       ),
+    );
+      },
     );
   }
 }

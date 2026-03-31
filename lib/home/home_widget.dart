@@ -7,6 +7,7 @@ import 'dart:async';
 import 'home_model.dart';
 export 'home_model.dart';
 import '/backend/api_requests/api_calls.dart';
+import '/services/active_ride_navigation.dart';
 import 'package:flutter/services.dart';
 
 class HomeWidget extends StatefulWidget {
@@ -61,8 +62,10 @@ class _HomeWidgetState extends State<HomeWidget>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // 2. IMPORTANT: Check for active rides immediately on app launch
-    _checkRideStatus();
+    // 2. After first frame (GoRouter available), restore active ride if any
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _checkRideStatus();
+    });
 
     // 3. Start Notification polling
     _updateNotificationCount();
@@ -125,9 +128,8 @@ class _HomeWidgetState extends State<HomeWidget>
     }
   }
 
-  /// ✅ FIXED: Logic to restore active ride session
+  /// Restore active ride session (shared with app-level resume handler).
   Future<void> _checkRideStatus() async {
-    // Prevent concurrent checks, but ALLOW check even if local bookingInProgress is false
     if (_isCheckingRideStatus) return;
 
     final token = FFAppState().accessToken;
@@ -136,65 +138,24 @@ class _HomeWidgetState extends State<HomeWidget>
     setState(() => _isCheckingRideStatus = true);
 
     try {
-      final response = await GetRideStatus.call(
-        userId: FFAppState().userid,
-        token: token,
-      );
+      final router = GoRouter.of(context);
+      final res =
+          await ActiveRideNavigation.tryOpenActiveRideFromApi(router);
 
-      _model.apiResult85c = response;
       if (!mounted) return;
 
-      if (response.succeeded) {
-        final rideList = getJsonField(response.jsonBody, r'''$.data.rides''');
+      if (res != null) {
+        _model.apiResult85c = res;
+      }
 
-        if (rideList != null && rideList is List && rideList.isNotEmpty) {
-          final activeRide = rideList.first;
-          final rideId = activeRide is Map ? activeRide['id'] : activeRide;
-          final status = (activeRide is Map ? activeRide['status'] : null)
-              ?.toString()
-              .toLowerCase();
-
-          const activeStatuses = [
-            'searching',
-            'driver_assigned',
-            'accepted',
-            'arriving',
-            'arrived',
-            'picked_up',
-            'started',
-            'in_progress',
-            'ontrip'
-          ];
-
-          final isActive = status == null || activeStatuses.contains(status);
-
-          if (rideId != null && isActive) {
-            print('🚀 Active ride detected (ID: $rideId). Restoring session...');
-            FFAppState().bookingInProgress = true;
-
-            if (mounted) {
-              context.pushNamed(
-                AutoBookWidget.routeName,
-                queryParameters: {'rideId': rideId.toString()},
-              );
-            }
-          } else {
-            FFAppState().bookingInProgress = false;
-          }
-        } else {
-          FFAppState().bookingInProgress = false;
-        }
-      } else if (response.statusCode == 401 || response.statusCode == 403) {
-        FFAppState().clearAuthSession();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Your session expired. Please log in again.'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-          context.goNamedAuth(LoginWidget.routeName, context.mounted);
-        }
+      if (mounted &&
+          (res?.statusCode == 401 || res?.statusCode == 403)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Your session expired. Please log in again.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
       debugPrint('Ride status check failed: $e');

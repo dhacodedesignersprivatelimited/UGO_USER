@@ -230,7 +230,9 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       name: BikebookWidget.routeName,
       path: BikebookWidget.routePath,
       requireAuth: true,
-      builder: (context, params) => BikebookWidget(),
+      builder: (context, params) => BikebookWidget(
+        rideId: params.getParam('rideId', ParamType.int),
+      ),
     ),
     FFRoute(
       name: AvaliableOptionsWidget.routeName,
@@ -477,7 +479,9 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       name: BookSucessfullWidget.routeName,
       path: BookSucessfullWidget.routePath,
       requireAuth: true,
-      builder: (context, params) => BookSucessfullWidget(),
+      builder: (context, params) => BookSucessfullWidget(
+        rideId: params.getParam('rideId', ParamType.int),
+      ),
     ),
     FFRoute(
       name: CancelRideWidget.routeName,

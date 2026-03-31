@@ -1,3 +1,4 @@
+import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -26,39 +27,85 @@ class _AiChatWidgetState extends State<AiChatWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  bool _aiLoading = false;
 
   List<ChatMessage> messages = [
     ChatMessage(
-      text: "Hi! I am UGO AI Support. How can I help you today?",
+      text:
+          "Hi! I'm UGO AI. Each reply uses a fresh snapshot of your rides, wallet, and notifications from our servers—ask about trips, balance, or your current ride.",
       isUser: false,
       timestamp: DateTime.now(),
     ),
   ];
 
-  void _sendMessage(String text) {
-    if (text.trim().isEmpty) return;
+  Future<void> _sendMessage(String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || _aiLoading) return;
+
+    final token = FFAppState().accessToken;
+    if (token.isEmpty || FFAppState().userid == 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in to use UGO AI.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       messages.add(ChatMessage(
-        text: text,
+        text: trimmed,
         isUser: true,
         timestamp: DateTime.now(),
       ));
+      _aiLoading = true;
     });
     _textController.clear();
     _scrollToBottom();
 
-    // Mock AI Response
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      final res = await AiAgentChatCall.call(
+        message: trimmed,
+        token: token,
+      );
+      if (!mounted) return;
+
+      String reply;
+      if (res.succeeded) {
+        reply = AiAgentChatCall.replyText(res.jsonBody)?.trim() ?? '';
+        if (reply.isEmpty) {
+          reply =
+              'I could not read the AI response. Please try again in a moment.';
+        }
+      } else {
+        final err = getJsonField(res.jsonBody, r'$.message')?.toString();
+        reply = (err != null && err.isNotEmpty)
+            ? err
+            : 'Something went wrong. Please try again.';
+      }
+
       setState(() {
         messages.add(ChatMessage(
-          text: "I understand you need help with '${text}'. A human agent will address this soon.",
+          text: reply,
           isUser: false,
           timestamp: DateTime.now(),
         ));
+        _aiLoading = false;
       });
-      _scrollToBottom();
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        messages.add(ChatMessage(
+          text: 'Network error. Check your connection and try again.',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+        _aiLoading = false;
+      });
+    }
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -106,7 +153,7 @@ class _AiChatWidgetState extends State<AiChatWidget> {
             onPressed: () => context.pop(),
           ),
           title: Text(
-            'UGO AI Support',
+            'UGO AI (live data)',
             style: GoogleFonts.interTight(
               color: Colors.white,
               fontSize: 18.0,
@@ -122,8 +169,37 @@ class _AiChatWidgetState extends State<AiChatWidget> {
               child: ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.all(16.0),
-                itemCount: messages.length,
+                itemCount: messages.length + (_aiLoading ? 1 : 0),
                 itemBuilder: (context, index) {
+                  if (_aiLoading && index == messages.length) {
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: theme.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'UGO AI is checking your account…',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: theme.secondaryText,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
                   final msg = messages[index];
                   return _buildMessageBubble(msg, theme, isDark);
                 },
@@ -267,8 +343,19 @@ class _AiChatWidgetState extends State<AiChatWidget> {
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.send_rounded, color: Colors.white),
-              onPressed: () => _sendMessage(_textController.text),
+              icon: _aiLoading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.send_rounded, color: Colors.white),
+              onPressed: _aiLoading
+                  ? null
+                  : () => _sendMessage(_textController.text),
             ),
           ),
         ],

@@ -15,6 +15,8 @@ import 'flutter_flow/internationalization.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'flutter_flow/firebase_app_check_util.dart';
 import 'notifications/fcm_service.dart';
+import 'services/active_ride_navigation.dart';
+import 'dart:async';
 
 // Orange theme colors
 const _orangePrimary = Color(0xFFFF7B10);
@@ -263,7 +265,7 @@ class MyApp extends StatefulWidget {
       context.findAncestorStateOfType<_MyAppState>()!;
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   Locale? _locale;
 
   ThemeMode _themeMode = FlutterFlowTheme.themeMode;
@@ -288,6 +290,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _appStateNotifier = AppStateNotifier.instance;
     _router = createRouter(_appStateNotifier);
@@ -301,6 +304,21 @@ class _MyAppState extends State<MyApp> {
       Duration(milliseconds: 1000),
       () => _appStateNotifier.stopShowingSplashImage(),
     );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    if (!_appStateNotifier.loggedIn || FFAppState().userid == 0) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(ActiveRideNavigation.tryOpenActiveRideFromApi(_router));
+    });
   }
 
   void setLocale(String language) {
