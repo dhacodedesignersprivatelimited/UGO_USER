@@ -681,14 +681,32 @@ class GetSavedAddressesCall {
 /// ---------------------------------------------------------------------------
 
 class GetRideHistoryCall {
+  /// [statusGroup]: `all` | `ongoing` | `completed` | `cancelled`
+  /// [startDate] / [endDate]: `YYYY-MM-DD` (inclusive), optional.
   static Future<ApiCallResponse> call({
     required int userId,
     String? token = '',
     int page = 1,
-    int pageSize = 50,
+    int pageSize = 20,
+    String statusGroup = 'all',
+    String? startDate,
+    String? endDate,
   }) async {
-    final q =
-        'page=${Uri.encodeComponent(page.toString())}&pageSize=${Uri.encodeComponent(pageSize.toString())}';
+    final qp = <String, String>{
+      'page': page.toString(),
+      'pageSize': pageSize.clamp(1, 50).toString(),
+      'statusGroup': statusGroup,
+    };
+    if (startDate != null && startDate.isNotEmpty) {
+      qp['startDate'] = startDate;
+    }
+    if (endDate != null && endDate.isNotEmpty) {
+      qp['endDate'] = endDate;
+    }
+    final q = qp.entries
+        .map((e) =>
+            '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .join('&');
     return ApiManager.instance.makeApiCall(
       callName: 'getRideHistory',
       apiUrl: '$_baseUrl/api/users/ride-history/$userId?$q',
@@ -2083,21 +2101,23 @@ class GetDriverDetailsCall {
     return null;
   }
 
-  static String? vehicleModel(dynamic response) {
-    var model =
-    castToType<String>(getJsonField(response, r'''$.vehicle_model'''));
-    if (model != null) return model;
-    model =
-        castToType<String>(getJsonField(response, r'''$.data.vehicle_model'''));
-    return model ?? 'Auto';
-  }
-
   static String? vehicleNumber(dynamic response) {
+    // From socket payload (flat fields)
     var number =
-    castToType<String>(getJsonField(response, r'''$.license_plate'''));
+        castToType<String>(getJsonField(response, r'''$.vehicle_plate'''));
+    if (number != null) return number;
+    number =
+        castToType<String>(getJsonField(response, r'''$.license_plate'''));
     if (number != null) return number;
     number = castToType<String>(
         getJsonField(response, r'''$.registration_number'''));
+    if (number != null) return number;
+    // From GET /api/drivers/:id (nested vehicle object)
+    number = castToType<String>(
+        getJsonField(response, r'''$.data.vehicle.license_plate'''));
+    if (number != null) return number;
+    number = castToType<String>(
+        getJsonField(response, r'''$.data.vehicle.registration_number'''));
     if (number != null) return number;
     number =
         castToType<String>(getJsonField(response, r'''$.data.license_plate'''));
@@ -2105,10 +2125,37 @@ class GetDriverDetailsCall {
     number = castToType<String>(
         getJsonField(response, r'''$.data.registration_number'''));
     if (number != null) return number;
-    // Fallback: adminVehicle.vehicle_name from GET /api/drivers/:id
     final vehicleName = castToType<String>(
         getJsonField(response, r'''$.data.adminVehicle.vehicle_name'''));
-    return vehicleName ?? 'AP-00-XX-0000';
+    return vehicleName;
+  }
+
+  static String? vehicleModel(dynamic response) {
+    // From socket payload
+    var m = castToType<String>(getJsonField(response, r'''$.vehicle_model'''));
+    if (m != null) return m;
+    m = castToType<String>(getJsonField(response, r'''$.vehicle_name'''));
+    if (m != null) return m;
+    // From GET /api/drivers/:id
+    m = castToType<String>(
+        getJsonField(response, r'''$.data.vehicle.vehicle_model'''));
+    if (m != null) return m;
+    m = castToType<String>(
+        getJsonField(response, r'''$.data.vehicle.vehicle_name'''));
+    if (m != null) return m;
+    m = castToType<String>(
+        getJsonField(response, r'''$.data.vehicle_model'''));
+    return m;
+  }
+
+  static String? vehicleColor(dynamic response) {
+    var c = castToType<String>(getJsonField(response, r'''$.vehicle_color'''));
+    if (c != null) return c;
+    c = castToType<String>(
+        getJsonField(response, r'''$.data.vehicle.vehicle_color'''));
+    if (c != null) return c;
+    return castToType<String>(
+        getJsonField(response, r'''$.data.vehicle_color'''));
   }
 
   static String? vehicleType(dynamic response) {
@@ -2205,7 +2252,11 @@ class RebookRideCall {
   static Future<ApiCallResponse> call({
     required int rideId,
     String? token = '',
+    int extraFare = 0,
   }) async {
+    final body = extraFare > 0
+        ? '{"extra_fare": $extraFare}'
+        : '{}';
     return ApiManager.instance.makeApiCall(
       callName: 'rebookRide',
       apiUrl: '$_baseUrl/api/rides/rebook/$rideId',
@@ -2215,7 +2266,7 @@ class RebookRideCall {
         'Content-Type': 'application/json',
       },
       params: {},
-      body: '{}',
+      body: body,
       bodyType: BodyType.JSON,
       returnBody: true,
       encodeBodyUtf8: false,
@@ -2230,6 +2281,19 @@ class RebookRideCall {
   static String? message(dynamic response) => castToType<String>(
     getJsonField(response, r'''$.message'''),
   );
+  static int? newRideId(dynamic response) => castToType<int>(
+    getJsonField(response, r'''$.data.ride_id'''),
+  );
+  static double? estimatedFare(dynamic response) {
+    final v = getJsonField(response, r'''$.data.estimated_fare''');
+    if (v == null) return null;
+    return double.tryParse(v.toString());
+  }
+  static double? extraFareResponse(dynamic response) {
+    final v = getJsonField(response, r'''$.data.extra_fare''');
+    if (v == null) return null;
+    return double.tryParse(v.toString());
+  }
 }
 // ─────────────────────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────────────────────

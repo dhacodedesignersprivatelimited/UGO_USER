@@ -65,10 +65,16 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   // State Flags
   bool isLoadingDriver = false;
   bool _isCancelling = false;
-  bool _isRebooking = false; // ✅ Added for rebooking state
+  bool _isRebooking = false;
   bool _userInitiatedCancel = false;
   bool _cancelledByDriver = false;
   String? _rideOtp;
+
+  // Decline / extra fare tracking
+  int _declineCount = 0;
+  int _totalDriversNotified = 0;
+  double _estimatedFare = 0;
+  double _extraFare = 0;
 
   // UI Status
   String _rideStatus = 'searching';
@@ -78,6 +84,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   int _searchSeconds = 0;
   Timer? _distanceUpdateTimer;
   Timer? _rideCheckTimer;
+  Timer? _nearbyDriversTimer;
+  Timer? _approachRouteTimer;
+  Timer? _routeRefreshDebounce;
   bool _rideCheckShown = false;
 
   // Distance tracking
@@ -122,6 +131,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
     // 2. Start Timers & Socket
     _startSearchTimer();
+    _startNearbyDriversTimer();
     _initializeSocket();
 
     // 3. ✅ CRITICAL: Always fetch fresh status on load
@@ -129,6 +139,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     
     // 4. Ensure total road distance is fetched
     _ensureTotalRoadDistance();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _isPrePickupTracking) _startApproachRouteTimer();
+    });
   }
 
   Future<void> _ensureTotalRoadDistance() async {
@@ -208,23 +222,126 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     return poly;
   }
 
-  void _animateCameraToBounds(List<LatLng> points) {
-    if (points.isEmpty) return;
-    double minLat = points.first.latitude, maxLat = points.first.latitude;
-    double minLng = points.first.longitude, maxLng = points.first.longitude;
-    for (var point in points) {
+  static const double _minBoundsSpan = 0.004;
+
+  void _animateCameraToBounds(List<LatLng> points, {double paddingPx = 100}) {
+    if (points.isEmpty || _mapController == null) return;
+    final valid =
+        points.where((p) => p.latitude.abs() > 1e-6 || p.longitude.abs() > 1e-6).toList();
+    if (valid.isEmpty) return;
+
+    if (valid.length == 1) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(valid.first, 15),
+      );
+      return;
+    }
+
+    double minLat = valid.first.latitude, maxLat = valid.first.latitude;
+    double minLng = valid.first.longitude, maxLng = valid.first.longitude;
+    for (final point in valid) {
       if (point.latitude < minLat) minLat = point.latitude;
       if (point.latitude > maxLat) maxLat = point.latitude;
       if (point.longitude < minLng) minLng = point.longitude;
       if (point.longitude > maxLng) maxLng = point.longitude;
     }
-    _mapController?.animateCamera(CameraUpdate.newLatLngBounds(
-      LatLngBounds(
-        southwest: LatLng(minLat, minLng),
-        northeast: LatLng(maxLat, maxLng),
-      ),
-      80,
-    ));
+
+    double latPad = (maxLat - minLat) * 0.15;
+    double lngPad = (maxLng - minLng) * 0.15;
+    if (maxLat - minLat < _minBoundsSpan) {
+      latPad = _minBoundsSpan / 2;
+      minLat -= latPad;
+      maxLat += latPad;
+    } else {
+      minLat -= latPad;
+      maxLat += latPad;
+    }
+    if (maxLng - minLng < _minBoundsSpan) {
+      lngPad = _minBoundsSpan / 2;
+      minLng -= lngPad;
+      maxLng += lngPad;
+    } else {
+      minLng -= lngPad;
+      maxLng += lngPad;
+    }
+
+    try {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(minLat, minLng),
+            northeast: LatLng(maxLat, maxLng),
+          ),
+          paddingPx,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Camera bounds failed, falling back to zoom: $e');
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng((minLat + maxLat) / 2, (minLng + maxLng) / 2),
+          12,
+        ),
+      );
+    }
+  }
+
+  /// Fits camera to driver + pickup (pre-trip) or pickup + drop + driver (in-trip).
+  void _fitMapToRideContext() {
+    final appState = FFAppState();
+    final pts = <LatLng>[];
+
+    void addPickup() {
+      final la = appState.pickupLatitude;
+      final ln = appState.pickupLongitude;
+      if (la != null && ln != null) pts.add(LatLng(la, ln));
+    }
+
+    void addDrop() {
+      var dLat = appState.dropLatitude;
+      var dLng = appState.dropLongitude;
+      if ((dLat == null || dLng == null) && ridesCache.isNotEmpty) {
+        dLat = double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '');
+        dLng = double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '');
+      }
+      if (dLat != null && dLng != null) pts.add(LatLng(dLat, dLng));
+    }
+
+    void addDriver() {
+      if (ridesCache.isEmpty) return;
+      final ride = ridesCache[0];
+      final dLat = double.tryParse(ride['driver_latitude']?.toString() ?? '');
+      final dLng = double.tryParse(ride['driver_longitude']?.toString() ?? '');
+      if (dLat != null && dLng != null) pts.add(LatLng(dLat, dLng));
+    }
+
+    if (_rideStatus == STATUS_ACCEPTED || _rideStatus == STATUS_ARRIVING) {
+      addDriver();
+      addPickup();
+    } else if (_rideStatus == STATUS_PICKED_UP) {
+      addPickup();
+      addDrop();
+      addDriver();
+    } else if (_rideStatus == STATUS_SEARCHING) {
+      addPickup();
+      addDrop();
+    } else {
+      addPickup();
+      addDrop();
+      addDriver();
+    }
+
+    if (pts.isEmpty) {
+      final la = appState.pickupLatitude ?? AppConfig.defaultLat;
+      final ln = appState.pickupLongitude ?? AppConfig.defaultLng;
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(la, ln), 14),
+      );
+      return;
+    }
+
+    final bottomInset = MediaQuery.sizeOf(context).height * 0.35;
+    _animateCameraToBounds(pts, paddingPx: 72 + bottomInset * 0.15);
   }
 
   Future<void> _initializeMap() async {
@@ -282,64 +399,70 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       }
     }
 
-    // Nearby drivers (during searching - like avaliable_options)
-    if (_rideStatus == STATUS_SEARCHING && pickupLat != null && pickupLng != null) {
-      try {
-        await _loadVehicleIconsIfNeeded();
-        final response = await GetNearbyDriversCall.call(
-          lat: pickupLat,
-          lon: pickupLng,
-          radius: 5.0,
-          token: appState.accessToken,
-        );
-        if (response.succeeded) {
-          final allDrivers = (getJsonField(response.jsonBody, r'''$.data''') as List?)?.toList() ?? [];
-          final category = appState.selectedRideCategory?.toLowerCase();
-          int? targetVt;
-          if (category == 'bike') targetVt = 2;
-          else if (category == 'auto') targetVt = 1;
-          else if (category == 'car') targetVt = 3;
-          final orangeIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
-          int idx = 0;
-          for (final d in allDrivers) {
-            if (getJsonField(d, r'''$.is_active''') != true || getJsonField(d, r'''$.is_online''') != true) continue;
-            final dVt = getJsonField(d, r'''$.vehicle_type_id''');
-            final driverVt = dVt is int ? dVt : int.tryParse(dVt?.toString() ?? '');
-            if (targetVt != null && driverVt != targetVt) continue;
-            final lat = getJsonField(d, r'''$.current_location_latitude''');
-            final lng = getJsonField(d, r'''$.current_location_longitude''');
-            if (lat == null || lng == null) continue;
-            final latVal = lat is num ? lat.toDouble() : double.tryParse(lat.toString());
-            final lngVal = lng is num ? lng.toDouble() : double.tryParse(lng.toString());
-            if (latVal == null || lngVal == null) continue;
-            final driverIcon = (driverVt == 1 ? _autoIcon : driverVt == 2 ? _bikeIcon : _carIcon) ?? orangeIcon;
-            newMarkers.add(Marker(
-              markerId: MarkerId('driver_$idx'),
-              position: LatLng(latVal, lngVal),
-              icon: driverIcon,
-            ));
-            idx++;
-          }
-        }
-      } catch (e) {
-        debugPrint('Error adding driver markers: $e');
-      }
-    }
-
     if (mounted) {
       setState(() {
+        // Preserve nearby_ markers (managed by _refreshNearbyDriverMarkers)
+        final nearbyMarkers =
+            _markers.where((m) => m.markerId.value.startsWith('nearby_')).toSet();
         _markers.clear();
         _markers.addAll(newMarkers);
+        if (_rideStatus == STATUS_SEARCHING) {
+          _markers.addAll(nearbyMarkers);
+        }
       });
     }
   }
 
-  Future<void> _getRoutePolyline() async {
+  bool get _isPrePickupTracking =>
+      _rideStatus == STATUS_ACCEPTED || _rideStatus == STATUS_ARRIVING;
+
+  double _mapFitPaddingPx() {
+    if (!mounted) return 100;
+    final h = MediaQuery.sizeOf(context).height;
+    return 88 + h * 0.12;
+  }
+
+  void _stopApproachRouteTimer() {
+    _approachRouteTimer?.cancel();
+    _approachRouteTimer = null;
+  }
+
+  void _startApproachRouteTimer() {
+    _stopApproachRouteTimer();
+    _approachRouteTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (!mounted || !_isPrePickupTracking) {
+        _stopApproachRouteTimer();
+        return;
+      }
+      unawaited(_getRoutePolyline(fitCamera: false));
+    });
+  }
+
+  void _debouncedLiveRefreshFromDriver() {
+    if (!mounted) return;
+    if (!_isPrePickupTracking && _rideStatus != STATUS_PICKED_UP) return;
+    _routeRefreshDebounce?.cancel();
+    _routeRefreshDebounce = Timer(const Duration(milliseconds: 1800), () {
+      if (!mounted) return;
+      unawaited(_refreshAfterDriverLocation());
+    });
+  }
+
+  Future<void> _refreshAfterDriverLocation() async {
+    await _addMarkers();
+    if (_isPrePickupTracking) {
+      await _getRoutePolyline(fitCamera: false);
+    }
+  }
+
+  /// Fetches directions and updates polyline. [fitCamera] when false avoids fighting user pan/zoom during live updates.
+  Future<void> _getRoutePolyline({bool fitCamera = true}) async {
     final appState = FFAppState();
     double? fromLat, fromLng, toLat, toLng;
+    final bool fullTripRoute =
+        _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_PICKED_UP;
 
-    if (_rideStatus == STATUS_ARRIVING || _rideStatus == STATUS_ACCEPTED) {
-      // Driver -> Pickup (current location)
+    if (_isPrePickupTracking) {
       if (ridesCache.isNotEmpty) {
         final ride = ridesCache[0];
         fromLat = double.tryParse(ride['driver_latitude']?.toString() ?? '');
@@ -347,67 +470,92 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       }
       toLat = appState.pickupLatitude;
       toLng = appState.pickupLongitude;
-    } else {
-      // Pickup -> Drop (searching or started)
+    } else if (fullTripRoute) {
       fromLat = appState.pickupLatitude;
       fromLng = appState.pickupLongitude;
-      toLat = appState.dropLatitude ?? (ridesCache.isNotEmpty
-          ? double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '')
-          : null);
-      toLng = appState.dropLongitude ?? (ridesCache.isNotEmpty
-          ? double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '')
-          : null);
+      toLat = appState.dropLatitude ??
+          (ridesCache.isNotEmpty
+              ? double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '')
+              : null);
+      toLng = appState.dropLongitude ??
+          (ridesCache.isNotEmpty
+              ? double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '')
+              : null);
+    } else {
+      return;
     }
 
-    if (fromLat == null || fromLng == null || toLat == null || toLng == null) return;
+    if (fromLat == null || fromLng == null || toLat == null || toLng == null) {
+      return;
+    }
 
     try {
       final url = 'https://maps.googleapis.com/maps/api/directions/json?'
           'origin=$fromLat,$fromLng&destination=$toLat,$toLng'
           '&key=${AppConfig.googleMapsApiKey}';
       final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
-          if (json['status'] == 'OK' && json['routes'] != null && (json['routes'] as List).isNotEmpty) {
-            final route = json['routes'][0];
-            final points = _decodePolyline(route['overview_polyline']['points']);
-            
-            // Extract Road Distance and ETA
-            double? roadDistance;
-            String? etaText;
-            if (route['legs'] != null && (route['legs'] as List).isNotEmpty) {
-              final leg = route['legs'][0];
-              final distanceMeters = leg['distance']?['value'] ?? 0;
-              roadDistance = distanceMeters / 1000.0;
-              etaText = leg['duration']?['text'];
-              
-              // Preservation logic: store as total distance if it's the ride distance
-              if (_rideStatus == STATUS_SEARCHING || _totalRoadDistanceKm == null) {
-                // If it's a Pickup->Drop route (indicated by fromLat/toLat matching pickup/drop)
-                if (fromLat == appState.pickupLatitude && toLat == appState.dropLatitude) {
-                  _totalRoadDistanceKm = roadDistance;
-                }
-              }
-            }
+      if (response.statusCode != 200) return;
 
-            if (mounted) {
-              setState(() {
-                _polylines.clear();
-                _polylines.add(Polyline(
-                  polylineId: const PolylineId('route'),
-                  points: points,
-                  color: Colors.orange,
-                  width: 4,
-                  geodesic: true,
-                ));
-                if (roadDistance != null) _currentRemainingDistance = roadDistance;
-                if (etaText != null) _liveEtaText = etaText;
-              });
-            }
-          if (_mapController != null && points.isNotEmpty) {
-            await Future.delayed(const Duration(milliseconds: 300));
-            _animateCameraToBounds(points);
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      if (json['status'] != 'OK' ||
+          json['routes'] == null ||
+          (json['routes'] as List).isEmpty) {
+        return;
+      }
+
+      final route = (json['routes'] as List).first as Map<String, dynamic>;
+      final poly = route['overview_polyline'];
+      if (poly is! Map || poly['points'] == null) return;
+      final points = _decodePolyline(poly['points'].toString());
+
+      double? roadDistance;
+      String? etaText;
+      if (route['legs'] != null && (route['legs'] as List).isNotEmpty) {
+        final leg = (route['legs'] as List).first as Map<String, dynamic>;
+        final distanceMeters = leg['distance']?['value'] ?? 0;
+        roadDistance = (distanceMeters is num) ? distanceMeters / 1000.0 : null;
+        etaText = leg['duration']?['text'] as String?;
+
+        if (_rideStatus == STATUS_SEARCHING || _totalRoadDistanceKm == null) {
+          final dLat = appState.dropLatitude ??
+              (ridesCache.isNotEmpty
+                  ? double.tryParse(
+                      ridesCache[0]['drop_latitude']?.toString() ?? '')
+                  : null);
+          if (fromLat == appState.pickupLatitude && toLat == dLat) {
+            _totalRoadDistanceKm = roadDistance;
           }
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        _polylines
+          ..clear()
+          ..add(Polyline(
+            polylineId: const PolylineId('route'),
+            points: points,
+            color: const Color(0xFFFF7B10),
+            width: 5,
+            geodesic: true,
+          ));
+
+        if (_isPrePickupTracking) {
+          if (roadDistance != null) _currentRemainingDistance = roadDistance;
+          if (etaText != null) _liveEtaText = etaText;
+        } else if (_rideStatus == STATUS_PICKED_UP) {
+          // Full pickup→drop polyline only; remaining distance comes from driver↔drop (_updateRemainingDistance).
+        } else if (_rideStatus == STATUS_SEARCHING) {
+          if (roadDistance != null) _currentRemainingDistance = roadDistance;
+          if (etaText != null) _liveEtaText = etaText;
+        }
+      });
+
+      if (fitCamera && _mapController != null && points.isNotEmpty) {
+        await Future.delayed(const Duration(milliseconds: 200));
+        if (mounted) {
+          _animateCameraToBounds(points, paddingPx: _mapFitPaddingPx());
         }
       }
     } catch (e) {
@@ -420,11 +568,12 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     if (status == 'started' ||
         status == 'in_progress' ||
         status == 'picked_up' ||
-        status == 'ontrip') {
+        status == 'ontrip' ||
+        status == 'trip_started') {
       _rideStatus = STATUS_PICKED_UP;
     } else if (status == 'arriving' || status == 'arrived') {
       _rideStatus = STATUS_ARRIVING;
-    } else if (status == 'accepted') {
+    } else if (status == 'accepted' || status == 'driver_assigned') {
       _rideStatus = STATUS_ACCEPTED;
     }
   }
@@ -453,9 +602,96 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     _distanceUpdateTimer = null;
   }
 
-  // ============================================================================
-  // 🗺️ MAP LOGIC
-  // ============================================================================
+  void _startNearbyDriversTimer() {
+    _nearbyDriversTimer?.cancel();
+    _refreshNearbyDriverMarkers();
+    _nearbyDriversTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+      if (mounted && _rideStatus == STATUS_SEARCHING) {
+        _refreshNearbyDriverMarkers();
+      } else {
+        _nearbyDriversTimer?.cancel();
+      }
+    });
+  }
+
+  void _stopNearbyDriversTimer() {
+    _nearbyDriversTimer?.cancel();
+    _nearbyDriversTimer = null;
+  }
+
+  Future<void> _refreshNearbyDriverMarkers() async {
+    final appState = FFAppState();
+    final pickupLat = appState.pickupLatitude;
+    final pickupLng = appState.pickupLongitude;
+    if (pickupLat == null || pickupLng == null) return;
+
+    try {
+      await _loadVehicleIconsIfNeeded();
+      final response = await GetNearbyDriversCall.call(
+        lat: pickupLat,
+        lon: pickupLng,
+        radius: 5.0,
+        token: appState.accessToken,
+      );
+      if (!response.succeeded || !mounted) return;
+
+      final allDrivers =
+          (getJsonField(response.jsonBody, r'''$.data''') as List?)?.toList() ?? [];
+      final category = appState.selectedRideCategory?.toLowerCase();
+      int? targetVt;
+      if (category == 'bike') targetVt = 2;
+      else if (category == 'auto') targetVt = 1;
+      else if (category == 'car') targetVt = 3;
+
+      final orangeIcon =
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+      final driverMarkers = <Marker>{};
+      int idx = 0;
+
+      for (final d in allDrivers) {
+        if (getJsonField(d, r'''$.is_active''') != true ||
+            getJsonField(d, r'''$.is_online''') != true) continue;
+        final dVt = getJsonField(d, r'''$.vehicle_type_id''');
+        final driverVt = dVt is int ? dVt : int.tryParse(dVt?.toString() ?? '');
+        if (targetVt != null && driverVt != targetVt) continue;
+        final lat = getJsonField(d, r'''$.current_location_latitude''');
+        final lng = getJsonField(d, r'''$.current_location_longitude''');
+        if (lat == null || lng == null) continue;
+        final latVal = lat is num ? lat.toDouble() : double.tryParse(lat.toString());
+        final lngVal = lng is num ? lng.toDouble() : double.tryParse(lng.toString());
+        if (latVal == null || lngVal == null) continue;
+        final driverIcon =
+            (driverVt == 1 ? _autoIcon : driverVt == 2 ? _bikeIcon : _carIcon) ??
+                orangeIcon;
+        driverMarkers.add(Marker(
+          markerId: MarkerId('nearby_$idx'),
+          position: LatLng(latVal, lngVal),
+          icon: driverIcon,
+          anchor: const Offset(0.5, 0.5),
+          flat: true,
+        ));
+        idx++;
+      }
+
+      if (mounted) {
+        setState(() {
+          _markers.removeWhere(
+              (m) => m.markerId.value.startsWith('nearby_'));
+          _markers.addAll(driverMarkers);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error refreshing nearby drivers: $e');
+    }
+  }
+
+  void _clearNearbyDriverMarkers() {
+    if (mounted) {
+      setState(() {
+        _markers.removeWhere((m) => m.markerId.value.startsWith('nearby_'));
+      });
+    }
+  }
 
   // ============================================================================
   // API & SOCKET LOGIC
@@ -541,6 +777,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           if (m['eta'] != null) ride['eta'] = m['eta'];
           setState(() => ridesCache = [ride]);
           RideSession().rideData = ride;
+          _debouncedLiveRefreshFromDriver();
         }
       }
 
@@ -604,13 +841,22 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           ridesCache = [updatedRide];
         }
 
+        // 1b. Extract decline count and fare info
+        final dc = updatedRide['decline_count'];
+        if (dc != null) _declineCount = int.tryParse(dc.toString()) ?? _declineCount;
+        final tdn = updatedRide['total_drivers_notified'];
+        if (tdn != null) _totalDriversNotified = int.tryParse(tdn.toString()) ?? _totalDriversNotified;
+        final ef = updatedRide['estimated_fare'];
+        if (ef != null) _estimatedFare = double.tryParse(ef.toString()) ?? _estimatedFare;
+        final xf = updatedRide['extra_fare'];
+        if (xf != null) _extraFare = double.tryParse(xf.toString()) ?? _extraFare;
+
         // 2. OTP Extraction (sync to app state for Secure Ride Start UI)
         final incomingOtp = updatedRide['otp'] ??
             updatedRide['ride_otp'] ??
             updatedRide['booking_otp'];
         if (incomingOtp != null) {
           _rideOtp = incomingOtp.toString();
-
         }
 
         // 3. Status State Machine
@@ -620,6 +866,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           _searchTimer?.cancel();
           _rideCheckTimer?.cancel();
           _stopDistanceUpdateTimer();
+          _stopNearbyDriversTimer();
+          _stopApproachRouteTimer();
+          _routeRefreshDebounce?.cancel();
+          _markers.removeWhere((m) => m.markerId.value.startsWith('nearby_'));
           socket?.off("ride_updated");
           FFAppState().bookingInProgress = false;
           FFAppState().currentRideId = null;
@@ -629,14 +879,20 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             _rideStatus = STATUS_ACCEPTED;
           }
           _searchTimer?.cancel();
+          _stopNearbyDriversTimer();
+          _markers.removeWhere((m) => m.markerId.value.startsWith('nearby_'));
+          _startApproachRouteTimer();
         } else if (status == 'arriving' || status == 'arrived') {
           // Backend/driver sends 'arrived' when driver reaches pickup; treat same as 'arriving'
           _rideStatus = STATUS_ARRIVING;
           _stopDistanceUpdateTimer();
+          _startApproachRouteTimer();
         } else if (status == 'started' ||
             status == 'picked_up' ||
             status == 'in_progress' ||
-            status == 'ontrip') {
+            status == 'ontrip' ||
+            status == 'trip_started') {
+          _stopApproachRouteTimer();
           // ✅ THIS HANDLES DIRECT START
           _rideStatus = STATUS_PICKED_UP;
           _searchTimer
@@ -655,6 +911,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             _searchTimer?.cancel();
             _rideCheckTimer?.cancel();
             _stopDistanceUpdateTimer();
+            _stopNearbyDriversTimer();
+            _stopApproachRouteTimer();
+            _routeRefreshDebounce?.cancel();
             navigateToComplete = true;
           }
         }
@@ -681,8 +940,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         _fetchDriverDetails(driverId);
       }
 
-      // 7. Refresh map when status changes (driver→pickup or pickup→drop)
-      if (_rideStatus == STATUS_ACCEPTED ||
+      // 7. Refresh map when status changes
+      if (_rideStatus == STATUS_SEARCHING) {
+        if (_nearbyDriversTimer == null || !_nearbyDriversTimer!.isActive) {
+          _startNearbyDriversTimer();
+        }
+        _initializeMap();
+      } else if (_rideStatus == STATUS_ACCEPTED ||
           _rideStatus == STATUS_ARRIVING ||
           _rideStatus == STATUS_PICKED_UP) {
         _initializeMap();
@@ -880,6 +1144,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             _rideStatus = STATUS_CANCELLED;
             _searchTimer?.cancel();
             _stopDistanceUpdateTimer();
+            _stopApproachRouteTimer();
+            _routeRefreshDebounce?.cancel();
           });
           FFAppState().bookingInProgress = false;
           FFAppState().currentRideId = null;
@@ -918,8 +1184,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           _searchSeconds = 0;
         });
 
-        // Restart search timer and re-initialize socket/map if needed
         _startSearchTimer();
+        _startNearbyDriversTimer();
         _initializeSocket();
         _initializeMap();
 
@@ -940,6 +1206,65 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       }
     } catch (e) {
       print('❌ Error during rebooking: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('An error occurred during rebooking.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      setState(() => _isRebooking = false);
+    }
+  }
+
+  Future<void> _handleRebookWithExtra(int extraAmount) async {
+    if (_isRebooking) return;
+    setState(() => _isRebooking = true);
+
+    try {
+      final response = await RebookRideCall.call(
+        rideId: widget.rideId,
+        token: FFAppState().accessToken,
+        extraFare: extraAmount,
+      );
+
+      if (response.succeeded) {
+        final newRideId = RebookRideCall.newRideId(response.jsonBody);
+        final newFare = RebookRideCall.estimatedFare(response.jsonBody) ?? _estimatedFare;
+        final newExtra = RebookRideCall.extraFareResponse(response.jsonBody) ?? extraAmount.toDouble();
+
+        setState(() {
+          _rideStatus = STATUS_SEARCHING;
+          _cancelledByDriver = false;
+          _userInitiatedCancel = false;
+          _isRebooking = false;
+          _searchSeconds = 0;
+          _declineCount = 0;
+          _totalDriversNotified = 0;
+          _estimatedFare = newFare;
+          _extraFare = newExtra;
+        });
+
+        _startSearchTimer();
+        _startNearbyDriversTimer();
+        _initializeSocket();
+        _initializeMap();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Searching with + ₹$extraAmount extra!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Rebook failed: ${RebookRideCall.message(response.jsonBody) ?? "Unknown error"}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isRebooking = false);
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('An error occurred during rebooking.'),
@@ -1001,6 +1326,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     _searchTimer?.cancel();
     _rideCheckTimer?.cancel();
     _stopDistanceUpdateTimer();
+    _stopNearbyDriversTimer();
+    _stopApproachRouteTimer();
+    _routeRefreshDebounce?.cancel();
     try {
       socket?.off("ride_updated");
       socket?.disconnect();
@@ -1062,19 +1390,46 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               ),
             ),
 
+            // Map refresh / recenter button (similar to driver app)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 80,
+              right: 16,
+              child: Material(
+                color: Colors.white,
+                elevation: 6.0,
+                shadowColor: Colors.black26,
+                shape: const CircleBorder(),
+                child: IconButton(
+                  tooltip: 'Show full route',
+                  onPressed: () async {
+                    try {
+                      await _initializeMap();
+                      if (mounted) _fitMapToRideContext();
+                    } catch (e) {
+                      debugPrint('Error refreshing map: $e');
+                    }
+                  },
+                  icon: const Icon(
+                    Icons.my_location_rounded,
+                    color: Color(0xFFFF7B10),
+                  ),
+                ),
+              ),
+            ),
+
             // Header (Stays on top)
             Positioned(top: 0, left: 0, right: 0, child: _buildHeader()),
 
             // 3. Draggable Bottom Sheet (Driver Details / Search)
             DraggableScrollableSheet(
-              initialChildSize: _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED ? 0.45 : 0.35,
+              initialChildSize: _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED ? 0.45 : 0.45,
               minChildSize: _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED ? 0.45 : 0.25,
-              maxChildSize: _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED ? 0.45 : 0.85,
+              maxChildSize: _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED ? 0.45 : 0.90,
               builder: (context, scrollController) {
                 return Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.1),
@@ -1417,6 +1772,11 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         child: SearchingRideComponent(
           searchSeconds: _searchSeconds,
           onCancel: _showCancelDialog,
+          declineCount: _declineCount,
+          totalDriversNotified: _totalDriversNotified,
+          estimatedFare: _estimatedFare,
+          extraFare: _extraFare,
+          onRebookWithExtra: _handleRebookWithExtra,
         ),
       );
     } else if (_rideStatus == STATUS_CANCELLED) {
