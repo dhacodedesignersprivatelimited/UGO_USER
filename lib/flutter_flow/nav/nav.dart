@@ -80,6 +80,18 @@ class AppStateNotifier extends ChangeNotifier {
   }
 }
 
+/// Shared builder for [RideRequestScreen] (Rapido-style tracking). Used for both
+/// [AutoBookWidget.routePath] (legacy) and [RideRequestScreen.routePath] (canonical).
+Widget ffRideRequestScreenBuilder(BuildContext context, FFParameters params) {
+  return RideRequestScreen(
+    rideId: params.getParam('rideId', ParamType.int)!,
+    initialRideStatus: params.getParam('initialRideStatus', ParamType.String) ??
+        params.getParam('status', ParamType.String),
+    totalDistanceKm: params.getParam('totalDistanceKm', ParamType.double),
+    totalDuration: params.getParam('totalDuration', ParamType.String),
+  );
+}
+
 GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
   initialLocation: '/',
   debugLogDiagnostics: kDebugMode,
@@ -211,10 +223,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       name: AutoBookWidget.routeName,
       path: AutoBookWidget.routePath,
       requireAuth: true,
-      builder: (context, params) => AutoBookWidget(
-        rideId: params.getParam('rideId', ParamType.int)!,
-        initialRideStatus: params.getParam('initialRideStatus', ParamType.String),
-      ),
+      builder: ffRideRequestScreenBuilder,
+    ),
+    FFRoute(
+      name: RideRequestScreen.routeName,
+      path: RideRequestScreen.routePath,
+      requireAuth: true,
+      builder: ffRideRequestScreenBuilder,
     ),
     FFRoute(
       name: RideChatWidget.routeName,

@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '/app_state.dart';
-import '/auto_book/auto_book_widget.dart';
+import '/ride_request/ride_request_screen.dart';
 import '/flutter_flow/nav/nav.dart';
 import '/ridecomplete/ridecomplete_widget.dart';
 
@@ -28,7 +28,7 @@ const _kType = 'type';
 const _kTypeAlt = 'event';
 const _kTypeAlt2 = 'action';
 
-/// Ride-related notification types that should open AutoBook.
+/// Ride-related notification types that should open [RideRequestScreen].
 const _kRideEventTypes = {
   'driver_assigned',
   'accepted',
@@ -73,7 +73,7 @@ void _handleRideNotification(
   }
   if (_kRideEventTypes.contains(eventType) || eventType == null) {
     router.pushNamed(
-      AutoBookWidget.routeName,
+      RideRequestScreen.routeName,
       queryParameters: {'rideId': rideId.toString()},
     );
   }
@@ -130,7 +130,10 @@ void setupFirebaseMessaging(GoRouter router) {
       FFAppState().bookingInProgress = true;
 
       final currentLocation = router.getCurrentLocation();
-      final alreadyOnRide = currentLocation.contains('autoBook') || currentLocation.contains('auto-book');
+      final alreadyOnRide = currentLocation.contains('autoBook') ||
+          currentLocation.contains('auto-book') ||
+          currentLocation.contains('rideRequest') ||
+          currentLocation.contains('ride-request');
       final alreadyOnComplete = currentLocation.contains('ridecomplete');
 
       if (!alreadyOnRide && !alreadyOnComplete) {

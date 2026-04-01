@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 
-import '/auto_book/auto_book_widget.dart';
+import '/ride_request/ride_request_screen.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/login/login_widget.dart';
 
-/// Fetches the user's active ride from the backend and opens [AutoBookWidget] when needed.
+/// Fetches the user's active ride from the backend and opens [RideRequestScreen] when needed.
 /// Used on cold start (Home) and when the app returns to foreground so riders don't stay on Home
 /// during an ongoing trip.
 class ActiveRideNavigation {
@@ -33,6 +33,8 @@ class ActiveRideNavigation {
       final loc = router.getCurrentLocation();
       if (loc.contains('autoBook') ||
           loc.contains('auto-book') ||
+          loc.contains('rideRequest') ||
+          loc.contains('ride-request') ||
           loc.contains('ridecomplete') ||
           loc.contains('ride-complete')) {
         return null;
@@ -106,7 +108,7 @@ class ActiveRideNavigation {
       FFAppState().currentRideId = id;
 
       router.pushNamed(
-        AutoBookWidget.routeName,
+        RideRequestScreen.routeName,
         queryParameters: {'rideId': id.toString()},
       );
       return response;

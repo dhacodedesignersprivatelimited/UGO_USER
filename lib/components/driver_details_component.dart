@@ -215,7 +215,6 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
           GetDriverDetailsCall.vehicleNumber(driverData),
         ]) ??
         '';
-
     // Vehicle model: build from name + model + color
     final vName = _firstNonEmpty([
       ride?['vehicle_name']?.toString(),
@@ -301,11 +300,8 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
             driverLng != null &&
             FFAppState().pickupLatitude != null &&
             FFAppState().pickupLongitude != null) {
-          approachingPickupKm = _calculateDistanceKm(
-              driverLat,
-              driverLng,
-              FFAppState().pickupLatitude!,
-              FFAppState().pickupLongitude!);
+          approachingPickupKm = _calculateDistanceKm(driverLat, driverLng,
+              FFAppState().pickupLatitude!, FFAppState().pickupLongitude!);
         }
         if (approachingPickupKm != null) {
           approachingEtaFallbackMins =
@@ -344,7 +340,6 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
               ),
             ),
             const SizedBox(height: 16),
-
             if (isStarted) ...[
               _buildStatusBanner(
                   'Ride in Progress', Icons.navigation_rounded, _kGreen),
@@ -358,7 +353,6 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
               ),
               const SizedBox(height: 12),
             ],
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -462,7 +456,9 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
                   ),
                 ),
                 Icon(
-                  isArriving ? Icons.near_me_rounded : Icons.directions_car_rounded,
+                  isArriving
+                      ? Icons.near_me_rounded
+                      : Icons.directions_car_rounded,
                   color: accent,
                   size: 22,
                 ),
@@ -567,7 +563,8 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
                 alignment: Alignment.center,
                 child: Text(
                   d.toUpperCase(),
-                  style: _font(size: 18, weight: FontWeight.w800, color: _kPrimary),
+                  style: _font(
+                      size: 18, weight: FontWeight.w800, color: _kPrimary),
                 ),
               );
             }).toList(),
@@ -618,14 +615,12 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
                 const SizedBox(height: 4),
                 Text(
                   vehicleModel.isNotEmpty ? vehicleModel : 'Vehicle',
-                  style: _font(
-                      size: 14, color: const Color(0xFF6B7280)),
+                  style: _font(size: 14, color: const Color(0xFF6B7280)),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   driverName,
-                  style: _font(
-                      size: 14, color: const Color(0xFF6B7280)),
+                  style: _font(size: 14, color: const Color(0xFF6B7280)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -835,8 +830,8 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
                   const SizedBox(height: 2),
                   Text(
                     amount,
-                    style:
-                        _font(size: 18, weight: FontWeight.w800, color: _kPrimary),
+                    style: _font(
+                        size: 18, weight: FontWeight.w800, color: _kPrimary),
                   ),
                 ],
               ),

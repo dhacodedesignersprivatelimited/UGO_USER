@@ -800,7 +800,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         _refreshCoinsFromBackend();
 
         context.pushNamed(
-          AutoBookWidget.routeName,
+          RideRequestScreen.routeName,
           queryParameters: {
             'rideId': rideId,
             'totalDistanceKm': googleDistanceKm?.toString(),
@@ -870,47 +870,105 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             ),
           ),
 
-          // 2. Top Bar
+          // 2. Top Bar (Rapido-style: compact header + trip summary chip)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: Container(
               padding: EdgeInsets.fromLTRB(
-                  16, MediaQuery.of(context).padding.top + 12, 16, 16),
+                  16, MediaQuery.of(context).padding.top + 10, 16, 14),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    theme.colorScheme.surface,
+                    theme.colorScheme.surface.withValues(alpha: 0.92),
+                  ],
+                ),
                 boxShadow: [
                   BoxShadow(
-                      color: isDark ? Colors.black54 : Colors.black12,
-                      blurRadius: 8,
-                      offset: Offset(0, 2))
+                      color: isDark
+                          ? Colors.black.withValues(alpha: 0.35)
+                          : Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4))
                 ],
               ),
               child: Row(
                 children: [
-                  InkWell(
-                    onTap: () => context.pop(),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(12)),
-                      child: Icon(Icons.arrow_back, size: 20, color: theme.colorScheme.onSurface),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => context.pop(),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: theme.colorScheme.outline.withValues(alpha: 0.12),
+                          ),
+                        ),
+                        child: Icon(Icons.arrow_back_rounded,
+                            size: 20, color: theme.colorScheme.onSurface),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Choose a ride',
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Choose your ride',
                           style: GoogleFonts.inter(
-                              fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
-                      Text(
-                          '${_formatDistance(currentDistance)} • ${googleDuration ?? "Calculating..."}',
-                          style: GoogleFonts.inter(
-                              fontSize: 13, color: theme.colorScheme.onSurfaceVariant)),
-                    ],
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                            height: 1.15,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF7B10).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFFFF7B10).withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.route_rounded,
+                                size: 16,
+                                color: const Color(0xFFFF7B10),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  '${_formatDistance(currentDistance)} · ${googleDuration ?? (isCalculatingRoute ? "Route…" : "—")}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -996,7 +1054,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                                 padding: const EdgeInsets.only(left: 20, right: 20, top: 8, bottom: 130), // Padding for bottom actions
                                 itemCount: vehicles.length,
                                 itemBuilder: (context, index) {
-                                  return _buildVehicleCard(vehicles[index], currentDistance, appState);
+                                  return _buildVehicleCard(
+                                      vehicles[index], currentDistance, appState, theme);
                                 },
                               );
                             },
@@ -1008,19 +1067,18 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                     // Fixed Bottom Section (Payment & Confirm)
                     Align(
                       alignment: Alignment.bottomCenter,
-                      child: Container(
-                        padding: const EdgeInsets.only(bottom: 0),
+                      child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: theme.colorScheme.surface,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, -5),
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 16,
+                              offset: const Offset(0, -6),
                             ),
                           ],
                         ),
-                        child: _buildBottomActions(appState),
+                        child: _buildBottomActions(appState, theme),
                       ),
                     ),
                   ],
@@ -1036,34 +1094,54 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
   Widget _buildEmptyState(FFAppState appState, ThemeData theme) {
     final category = appState.selectedRideCategory ?? 'ride';
     final label = category == 'bike' ? 'Bike' : category == 'car' ? 'Car' : category == 'auto' ? 'Auto' : 'ride';
+    const brand = Color(0xFFFF7B10);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.directions_car_outlined, size: 64, color: theme.colorScheme.onSurfaceVariant),
-            const SizedBox(height: 16),
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    brand.withValues(alpha: 0.2),
+                    brand.withValues(alpha: 0.06),
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+              ),
+              child: Icon(Icons.two_wheeler_rounded,
+                  size: 44, color: brand.withValues(alpha: 0.9)),
+            ),
+            const SizedBox(height: 20),
             Text(
-              'No $label rides available',
+              'No $label rides right now',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.4,
                 color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Try "Where to go?" for all options',
+              'See every vehicle type on the home screen,\nor pick another category.',
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 fontSize: 14,
+                height: 1.4,
+                fontWeight: FontWeight.w500,
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 20),
-            TextButton(
+            const SizedBox(height: 22),
+            ElevatedButton(
               onPressed: () {
                 FFAppState().selectedRideCategory = null;
                 setState(() {
@@ -1071,7 +1149,23 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                 });
                 _addMarkers();
               },
-              child: Text('Show all rides', style: GoogleFonts.inter(color: const Color(0xFFFF7B10), fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                foregroundColor: brand,
+                backgroundColor: brand.withValues(alpha: 0.12),
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: brand.withValues(alpha: 0.35)),
+                ),
+              ),
+              child: Text(
+                'Show all rides',
+                style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700, fontSize: 15),
+              ),
             ),
           ],
         ),
@@ -1079,7 +1173,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     );
   }
 
-  Widget _buildVehicleCard(dynamic data, double distance, FFAppState appState) {
+  Widget _buildVehicleCard(
+      dynamic data, double distance, FFAppState appState, ThemeData theme) {
     final pricing = getJsonField(data, r'''$.pricing''');
     final String vehicleId =
         getJsonField(data, r'''$.pricing.vehicle_id''')?.toString() ??
@@ -1124,14 +1219,23 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     if (imgUrl != null && !imgUrl.startsWith('http'))
       imgUrl = 'https://ugo-api.icacorp.org/$imgUrl';
 
-    // Styles
+    final surface = theme.colorScheme.surface;
+    final onSurface = theme.colorScheme.onSurface;
+    final onVar = theme.colorScheme.onSurfaceVariant;
+
     Color backgroundColor = isSelected
-        ? (isPro ? const Color(0xFFFFF9C4) : const Color(0xFFFFF8F0))
-        : (isPro ? const Color(0xFFFAFAFA) : Colors.white);
+        ? (isPro
+            ? const Color(0xFFFFF9C4)
+            : const Color(0xFFFFF8F0))
+        : (isPro
+            ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.65)
+            : surface);
 
     Color borderColor = isSelected
         ? (isPro ? const Color(0xFFFBC02D) : const Color(0xFFFF7B10))
-        : (isPro ? const Color(0xFFFFD54F) : Colors.grey[200]!);
+        : (isPro
+            ? const Color(0xFFFFD54F)
+            : theme.colorScheme.outline.withValues(alpha: 0.22));
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1147,26 +1251,37 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             appState.selectedBaseKmEnd = baseKmEnd;
           });
         },
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          // Adjusted padding slightly to give the crown room at the top
           padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: borderColor,
               width: isSelected ? 2 : (isPro ? 1.5 : 1),
             ),
-            boxShadow: isPro
-                ? [
-                    BoxShadow(
-                        color: Colors.amber.withValues(alpha:0.15),
-                        blurRadius: 8,
-                        offset: Offset(0, 4))
-                  ]
-                : [],
+            boxShadow: [
+              if (isPro)
+                BoxShadow(
+                  color: Colors.amber.withValues(alpha: 0.14),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              else if (isSelected)
+                BoxShadow(
+                  color: const Color(0xFFFF7B10).withValues(alpha: 0.12),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                )
+              else
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+            ],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -1247,11 +1362,11 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                   child: imgUrl != null
                       ? Image.network(imgUrl,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Icon(
+                          errorBuilder: (_, __, ___) => Icon(
                               Icons.directions_car,
-                              color: Colors.grey))
-                      : const Icon(Icons.directions_car,
-                          size: 40, color: Colors.grey),
+                              color: onVar))
+                      : Icon(Icons.directions_car,
+                          size: 40, color: onVar),
                 ),
               // =========================
               // END IMAGE SECTION
@@ -1266,22 +1381,34 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                   children: [
                     Row(
                       children: [
-                        Text(name,
-                            style: GoogleFonts.inter(
-                                fontSize: 16, fontWeight: FontWeight.bold)),
+                        Flexible(
+                          child: Text(name,
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
+                                color: onSurface,
+                              )),
+                        ),
                         const SizedBox(width: 6),
                         if (isPro)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                                horizontal: 7, vertical: 3),
                             decoration: BoxDecoration(
-                                color: Colors.orange,
-                                borderRadius: BorderRadius.circular(4)),
+                                gradient: const LinearGradient(
+                                  colors: [
+                                    Color(0xFFFF7B10),
+                                    Color(0xFFE86500),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(6)),
                             child: Text('PRO',
                                 style: GoogleFonts.inter(
                                     fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white)),
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5)),
                           ),
                       ],
                     ),
@@ -1289,7 +1416,9 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                     Text(
                         _getDriverAvailabilityText(data),
                         style: GoogleFonts.inter(
-                            fontSize: 12, color: Colors.grey[600])),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: onVar)),
                     if (isPro)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
@@ -1307,11 +1436,16 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                 children: [
                   Text('₹$displayFare',
                       style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isPro ? Colors.black : Colors.black87)),
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.4,
+                          color: onSurface)),
                   if (isPro)
-                    Icon(Icons.star, size: 16, color: Colors.amber[700])
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Icon(Icons.star_rounded,
+                          size: 18, color: Colors.amber[700]),
+                    )
                 ],
               ),
             ],
@@ -1321,7 +1455,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     );
   }
 
-  Widget _buildBottomActions(FFAppState appState) {
+  Widget _buildBottomActions(FFAppState appState, ThemeData theme) {
     final distance = googleDistanceKm ??
         (appState.pickupLatitude != null && appState.dropLatitude != null
             ? calculateDistance(
@@ -1355,32 +1489,41 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         ? 0
         : (estimatedFare - coinDiscountRs).round().clamp(0, 999999);
 
+    final surface = theme.colorScheme.surface;
+    final onSurface = theme.colorScheme.onSurface;
+    final onVar = theme.colorScheme.onSurfaceVariant;
+
     return Container(
       padding: EdgeInsets.fromLTRB(
-          16, 12, 16, MediaQuery.of(context).padding.bottom + 16),
+          18, 14, 18, MediaQuery.of(context).padding.bottom + 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        color: surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        border: Border(
+          top: BorderSide(
+            color: theme.colorScheme.outline.withValues(alpha: 0.08),
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, -4),
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 20,
+            offset: const Offset(0, -6),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Uber/Rapido-style: Payment method chips (inline selection)
           Row(
             children: [
               Text(
-                'Payment',
+                'Pay with',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.2,
+                  color: onVar,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1439,7 +1582,7 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                        color: onSurface,
                       ),
                     ),
                   ),
@@ -1522,35 +1665,64 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
               ),
             ),
           ],
-          const SizedBox(height: 14),
-          SizedBox(
+          const SizedBox(height: 16),
+          Container(
             width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: isLoadingRide || selectedVehicleType == null
+            height: 54,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: (isLoadingRide || selectedVehicleType == null)
                   ? null
-                  : _confirmBooking,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryOrange,
-                disabledBackgroundColor: Colors.grey[300],
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
+                  : const LinearGradient(
+                      colors: [Color(0xFFFF7B10), Color(0xFFE86500)],
+                    ),
+              color: (isLoadingRide || selectedVehicleType == null)
+                  ? theme.colorScheme.surfaceContainerHighest
+                  : null,
+              boxShadow: (isLoadingRide || selectedVehicleType == null)
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: primaryOrange.withValues(alpha: 0.35),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: isLoadingRide || selectedVehicleType == null
+                    ? null
+                    : _confirmBooking,
+                borderRadius: BorderRadius.circular(16),
+                child: Center(
+                  child: isLoadingRide
+                      ? SizedBox(
+                          width: 26,
+                          height: 26,
+                          child: CircularProgressIndicator(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : Text(
+                          selectedVehicleType != null && estimatedFare != null
+                              ? 'Book for ₹$amountToPay · ${_paymentDisplayLabel(selectedPaymentMethod)}'
+                              : 'Select a ride to continue',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                            color: (isLoadingRide ||
+                                    selectedVehicleType == null)
+                                ? onVar
+                                : Colors.white,
+                          ),
+                        ),
+                ),
               ),
-              child: isLoadingRide
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2.5))
-                  : Text(
-                      selectedVehicleType != null && estimatedFare != null
-                          ? 'Pay ₹$amountToPay via ${_paymentDisplayLabel(selectedPaymentMethod)}'
-                          : 'Select a ride to continue',
-                      style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white)),
             ),
           ),
         ],
@@ -1576,12 +1748,14 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected
-              ? primaryColor.withValues(alpha: 0.12)
-              : Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
+              ? primaryColor.withValues(alpha: 0.14)
+              : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? primaryColor : Colors.grey[300]!,
-            width: isSelected ? 1.5 : 1,
+            color: isSelected
+                ? primaryColor
+                : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+            width: isSelected ? 2 : 1,
           ),
         ),
         child: Row(
@@ -1590,15 +1764,19 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
             Icon(
               icon,
               size: 18,
-              color: isSelected ? primaryColor : Colors.grey[600],
+              color: isSelected
+                  ? primaryColor
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: GoogleFonts.inter(
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? primaryColor : Colors.grey[700],
+                fontWeight: FontWeight.w700,
+                color: isSelected
+                    ? primaryColor
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],

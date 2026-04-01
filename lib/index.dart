@@ -19,6 +19,7 @@ export '/support/support_widget.dart' show SupportWidget;
 export '/wallet/wallet_widget.dart' show WalletWidget;
 export '/balance/balance_widget.dart' show BalanceWidget;
 export '/auto_book/auto_book_widget.dart' show AutoBookWidget;
+export '/ride_request/ride_request_screen.dart' show RideRequestScreen;
 export '/ride_chat/ride_chat_widget.dart' show RideChatWidget;
 export '/bikebook/bikebook_widget.dart' show BikebookWidget;
 export '/avaliable_options/avaliable_options_widget.dart'

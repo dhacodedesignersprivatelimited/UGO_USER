@@ -1534,6 +1534,56 @@ class GetRideDetailsCall {
   }
 }
 
+/// Rapido-style: rider updates pickup/drop mid-ride; backend emits `ride_updated` + slim `ride_location_updated` (coords, distance, estimated_fare, final_fare).
+class PatchRideLocationsCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    required String token,
+    double? pickupLatitude,
+    double? pickupLongitude,
+    String? pickupLocationAddress,
+    double? dropLatitude,
+    double? dropLongitude,
+    String? dropLocationAddress,
+  }) async {
+    final body = <String, dynamic>{};
+    if (pickupLatitude != null &&
+        pickupLongitude != null &&
+        pickupLocationAddress != null &&
+        pickupLocationAddress.trim().length >= 3) {
+      body['pickup_latitude'] = pickupLatitude;
+      body['pickup_longitude'] = pickupLongitude;
+      body['pickup_location_address'] = pickupLocationAddress.trim();
+    }
+    if (dropLatitude != null &&
+        dropLongitude != null &&
+        dropLocationAddress != null &&
+        dropLocationAddress.trim().length >= 3) {
+      body['drop_latitude'] = dropLatitude;
+      body['drop_longitude'] = dropLongitude;
+      body['drop_location_address'] = dropLocationAddress.trim();
+    }
+    return ApiManager.instance.makeApiCall(
+      callName: 'patchRideLocations',
+      apiUrl: '$_baseUrl/api/rides/$rideId/locations',
+      callType: ApiCallType.PATCH,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode(body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      encodeBodyUtf8: false,
+      decodeUtf8: false,
+      cache: false,
+      isStreamingApi: false,
+      alwaysAllowBody: true,
+    );
+  }
+}
+
 /// Returns valid payment_method (cash|online|wallet), defaults to "cash"
 String _createRidePaymentMethod(String? paymentType) {
   final p = (paymentType ?? '').toString().trim().toLowerCase();
@@ -2042,11 +2092,19 @@ class GetVehicleInfoByDriverCall {
         response,
         r'''$.data.vehicle_model''',
       ));
-  static String? licensePlate(dynamic response) =>
-      castToType<String>(getJsonField(
-        response,
-        r'''$.data.license_plate''',
-      ));
+  static String? licensePlate(dynamic response) {
+    return castToType<String>(
+            getJsonField(response, r'''$.data.license_plate''')) ??
+        castToType<String>(
+            getJsonField(response, r'''$.data.vehicle.license_plate'''));
+  }
+  /// RC / registration when `license_plate` is empty on `by-driver` user payload.
+  static String? registrationNumber(dynamic response) {
+    return castToType<String>(
+            getJsonField(response, r'''$.data.registration_number''')) ??
+        castToType<String>(
+            getJsonField(response, r'''$.data.vehicle.registration_number'''));
+  }
   static String? vehicleName(dynamic response) =>
       castToType<String>(getJsonField(
         response,
@@ -2125,9 +2183,8 @@ class GetDriverDetailsCall {
     number = castToType<String>(
         getJsonField(response, r'''$.data.registration_number'''));
     if (number != null) return number;
-    final vehicleName = castToType<String>(
-        getJsonField(response, r'''$.data.adminVehicle.vehicle_name'''));
-    return vehicleName;
+    // Do not fall back to admin vehicle_name (e.g. "Auto") — category label, not a plate.
+    return null;
   }
 
   static String? vehicleModel(dynamic response) {

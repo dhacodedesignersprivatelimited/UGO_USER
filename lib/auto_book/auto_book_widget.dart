@@ -17,12 +17,16 @@ export 'auto_book_model.dart';
 import '/components/searching_ride_component.dart';
 import '/components/driver_details_component.dart';
 import '/components/ride_cancelled_component.dart';
+import '/ride_request/ride_location_patch_sheet.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 import '/ride_session.dart';
 import '/services/route_distance_service.dart';
+import 'package:go_router/go_router.dart';
 
+/// In-app ride request / trip UI. Prefer navigating via [RideRequestScreen.routeName];
+/// [routeName] / [routePath] remain valid aliases (same screen via router builder).
 class AutoBookWidget extends StatefulWidget {
   const AutoBookWidget({
     super.key,
@@ -75,6 +79,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   int _totalDriversNotified = 0;
   double _estimatedFare = 0;
   double _extraFare = 0;
+
+  /// Backend `no_driver_found` socket (30s no-accept nudge).
+  String? _noDriverNudgeMessage;
+  double? _serverSuggestedExtra;
+
+  /// Rapido-style: one "increase offer" dialog per search cycle at 30s (matches driver offer window).
+  bool _rapido30sIncreaseDialogShown = false;
 
   // UI Status
   String _rideStatus = 'searching';
@@ -579,11 +590,364 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   }
 
   void _startSearchTimer() {
+    _searchTimer?.cancel();
     _searchTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted && _rideStatus == STATUS_SEARCHING) {
-        setState(() => _searchSeconds++);
+      if (!mounted || _rideStatus != STATUS_SEARCHING) return;
+      final next = _searchSeconds + 1;
+      setState(() => _searchSeconds = next);
+      if (next == 30 && !_rapido30sIncreaseDialogShown) {
+        _rapido30sIncreaseDialogShown = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _rideStatus == STATUS_SEARCHING) {
+            _showRapidoIncreasePriceDialog();
+          }
+        });
       }
     });
+  }
+
+  int _rapidoSuggestedExtraRs() {
+    var base = _estimatedFare;
+    if (base <= 0 && ridesCache.isNotEmpty) {
+      base = double.tryParse(
+              ridesCache[0]['estimated_fare']?.toString() ?? '') ??
+          0;
+    }
+    final sug = _serverSuggestedExtra;
+    if (sug != null && sug > 0) {
+      return sug.round().clamp(1, 100000);
+    }
+    if (base > 0) {
+      return (base * 0.2).round().clamp(1, 100000);
+    }
+    return 20;
+  }
+
+  /// Shown at 30s while still searching (same cadence as driver card timeout + backend nudge).
+  void _showRapidoIncreasePriceDialog() {
+    if (!mounted || _rideStatus != STATUS_SEARCHING) return;
+    final extraRs = _rapidoSuggestedExtraRs();
+    const deepOrange = Color(0xFFE86500);
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(26),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFFF8A3D),
+                      primaryColor,
+                      deepOrange,
+                    ],
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.local_fire_department_rounded,
+                        color: Colors.white,
+                        size: 36,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'No captain free yet',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'A quick fare boost helps you get picked up faster.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        height: 1.4,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.95),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: double.infinity,
+                color: const Color(0xFFFFFBF7),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: primaryColor.withValues(alpha: 0.35),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.trending_up_rounded,
+                              color: deepOrange, size: 22),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Suggested boost',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF5D4037),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '+ ₹$extraRs',
+                            style: GoogleFonts.inter(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              color: deepOrange,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _handleRebookWithExtra(extraRs);
+                        },
+                        borderRadius: BorderRadius.circular(16),
+                        child: Ink(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            gradient: const LinearGradient(
+                              colors: [primaryColor, deepOrange],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withValues(alpha: 0.4),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 54,
+                            child: Center(
+                              child: Text(
+                                'Boost & search again · + ₹$extraRs',
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        style: TextButton.styleFrom(
+                          foregroundColor: deepOrange,
+                        ),
+                        child: Text(
+                          'Keep searching',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _cancelRide('Cancelled while waiting for driver');
+                      },
+                      child: Text(
+                        'Cancel ride',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool get _canEditPickupLocation {
+    const ok = {
+      'searching',
+      'accepted',
+      'arriving',
+      'arrived',
+      'driver_assigned',
+    };
+    return ok.contains(_rideStatus.toLowerCase());
+  }
+
+  bool get _canEditDropLocation {
+    const ok = {
+      'searching',
+      'accepted',
+      'arriving',
+      'arrived',
+      'driver_assigned',
+      'started',
+      'picked_up',
+      'in_progress',
+      'ontrip',
+      'on_trip',
+      'qr_scanned',
+    };
+    return ok.contains(_rideStatus.toLowerCase());
+  }
+
+  bool get _showEditLocationAction =>
+      (_canEditPickupLocation || _canEditDropLocation) &&
+      _rideStatus != STATUS_COMPLETED &&
+      _rideStatus != STATUS_CANCELLED;
+
+  void _showEditLocationMenu() {
+    final p = _canEditPickupLocation;
+    final d = _canEditDropLocation;
+    if (p && !d) {
+      _openLocationPatchSheet(editPickup: true);
+      return;
+    }
+    if (!p && d) {
+      _openLocationPatchSheet(editPickup: false);
+      return;
+    }
+    if (!p && !d) return;
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.trip_origin, color: Colors.green),
+              title: const Text('Edit pickup'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _openLocationPatchSheet(editPickup: true);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.flag, color: Colors.red),
+              title: const Text('Edit drop'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _openLocationPatchSheet(editPickup: false);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openLocationPatchSheet({required bool editPickup}) async {
+    if (ridesCache.isEmpty) return;
+    final ride = ridesCache.first;
+    final lat = editPickup
+        ? double.tryParse(ride['pickup_latitude']?.toString() ?? '')
+        : double.tryParse(ride['drop_latitude']?.toString() ?? '');
+    final lng = editPickup
+        ? double.tryParse(ride['pickup_longitude']?.toString() ?? '')
+        : double.tryParse(ride['drop_longitude']?.toString() ?? '');
+    final address = editPickup
+        ? (ride['pickup_location_address'] ?? '').toString()
+        : (ride['drop_location_address'] ?? '').toString();
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => RideLocationPatchSheet(
+        rideId: widget.rideId,
+        editPickup: editPickup,
+        initialLat: lat ?? AppConfig.defaultLat,
+        initialLng: lng ?? AppConfig.defaultLng,
+        initialAddress: address,
+      ),
+    );
+
+    if (result == true && mounted) {
+      final r = await GetRideDetailsCall.call(
+        rideId: widget.rideId,
+        token: FFAppState().accessToken,
+      );
+      if (r.succeeded && mounted) {
+        final rideData =
+            getJsonField(r.jsonBody, r'$.data') ?? r.jsonBody;
+        if (rideData is Map<String, dynamic>) {
+          _processRideUpdate(rideData);
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Route updated. Driver notified.'),
+            backgroundColor: Color(0xFF2E7D32),
+          ),
+        );
+      }
+    }
   }
 
   void _startDistanceUpdateTimer() {
@@ -721,6 +1085,20 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     }
   }
 
+  void _disposeSocket() {
+    try {
+      socket?.off('ride_updated');
+      socket?.off('ride_location_updated');
+      socket?.off('no_driver_found');
+      socket?.off('ride_completed');
+      socket?.off('location_update');
+      socket?.off('driver_location_update');
+      socket?.disconnect();
+      socket?.dispose();
+    } catch (_) {}
+    socket = null;
+  }
+
   void _initializeSocket() {
     final String token = FFAppState().accessToken;
     if (token.isEmpty) {
@@ -729,6 +1107,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     }
 
     try {
+      _disposeSocket();
       // 1. Initialize Socket
       socket = IO.io(
         _baseUrl,
@@ -761,6 +1140,65 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         print("📡 Socket Event Received");
         if (data != null) {
           _processRideUpdate(data);
+        }
+      });
+
+      socket!.on('ride_location_updated', (data) {
+        if (!mounted || data is! Map) return;
+        final m = Map<String, dynamic>.from(data);
+        final rid = m['ride_id'] ?? m['rideId'];
+        final id = rid is int ? rid : int.tryParse(rid?.toString() ?? '');
+        if (id != null && id != widget.rideId) return;
+        if (ridesCache.isEmpty) return;
+        setState(() {
+          final cur = Map<String, dynamic>.from(ridesCache.first);
+          if (m['pickup_updated'] == true) {
+            if (m['pickup_latitude'] != null) {
+              cur['pickup_latitude'] = m['pickup_latitude'];
+            }
+            if (m['pickup_longitude'] != null) {
+              cur['pickup_longitude'] = m['pickup_longitude'];
+            }
+            if (m['pickup_location_address'] != null) {
+              cur['pickup_location_address'] = m['pickup_location_address'];
+            }
+          }
+          if (m['drop_updated'] == true) {
+            if (m['drop_latitude'] != null) {
+              cur['drop_latitude'] = m['drop_latitude'];
+            }
+            if (m['drop_longitude'] != null) {
+              cur['drop_longitude'] = m['drop_longitude'];
+            }
+            if (m['drop_location_address'] != null) {
+              cur['drop_location_address'] = m['drop_location_address'];
+            }
+          }
+          if (m['estimated_fare'] != null) {
+            cur['estimated_fare'] = m['estimated_fare'];
+          }
+          if (m['final_fare'] != null) {
+            cur['final_fare'] = m['final_fare'];
+          }
+          if (m['ride_distance_km'] != null) {
+            cur['ride_distance_km'] = m['ride_distance_km'];
+          }
+          ridesCache = [cur];
+          RideSession().rideData = cur;
+          final ff = m['final_fare'];
+          final ef = m['estimated_fare'];
+          if (ff != null) {
+            _estimatedFare =
+                double.tryParse(ff.toString()) ?? _estimatedFare;
+          } else if (ef != null) {
+            _estimatedFare =
+                double.tryParse(ef.toString()) ?? _estimatedFare;
+          }
+        });
+        _initializeMap();
+        _ensureTotalRoadDistance();
+        if (_rideStatus == STATUS_PICKED_UP) {
+          _updateRemainingDistance();
         }
       });
 
@@ -807,6 +1245,30 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         }
       });
 
+      socket!.on('no_driver_found', (data) {
+        if (!mounted || data is! Map) return;
+        final m = Map<String, dynamic>.from(data);
+        final rid = m['ride_id'];
+        final id = rid is int ? rid : int.tryParse(rid?.toString() ?? '');
+        if (id != null && id != widget.rideId) return;
+        if (_rideStatus != STATUS_SEARCHING) return;
+        final msg = m['message']?.toString();
+        final sug = m['suggested_increase'];
+        final extra = sug is num
+            ? sug.toDouble()
+            : double.tryParse(sug?.toString() ?? '');
+        final bannerText = (msg != null && msg.isNotEmpty)
+            ? msg
+            : 'Try increasing your offer to get a driver faster.';
+        if (!mounted) return;
+        setState(() {
+          _noDriverNudgeMessage = bannerText;
+          _serverSuggestedExtra =
+              (extra != null && extra > 0) ? extra : null;
+        });
+        // Banner in SearchingRideComponent + optional 30s dialog; skip duplicate SnackBar.
+      });
+
       // 4. Connect
       socket!.connect();
     } catch (e) {
@@ -841,13 +1303,23 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           ridesCache = [updatedRide];
         }
 
+        if (status != 'searching') {
+          _noDriverNudgeMessage = null;
+          _serverSuggestedExtra = null;
+        }
+
         // 1b. Extract decline count and fare info
         final dc = updatedRide['decline_count'];
         if (dc != null) _declineCount = int.tryParse(dc.toString()) ?? _declineCount;
         final tdn = updatedRide['total_drivers_notified'];
         if (tdn != null) _totalDriversNotified = int.tryParse(tdn.toString()) ?? _totalDriversNotified;
+        final ff = updatedRide['final_fare'];
         final ef = updatedRide['estimated_fare'];
-        if (ef != null) _estimatedFare = double.tryParse(ef.toString()) ?? _estimatedFare;
+        if (ff != null) {
+          _estimatedFare = double.tryParse(ff.toString()) ?? _estimatedFare;
+        } else if (ef != null) {
+          _estimatedFare = double.tryParse(ef.toString()) ?? _estimatedFare;
+        }
         final xf = updatedRide['extra_fare'];
         if (xf != null) _extraFare = double.tryParse(xf.toString()) ?? _extraFare;
 
@@ -871,6 +1343,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           _routeRefreshDebounce?.cancel();
           _markers.removeWhere((m) => m.markerId.value.startsWith('nearby_'));
           socket?.off("ride_updated");
+          socket?.off('ride_location_updated');
+          socket?.off('no_driver_found');
           FFAppState().bookingInProgress = false;
           FFAppState().currentRideId = null;
           RideSession().clear();
@@ -1031,6 +1505,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       Map<String, dynamic> rideData) async {
     _stopDistanceUpdateTimer();
     socket?.off("ride_updated");
+    socket?.off('ride_location_updated');
+    socket?.off('no_driver_found');
 
     RideSession().rideData = rideData;
     FFAppState().currentRideId = widget.rideId;
@@ -1175,13 +1651,40 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       );
 
       if (response.succeeded) {
-        // Clear cancel flags and reset status to searching
+        final newRideId = RebookRideCall.newRideId(response.jsonBody);
+        final newFare = RebookRideCall.estimatedFare(response.jsonBody);
+        final newExtra = RebookRideCall.extraFareResponse(response.jsonBody) ?? 0.0;
+
+        if (mounted &&
+            newRideId != null &&
+            newRideId != widget.rideId) {
+          FFAppState().currentRideId = newRideId;
+          FFAppState().bookingInProgress = true;
+          context.pushReplacementNamed(
+            RideRequestScreen.routeName,
+            queryParameters: {
+              'rideId': '$newRideId',
+              if (_totalRoadDistanceKm != null)
+                'totalDistanceKm': _totalRoadDistanceKm!.toString(),
+              if (_liveEtaText != null && _liveEtaText!.trim().isNotEmpty)
+                'totalDuration': _liveEtaText!,
+            },
+          );
+          return;
+        }
+
+        if (!mounted) return;
         setState(() {
           _rideStatus = STATUS_SEARCHING;
           _cancelledByDriver = false;
           _userInitiatedCancel = false;
           _isRebooking = false;
           _searchSeconds = 0;
+          _rapido30sIncreaseDialogShown = false;
+          _noDriverNudgeMessage = null;
+          _serverSuggestedExtra = null;
+          if (newFare != null) _estimatedFare = newFare;
+          _extraFare = newExtra;
         });
 
         _startSearchTimer();
@@ -1189,12 +1692,14 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         _initializeSocket();
         _initializeMap();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Rebooking successful! Searching for drivers...'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Rebooking successful! Searching for drivers...'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1232,16 +1737,38 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         final newFare = RebookRideCall.estimatedFare(response.jsonBody) ?? _estimatedFare;
         final newExtra = RebookRideCall.extraFareResponse(response.jsonBody) ?? extraAmount.toDouble();
 
+        if (mounted &&
+            newRideId != null &&
+            newRideId != widget.rideId) {
+          FFAppState().currentRideId = newRideId;
+          FFAppState().bookingInProgress = true;
+          context.pushReplacementNamed(
+            RideRequestScreen.routeName,
+            queryParameters: {
+              'rideId': '$newRideId',
+              if (_totalRoadDistanceKm != null)
+                'totalDistanceKm': _totalRoadDistanceKm!.toString(),
+              if (_liveEtaText != null && _liveEtaText!.trim().isNotEmpty)
+                'totalDuration': _liveEtaText!,
+            },
+          );
+          return;
+        }
+
+        if (!mounted) return;
         setState(() {
           _rideStatus = STATUS_SEARCHING;
           _cancelledByDriver = false;
           _userInitiatedCancel = false;
           _isRebooking = false;
           _searchSeconds = 0;
+          _rapido30sIncreaseDialogShown = false;
           _declineCount = 0;
           _totalDriversNotified = 0;
           _estimatedFare = newFare;
           _extraFare = newExtra;
+          _noDriverNudgeMessage = null;
+          _serverSuggestedExtra = null;
         });
 
         _startSearchTimer();
@@ -1329,11 +1856,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     _stopNearbyDriversTimer();
     _stopApproachRouteTimer();
     _routeRefreshDebounce?.cancel();
-    try {
-      socket?.off("ride_updated");
-      socket?.disconnect();
-      socket?.dispose();
-    } catch (_) {}
+    _disposeSocket();
     _model.dispose();
     super.dispose();
   }
@@ -1385,7 +1908,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                 myLocationButtonEnabled: false,
                 mapType: MapType.normal,
                 padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).size.height * 0.4, // Keep markers above collapsed sheet
+                  bottom: _rideStatus == STATUS_SEARCHING
+                      ? MediaQuery.of(context).size.height * 0.11
+                      : MediaQuery.of(context).size.height * 0.4,
                 ),
               ),
             ),
@@ -1422,9 +1947,15 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
             // 3. Draggable Bottom Sheet (Driver Details / Search)
             DraggableScrollableSheet(
-              initialChildSize: _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED ? 0.45 : 0.45,
-              minChildSize: _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED ? 0.45 : 0.25,
-              maxChildSize: _rideStatus == STATUS_SEARCHING || _rideStatus == STATUS_CANCELLED ? 0.45 : 0.90,
+              initialChildSize: _rideStatus == STATUS_SEARCHING
+                  ? 0.88
+                  : (_rideStatus == STATUS_CANCELLED ? 0.45 : 0.45),
+              minChildSize: _rideStatus == STATUS_SEARCHING
+                  ? 0.38
+                  : (_rideStatus == STATUS_CANCELLED ? 0.45 : 0.25),
+              maxChildSize: _rideStatus == STATUS_SEARCHING
+                  ? 0.96
+                  : (_rideStatus == STATUS_CANCELLED ? 0.45 : 0.90),
               builder: (context, scrollController) {
                 return Container(
                   decoration: BoxDecoration(
@@ -1432,12 +1963,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, -4),
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 24,
+                        offset: const Offset(0, -6),
                       ),
                     ],
                   ),
+                  clipBehavior: Clip.antiAlias,
                   child: _buildBottomComponent(scrollController),
                 );
               },
@@ -1688,6 +2220,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                   GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700),
             ),
           ),
+          if (_showEditLocationAction)
+            IconButton(
+              onPressed: _showEditLocationMenu,
+              icon: const Icon(Icons.edit_location_alt_outlined),
+              color: primaryColor,
+              tooltip: 'Edit pickup or drop',
+            ),
           if (_rideStatus != STATUS_SEARCHING) ...[
             GestureDetector(
               onTap: _handleSosPressed,
@@ -1767,17 +2306,28 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
   Widget _buildBottomComponent(ScrollController scrollController) {
     if (_rideStatus == STATUS_SEARCHING) {
-      return SingleChildScrollView(
+      final bottomInset = MediaQuery.paddingOf(context).bottom;
+      return CustomScrollView(
         controller: scrollController,
-        child: SearchingRideComponent(
-          searchSeconds: _searchSeconds,
-          onCancel: _showCancelDialog,
-          declineCount: _declineCount,
-          totalDriversNotified: _totalDriversNotified,
-          estimatedFare: _estimatedFare,
-          extraFare: _extraFare,
-          onRebookWithExtra: _handleRebookWithExtra,
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
         ),
+        slivers: [
+          SliverToBoxAdapter(
+            child: SearchingRideComponent(
+              searchSeconds: _searchSeconds,
+              onCancel: _showCancelDialog,
+              declineCount: _declineCount,
+              totalDriversNotified: _totalDriversNotified,
+              estimatedFare: _estimatedFare,
+              extraFare: _extraFare,
+              onRebookWithExtra: _handleRebookWithExtra,
+              serverNudgeMessage: _noDriverNudgeMessage,
+              serverSuggestedExtra: _serverSuggestedExtra,
+            ),
+          ),
+          SliverToBoxAdapter(child: SizedBox(height: 12 + bottomInset)),
+        ],
       );
     } else if (_rideStatus == STATUS_CANCELLED) {
       return SingleChildScrollView(
