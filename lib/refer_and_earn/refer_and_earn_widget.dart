@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/utils/coin_wallet_inr.dart';
@@ -12,15 +14,17 @@ export 'refer_and_earn_model.dart';
 
 /// Vibrant Refer & Earn palette — high contrast, friendly “coach” energy.
 class _ReferPalette {
-  static const Color violet = Color(0xFF5B21B6);
-  static const Color violetLight = Color(0xFF7C3AED);
-  static const Color coral = Color(0xFFFF4D2E);
+  static const Color primary = Color(0xFFFF8A00); // Ugo Orange
+  static const Color primaryDark = Color(0xFFE67A00);
+  static const Color primaryLight = Color(0xFFFFCC99);
+  static const Color accent = Color(0xFFFF4D00); // Deep Orange
   static const Color sun = Color(0xFFFFB547);
   static const Color mint = Color(0xFF10B981);
   static const Color ocean = Color(0xFF0EA5E9);
-  static const Color ink = Color(0xFF0F172A);
+  static const Color ink = Color(0xFF1A1A1A);
   static const Color cream = Color(0xFFFFFBF5);
   static const Color card = Colors.white;
+  static const Color glass = Color(0xCCFFFFFF);
 }
 
 class ReferAndEarnWidget extends StatefulWidget {
@@ -202,29 +206,47 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
   }
 
   String get _referralSharePlain =>
-      'Hey! Join UGO for Pro rides.\n\nUse my code: $_referralCode\n\nAdd it in the app at signup or Profile → Referral.';
+      '🚖 *Join UGO Taxi!* 🚖\n\n'
+      'Get premium rides at great prices. Use my Referral Code: *$_referralCode* 🎁\n\n'
+      'Download now:\n'
+      'https://play.google.com/store/apps/details?id=com.ugotaxi_rajkumar.user';
+
+  Future<XFile> _getLogoXFile() async {
+    final byteData = await rootBundle.load('assets/images/app_launcher_icon.png');
+    final tempDir = await getTemporaryDirectory();
+    final file = File('${tempDir.path}/ugo_referral_logo.png');
+    await file.writeAsBytes(byteData.buffer.asUint8List());
+    return XFile(file.path);
+  }
 
   Future<void> _shareOnWhatsApp() async {
     if (_referralCode.isEmpty) return;
-    final message = Uri.encodeComponent(_referralSharePlain);
-    final whatsappUrl = Uri.parse('whatsapp://send?text=$message');
-    final fallback =
-        Uri.parse('https://api.whatsapp.com/send?text=$message');
-    if (await canLaunchUrl(whatsappUrl)) {
-      await launchUrl(whatsappUrl);
-    } else {
+    try {
+      final logo = await _getLogoXFile();
+      await Share.shareXFiles(
+        [logo],
+        text: _referralSharePlain,
+      );
+    } catch (e) {
+      // Fallback to text only if image fails
+      final message = Uri.encodeComponent(_referralSharePlain);
+      final fallback = Uri.parse('https://api.whatsapp.com/send?text=$message');
       await launchUrl(fallback, mode: LaunchMode.externalApplication);
     }
   }
 
   Future<void> _shareViaSystemSheet() async {
     if (_referralCode.isEmpty) return;
-    await SharePlus.instance.share(
-      ShareParams(
+    try {
+      final logo = await _getLogoXFile();
+      await Share.shareXFiles(
+        [logo],
         text: _referralSharePlain,
-        subject: 'UGO — my referral code',
-      ),
-    );
+        subject: 'UGO — Join me for Pro rides!',
+      );
+    } catch (e) {
+      await Share.share(_referralSharePlain, subject: 'UGO — Referral');
+    }
   }
 
   Future<void> _shareViaSms() async {
@@ -249,7 +271,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
                 style: GoogleFonts.inter(color: Colors.white)),
           ],
         ),
-        backgroundColor: _ReferPalette.violetLight,
+        backgroundColor: _ReferPalette.primaryLight,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -308,13 +330,13 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
                         colors: [
-                          _ReferPalette.violetLight,
-                          _ReferPalette.coral,
+                          _ReferPalette.primaryLight,
+                          _ReferPalette.accent,
                         ],
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: _ReferPalette.coral.withValues(alpha: 0.35),
+                          color: _ReferPalette.accent.withValues(alpha: 0.35),
                           blurRadius: 24,
                           offset: const Offset(0, 8),
                         ),
@@ -345,7 +367,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       child: SlideTransition(
         position: _slideAnim,
         child: RefreshIndicator(
-          color: _ReferPalette.coral,
+          color: _ReferPalette.accent,
           onRefresh: () => _fetchUserData(showPageLoader: false),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(
@@ -357,7 +379,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
                 pinned: true,
                 stretch: true,
                 elevation: 0,
-                backgroundColor: _ReferPalette.violet,
+                backgroundColor: _ReferPalette.primary,
                 leading: IconButton(
                   icon: const Icon(Icons.arrow_back_ios_new_rounded,
                       color: Colors.white, size: 20),
@@ -383,11 +405,11 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              Color(0xFF4C1D95),
-                              Color(0xFF7C3AED),
-                              Color(0xFFFF6B4A),
+                              _ReferPalette.primaryDark,
+                              _ReferPalette.primary,
+                              Color(0xFFFFB366), // Peach/Light Orange
                             ],
-                            stops: [0.0, 0.55, 1.0],
+                            stops: [0.0, 0.5, 1.0],
                           ),
                         ),
                       ),
@@ -542,7 +564,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: _ReferPalette.violetLight),
+          Icon(icon, size: 18, color: _ReferPalette.primaryLight),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -569,7 +591,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       ),
       child: Row(
         children: [
-          Icon(Icons.hourglass_top_rounded, color: _ReferPalette.coral, size: 28),
+          Icon(Icons.hourglass_top_rounded, color: _ReferPalette.accent, size: 28),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -602,112 +624,134 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1E1B4B), Color(0xFF312E81), Color(0xFF4C1D95)],
+          colors: [
+            _ReferPalette.primary.withOpacity(0.9),
+            _ReferPalette.primaryDark,
+            _ReferPalette.accent,
+          ],
         ),
         boxShadow: [
           BoxShadow(
-            color: _ReferPalette.violet.withValues(alpha: 0.45),
+            color: _ReferPalette.primary.withOpacity(0.4),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _ReferPalette.sun.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '10 coins = ₹1 ride discount',
-                  style: GoogleFonts.inter(
-                    color: _ReferPalette.sun,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Your balance',
-            style: GoogleFonts.inter(
-              color: Colors.white70,
-              fontSize: 13,
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Icon(
+              Icons.stars_rounded,
+              size: 100,
+              color: Colors.white.withOpacity(0.12),
             ),
           ),
-          const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '$_coinsBalance',
-                style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 42,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 6),
-                child: Text(
-                  'coins',
-                  style: GoogleFonts.inter(
-                    color: Colors.white70,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              Row(
                 children: [
-                  Text(
-                    '≈ ₹${r.toStringAsFixed(2)}',
-                    style: GoogleFonts.poppins(
-                      color: _ReferPalette.mint,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ),
-                  Text(
-                    'off next rides',
-                    style: GoogleFonts.inter(
-                      color: Colors.white54,
-                      fontSize: 11,
+                    child: Text(
+                      '10 coins = ₹1 ride discount',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 18),
+              Text(
+                'YOUR COIN STASH',
+                style: GoogleFonts.inter(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '$_coinsBalance',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 48,
+                      fontWeight: FontWeight.w800,
+                      height: 1,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, bottom: 6),
+                    child: Text(
+                      'coins',
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '≈ ₹${r.toStringAsFixed(2)}',
+                        style: GoogleFonts.poppins(
+                          color: _ReferPalette.sun,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        'next ride off',
+                        style: GoogleFonts.inter(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              if (_walletCoinsLedger != null) ...[
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _walletMini('Earned', '${_walletCoinsLedger!['total_earned_coins']}'),
+                      _walletMini('Used', '${_walletCoinsLedger!['total_used_coins']}'),
+                      _walletMini('Avail.', '${_walletCoinsLedger!['available_coins']}'),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
-          if (_walletCoinsLedger != null &&
-              (_walletCoinsLedger!['total_earned_coins']! > 0 ||
-                  _walletCoinsLedger!['total_used_coins']! > 0)) ...[
-            const SizedBox(height: 16),
-            Divider(color: Colors.white.withValues(alpha: 0.15)),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _walletMini(
-                    'Earned', '${_walletCoinsLedger!['total_earned_coins']}'),
-                _walletMini('Used', '${_walletCoinsLedger!['total_used_coins']}'),
-                _walletMini(
-                    'Avail.', '${_walletCoinsLedger!['available_coins']}'),
-              ],
-            ),
-          ],
         ],
       ),
     );
@@ -734,7 +778,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
         _pill(Icons.verified_rounded, 'Paid friends',
             '$_referralsActivated', _ReferPalette.mint),
         _pill(Icons.local_fire_department_rounded, 'Pro payouts',
-            '$_proRidePayouts', _ReferPalette.coral),
+            '$_proRidePayouts', _ReferPalette.accent),
         _pill(Icons.stars_rounded, 'Ref. coins',
             '$_referralRewardCoinsTotal', _ReferPalette.sun),
         if (_totalEarned > 0)
@@ -784,53 +828,78 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
 
   Widget _buildCodeCard() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            _ReferPalette.sun.withValues(alpha: 0.35),
-            Colors.white,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-            color: _ReferPalette.coral.withValues(alpha: 0.3), width: 1.5),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: _ReferPalette.primary.withOpacity(0.15)),
+        boxShadow: [
+          BoxShadow(
+            color: _ReferPalette.primary.withOpacity(0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Text(
-            'YOUR CODE',
-            style: GoogleFonts.inter(
-              letterSpacing: 2,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              color: _ReferPalette.coral,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: _ReferPalette.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'SHARE YOUR UNIQUE CODE',
+              style: GoogleFonts.inter(
+                letterSpacing: 1.2,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: _ReferPalette.primaryDark,
+              ),
             ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            _referralCode.isEmpty ? '••••••••' : _referralCode,
-            style: GoogleFonts.spaceMono(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: _ReferPalette.ink,
-              letterSpacing: 2,
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
+              color: _ReferPalette.cream,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: _ReferPalette.primary.withOpacity(0.3),
+                width: 1.5,
+                style: BorderStyle.solid,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                _referralCode.isEmpty ? '••••••••' : _referralCode,
+                style: GoogleFonts.spaceMono(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  color: _ReferPalette.ink,
+                  letterSpacing: 4,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: _referralCode.isEmpty ? null : _copyCode,
-            icon: const Icon(Icons.copy_rounded, size: 18),
-            label: Text('Copy code',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-            style: FilledButton.styleFrom(
-              backgroundColor: _ReferPalette.violetLight,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _referralCode.isEmpty ? null : _copyCode,
+              icon: const Icon(Icons.copy_rounded, size: 20),
+              label: Text('Copy to clipboard',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _ReferPalette.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
             ),
           ),
         ],
@@ -846,14 +915,14 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
             'WhatsApp',
             const Color(0xFF25D366),
             Icons.chat_rounded,
-            _shareOnWhatsApp,
+            () => _shareOnWhatsApp(), // Always uses logic
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _shareBtn(
             'More',
-            _ReferPalette.violetLight,
+            _ReferPalette.primaryLight,
             Icons.ios_share_rounded,
             _referralCode.isEmpty ? null : _shareViaSystemSheet,
           ),
@@ -1024,7 +1093,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     final inr = double.tryParse(m['value_inr']?.toString() ?? '') ??
         (absCoins / 10.0);
     final rideId = m['ride_id'];
-    final c = isEarn ? _ReferPalette.mint : _ReferPalette.coral;
+    final c = isEarn ? _ReferPalette.mint : _ReferPalette.accent;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1135,7 +1204,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
           'Your invites',
           'See who’s linked and what’s happening',
           Icons.people_alt_rounded,
-          _ReferPalette.violetLight,
+          _ReferPalette.primaryLight,
         ),
         const SizedBox(height: 12),
         ..._referralRows.take(20).map((r) {
@@ -1172,12 +1241,12 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
               children: [
                 CircleAvatar(
                   radius: 22,
-                  backgroundColor: _ReferPalette.violetLight.withValues(alpha: 0.15),
+                  backgroundColor: _ReferPalette.primary.withOpacity(0.12),
                   child: Text(
                     name.isNotEmpty ? name[0].toUpperCase() : '?',
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w800,
-                      color: _ReferPalette.violetLight,
+                      color: _ReferPalette.primary,
                     ),
                   ),
                 ),
@@ -1217,7 +1286,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     final steps = <Map<String, dynamic>>[
       {
         'icon': Icons.rocket_launch_rounded,
-        'color': _ReferPalette.coral,
+        'color': _ReferPalette.primary,
         'title': 'Share once',
         'desc': 'Send your code on WhatsApp, SMS, or any app.',
       },
@@ -1327,13 +1396,13 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _ReferPalette.violet.withValues(alpha: 0.06),
+        color: _ReferPalette.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _ReferPalette.violetLight.withValues(alpha: 0.2)),
+        border: Border.all(color: _ReferPalette.primaryLight.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          Icon(Icons.lightbulb_rounded, color: _ReferPalette.violetLight, size: 26),
+          Icon(Icons.lightbulb_rounded, color: _ReferPalette.primaryLight, size: 26),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

@@ -793,6 +793,13 @@
             </list>
           </value>
         </entry>
+        <entry key="in_app_update">
+          <value>
+            <list>
+              <option value="$USER_HOME$/.pub-cache/hosted/pub.dev/in_app_update-4.2.5/lib" />
+            </list>
+          </value>
+        </entry>
         <entry key="intl">
           <value>
             <list>
@@ -1563,6 +1570,7 @@
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/image_picker_macos-0.2.2+1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/image_picker_platform_interface-2.11.1/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/image_picker_windows-0.2.2/lib" />
+      <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/in_app_update-4.2.5/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/intl-0.20.2/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/iregexp-0.1.2/lib" />
       <root url="file://$USER_HOME$/.pub-cache/hosted/pub.dev/js-0.6.7/lib" />

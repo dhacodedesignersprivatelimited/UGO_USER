@@ -8,7 +8,11 @@ import 'home_model.dart';
 export 'home_model.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/services/active_ride_navigation.dart';
+import '/services/firebase_remote_config_service.dart';
+import '/services/in_app_update_service.dart';
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeWidget extends StatefulWidget {
   const HomeWidget({super.key});
@@ -76,6 +80,9 @@ class _HomeWidgetState extends State<HomeWidget>
 
     // 5. Fetch vehicle types for Our Services
     _fetchVehicleTypes();
+
+    // 6. Check for app updates
+    _checkVersionUpdate();
   }
 
   Future<void> _fetchVehicleTypes() async {
@@ -164,6 +171,98 @@ class _HomeWidgetState extends State<HomeWidget>
         setState(() => _isCheckingRideStatus = false);
       }
     }
+  }
+
+  // ── Version Update Logic ──────────────────────────────────
+
+  Future<void> _checkVersionUpdate() async {
+    final remoteConfig = FirebaseRemoteConfigService();
+    await remoteConfig.ensureInitialized();
+    final isMandatory = remoteConfig.getBool('is_update_mandatory', defaultValue: false);
+
+    // 1. Check for Play Store In-App Updates (OTA)
+    await InAppUpdateService().checkRemainingUpdate();
+    await InAppUpdateService().checkForUpdate(forceImmediate: isMandatory);
+
+    // 2. Fallback: Manual version check via Remote Config
+    try {
+      final PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      final String currentVersion = packageInfo.version;
+      final String latestVersion = remoteConfig.latestAppVersion;
+      final String minRequiredVersion = remoteConfig.minRequiredVersion;
+
+      debugPrint('UGO_UPDATE: Current=$currentVersion, Latest=$latestVersion, Min=$minRequiredVersion');
+
+      // Mandatory Update (Blocker)
+      if (_isVersionLower(currentVersion, minRequiredVersion)) {
+        if (!mounted) return;
+        _showUpdateDialog(isMandatory: true);
+      } 
+      // Optional Update (Suggestion)
+      else if (_isVersionLower(currentVersion, latestVersion) && !isMandatory) {
+        if (!mounted) return;
+        _showUpdateDialog(isMandatory: false);
+      }
+    } catch (e) {
+      debugPrint('UGO_UPDATE_ERROR: Manual version check failed: $e');
+    }
+  }
+
+  bool _isVersionLower(String current, String required) {
+    try {
+      final List<int> v1 = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      final List<int> v2 = required.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      for (int i = 0; i < v2.length; i++) {
+        final int part1 = i < v1.length ? v1[i] : 0;
+        final int part2 = v2[i];
+        if (part1 < part2) return true;
+        if (part1 > part2) return false;
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  void _showUpdateDialog({required bool isMandatory}) {
+    showDialog(
+      context: context,
+      barrierDismissible: !isMandatory,
+      builder: (context) => PopScope(
+        canPop: !isMandatory,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            isMandatory ? 'Update Required' : 'Update Available',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+          ),
+          content: Text(
+            isMandatory
+                ? 'To continue using UGO, please update to the latest version. It only takes a minute!'
+                : 'A newer version of UGO is available with better features and bug fixes.',
+            style: GoogleFonts.inter(),
+          ),
+          actions: [
+            if (!isMandatory)
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Later', style: GoogleFonts.inter(color: Colors.grey)),
+              ),
+            ElevatedButton(
+              onPressed: () async {
+                final url = FirebaseRemoteConfigService().playStoreUrl;
+                if (url.isNotEmpty && await canLaunchUrl(Uri.parse(url))) {
+                  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryOrange,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(isMandatory ? 'Update Now' : 'Update', style: GoogleFonts.inter(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _updateNotificationCount() async {

@@ -59,6 +59,14 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
   @override
   void initState() {
     super.initState();
+    // ✅ Clear previous session data to ensure a fresh ride planning flow
+    FFAppState().pickuplocation = '';
+    FFAppState().pickupLatitude = null;
+    FFAppState().pickupLongitude = null;
+    FFAppState().droplocation = '';
+    FFAppState().dropLatitude = null;
+    FFAppState().dropLongitude = null;
+    
     currentLocation = _defaultCenter;
     _model = createModel(context, () => PlanYourRideModel());
     _initializeLocation();
@@ -498,8 +506,20 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
 
 
   void _confirmRide() {
-    if (FFAppState().pickuplocation.isEmpty || FFAppState().droplocation.isEmpty) {
+    final app = FFAppState();
+    if (app.pickuplocation.isEmpty || app.droplocation.isEmpty) {
       _showSnackBar('Please select both pickup and drop locations', isError: true);
+      return;
+    }
+
+    // ✅ SHIELD: Prevent same pickup and drop
+    bool isSameAddress = app.pickuplocation.trim().toLowerCase() == 
+                         app.droplocation.trim().toLowerCase();
+    bool isSameCoords = app.pickupLatitude == app.dropLatitude && 
+                         app.pickupLongitude == app.dropLongitude;
+
+    if (isSameAddress || isSameCoords) {
+      _showSnackBar('Pickup and drop locations cannot be the same', isError: true);
       return;
     }
 

@@ -19,6 +19,7 @@ import 'flutter_flow/firebase_app_check_util.dart';
 import 'flutter_flow/nav/nav.dart';
 import 'notifications/fcm_service.dart';
 import 'services/active_ride_navigation.dart';
+import 'services/firebase_remote_config_service.dart';
 import 'dart:async';
 
 // Orange theme colors
@@ -241,6 +242,7 @@ void main() async {
   usePathUrlStrategy();
 
   await initFirebase();
+  await FirebaseRemoteConfigService().initialize();
   await PaymentConfig().initialize();
 
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
