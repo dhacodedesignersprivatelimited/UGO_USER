@@ -42,4 +42,5 @@ class SecureStorageService {
 
   static const String keyAccessToken = 'secure_ff_accessToken';
   static const String keyRefreshToken = 'secure_ff_refreshToken';
+  static const String keyDeviceId = 'secure_ff_deviceId';
 }

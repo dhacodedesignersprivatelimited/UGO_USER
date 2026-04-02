@@ -3,6 +3,7 @@ import '../flutter_flow/flutter_flow_theme.dart';
 import '../login/login_widget.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/notifications/fcm_service.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -160,7 +161,8 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
           FFAppState().refreshToken = refreshToken;
         }
         if (userId != null) FFAppState().userid = userId;
-        
+        syncRideChatFcmRegistration();
+
         // --- AUTO-GENERATE REFERRAL CODE ---
         try {
           print('🎁 Auto-generating referral code for user $userId...');
@@ -218,6 +220,7 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
               FFAppState().refreshToken = refreshToken;
             }
             if (userId != null) FFAppState().userid = userId;
+            syncRideChatFcmRegistration();
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(FFLocalizations.of(context).getText('login_welcome_back')),
                 backgroundColor: FlutterFlowTheme.of(context).success));

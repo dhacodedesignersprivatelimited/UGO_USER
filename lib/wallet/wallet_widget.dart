@@ -1,5 +1,8 @@
 import 'package:ugouser/backend/api_requests/api_calls.dart';
 
+import '/utils/coin_wallet_inr.dart';
+import '/voucher/voucher_widget.dart';
+import '/wallet_history/wallet_history_widget.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -25,6 +28,10 @@ class _WalletWidgetState extends State<WalletWidget> {
   late WalletModel _model;
   final TextEditingController _amountController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  /// From GET /wallets/me/summary when available; else null (UI uses [CoinWalletInr]).
+  double? _coinsValueInrFromApi;
+  List<Map<String, dynamic>> _recentWalletTx = [];
+  final ScrollController _scrollController = ScrollController();
 
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
@@ -49,9 +56,29 @@ late Razorpay _razorpay;
     _loadWalletData();
   }
 
-  /// Wallet (withdrawable / UPI cash) + referral coins (rides only, from backend).
+  /// Wallet (recharge / UPI) + coins (rides only). Prefers summary endpoint for one round-trip.
   Future<void> _loadWalletData() async {
     final app = FFAppState();
+    final token = app.accessToken;
+
+    if (token.isNotEmpty) {
+      final sum = await GetWalletSummaryCall.call(token: token);
+      if (sum.succeeded) {
+        final main = GetWalletSummaryCall.mainWalletInr(sum.jsonBody);
+        final coins = GetWalletSummaryCall.coins(sum.jsonBody) ?? 0;
+        final cv = GetWalletSummaryCall.coinsValueInr(sum.jsonBody);
+        if (main != null) app.walletBalance = main;
+        app.coinsBalance = coins;
+        await _loadRecentTransactions(token);
+        if (mounted) {
+          setState(() => _coinsValueInrFromApi = cv);
+        } else {
+          _coinsValueInrFromApi = cv;
+        }
+        return;
+      }
+    }
+
     final response = await GetwalletCall.call(
       userId: app.userid,
       token: app.accessToken,
@@ -77,14 +104,198 @@ late Razorpay _razorpay;
       } catch (_) {}
     }
 
-    if (mounted) setState(() {});
+    final t = app.accessToken;
+    if (t.isNotEmpty) await _loadRecentTransactions(t);
+    if (mounted) setState(() => _coinsValueInrFromApi = null);
+  }
+
+  Future<void> _loadRecentTransactions(String token) async {
+    try {
+      final res = await GetWalletTransactionsMeCall.call(
+        token: token,
+        page: 1,
+        limit: 5,
+      );
+      final raw = GetWalletTransactionsMeCall.transactions(res.jsonBody) ?? [];
+      final list = <Map<String, dynamic>>[];
+      for (final item in raw) {
+        if (item is Map) list.add(Map<String, dynamic>.from(item));
+      }
+      if (mounted) setState(() => _recentWalletTx = list);
+    } catch (_) {}
+  }
+
+  Widget _buildWalletHomeSummary(BuildContext context) {
+    final app = FFAppState();
+    final coins = app.coinsBalance;
+    final inr = app.walletBalance;
+    final coinRs = CoinWalletInr.toInr(coins);
+    final theme = FlutterFlowTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Overview',
+          style: theme.titleMedium.override(
+            font: GoogleFonts.interTight(fontWeight: FontWeight.w600),
+            color: theme.accent1,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _miniStat(
+                context,
+                'Ugo cash',
+                '₹${inr.toStringAsFixed(2)}',
+                Icons.account_balance_wallet_outlined,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _miniStat(
+                context,
+                'Coins → rides',
+                '$coins · ₹${coinRs.toStringAsFixed(2)}',
+                Icons.monetization_on_outlined,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      _scrollController.position.maxScrollExtent,
+                      duration: const Duration(milliseconds: 450),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                },
+                icon: const Icon(Icons.add, size: 20),
+                label: const Text('Add money'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primary,
+                  foregroundColor: theme.secondaryBackground,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => context.pushNamed(VoucherWidget.routeName),
+                icon: const Icon(Icons.local_offer_outlined, size: 20),
+                label: const Text('Vouchers'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: () {
+                showDialog<void>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Transfer coins'),
+                    content: const Text(
+                      'Coin transfers to other users are not available yet. Use ride booking to spend coins as discount.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              icon: const Icon(Icons.swap_horiz, size: 18),
+              label: const Text('Transfer coins'),
+            ),
+            TextButton.icon(
+              onPressed: () => context.pushNamed(WalletHistoryWidget.routeName),
+              icon: const Icon(Icons.history, size: 18),
+              label: const Text('Full history'),
+            ),
+          ],
+        ),
+        if (_recentWalletTx.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Recent transactions',
+            style: theme.titleSmall.override(
+              font: GoogleFonts.interTight(fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(height: 6),
+          ..._recentWalletTx.map((m) {
+            return ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                '${m['transaction_type'] ?? '—'}',
+                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                '${m['description'] ?? ''}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(fontSize: 11),
+              ),
+              trailing: Text(
+                '₹${m['amount'] ?? '0'}',
+                style: GoogleFonts.interTight(
+                  fontWeight: FontWeight.w700,
+                  color: theme.accent1,
+                  fontSize: 13,
+                ),
+              ),
+            );
+          }),
+        ],
+      ],
+    );
+  }
+
+  Widget _miniStat(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
+    final theme = FlutterFlowTheme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.primaryBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.alternate),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: theme.accent1),
+          const SizedBox(height: 6),
+          Text(label, style: GoogleFonts.inter(fontSize: 11, color: theme.secondaryText)),
+          Text(value, style: GoogleFonts.interTight(fontSize: 15, fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
   }
 
   /// Referral coins shown as in-wallet ride credit (Mana Savari–style: in-app only, no withdrawal).
   Widget _buildReferralRewardsCard(BuildContext context) {
     final app = FFAppState();
     final coins = app.coinsBalance;
-    final rs = app.referralCoinsValueRs;
+    final rsInr = _coinsValueInrFromApi ?? CoinWalletInr.toInr(coins);
 
     return Container(
       width: double.infinity,
@@ -140,40 +351,93 @@ late Razorpay _razorpay;
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 6),
+            Text(
+              CoinWalletInr.rateCaption(),
+              style: GoogleFonts.inter(
+                color: Colors.white.withValues(alpha: 0.85),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 14),
             Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '$coins',
-                  style: GoogleFonts.interTight(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Coin balance',
+                        style: GoogleFonts.inter(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$coins',
+                        style: GoogleFonts.interTight(
+                          color: Colors.white,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        'coins',
+                        style: GoogleFonts.inter(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 6),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    'coins',
-                    style: GoogleFonts.inter(color: Colors.white70, fontSize: 14),
-                  ),
+                Container(
+                  width: 1,
+                  height: 72,
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                  color: Colors.white24,
                 ),
-                const Spacer(),
-                Text(
-                  '≈ ₹${rs.toStringAsFixed(1)} on rides',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFFFFB366),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Worth on rides',
+                        style: GoogleFonts.inter(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹${rsInr.toStringAsFixed(2)}',
+                        style: GoogleFonts.interTight(
+                          color: const Color(0xFFFFB366),
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        'INR ride discount',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFFFFB366).withValues(alpha: 0.9),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Text(
-              '10 coins = ₹1 off fare · Apply when you book a ride · Not withdrawable (not bank/UPI cash)',
+              'Applied at booking (not added to Ugo cash). Not withdrawable.',
               style: GoogleFonts.inter(
                 color: Colors.white.withValues(alpha: 0.75),
                 fontSize: 12,
@@ -315,6 +579,7 @@ Future<void> _openRazorpay(double amount) async {
   void dispose() {
       _razorpay.clear();
       _amountController.dispose();
+    _scrollController.dispose();
     _model.dispose();
 
     super.dispose();
@@ -371,10 +636,15 @@ Future<void> _openRazorpay(double amount) async {
         body: Padding(
           padding: EdgeInsetsDirectional.fromSTEB(12.0, 0.0, 12.0, 0.0),
           child: SingleChildScrollView(
+            controller: _scrollController,
             child: Column(
               mainAxisSize: MainAxisSize.max,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: _buildWalletHomeSummary(context),
+                ),
                 Padding(
                   padding: EdgeInsets.all(16.0),
                   child: InkWell(
@@ -433,17 +703,35 @@ Future<void> _openRazorpay(double amount) async {
                                 Row(
                                   mainAxisSize: MainAxisSize.max,
                                   children: [
-                                    Text(
-                                      "₹ ${FFAppState().walletBalance.toStringAsFixed(2)}",
-                                      style: FlutterFlowTheme.of(context)
-                                          .titleLarge
-                                          .override(
-                                            font: GoogleFonts.interTight(
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            color: FlutterFlowTheme.of(context).accent1,
-                                            fontSize: 20.0,
-                                          ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          "₹ ${FFAppState().walletBalance.toStringAsFixed(2)}",
+                                          style: FlutterFlowTheme.of(context)
+                                              .titleLarge
+                                              .override(
+                                                font: GoogleFonts.interTight(
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                                color: FlutterFlowTheme.of(context)
+                                                    .accent1,
+                                                fontSize: 20.0,
+                                              ),
+                                        ),
+                                        Text(
+                                          'Indian rupees (recharge)',
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodySmall
+                                              .override(
+                                                font: GoogleFonts.inter(),
+                                                color: FlutterFlowTheme.of(context)
+                                                    .secondaryText,
+                                                fontSize: 11,
+                                              ),
+                                        ),
+                                      ],
                                     ),
 
                                     // InkWell(

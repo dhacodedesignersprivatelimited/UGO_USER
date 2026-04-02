@@ -1,10 +1,12 @@
 // ignore_for_file: constant_identifier_names, depend_on_referenced_packages, prefer_final_fields
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:core';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 
 import 'network_exceptions_io.dart'
     if (dart.library.html) 'network_exceptions_stub.dart' as net;
@@ -254,6 +256,9 @@ class ApiManager {
 
   // Cache that will ensure identical calls are not repeatedly made.
   static Map<ApiCallOptions, ApiCallResponse> _apiCache = {};
+  static Future<String?>? _refreshInFlight;
+  static void Function()? onAccessTokenRefreshed;
+  static void Function(String? reason)? onUnauthenticated;
 
   static ApiManager? _instance;
   static ApiManager get instance => _instance ??= ApiManager._();
@@ -270,6 +275,22 @@ class ApiManager {
       .map((e) =>
           "${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value.toString())}")
       .join('&');
+
+  static String _platformLabel() =>
+      kIsWeb ? 'web' : defaultTargetPlatform.name.toLowerCase();
+
+  static Map<String, dynamic> _injectDeviceHeaders(Map<String, dynamic> headers) {
+    final withHeaders = Map<String, dynamic>.from(headers);
+    final appState = FFAppState();
+    if (appState.deviceId.isNotEmpty &&
+        !withHeaders.keys.any((k) => k.toLowerCase() == 'x-device-id')) {
+      withHeaders['x-device-id'] = appState.deviceId;
+    }
+    if (!withHeaders.keys.any((k) => k.toLowerCase() == 'x-platform')) {
+      withHeaders['x-platform'] = _platformLabel();
+    }
+    return withHeaders;
+  }
 
   static Future<ApiCallResponse> urlRequest(
     ApiCallType callType,
@@ -548,15 +569,24 @@ class ApiManager {
   }
 
   static Future<String?> _tryRefreshAccessToken(String oldAccessToken) async {
+    if (_refreshInFlight != null) {
+      return _refreshInFlight;
+    }
+    final completer = Completer<String?>();
+    _refreshInFlight = completer.future;
     final appState = FFAppState();
     final refreshToken = appState.refreshToken;
-    if (refreshToken.isEmpty) return null;
+    if (refreshToken.isEmpty) {
+      completer.complete(null);
+      _refreshInFlight = null;
+      return null;
+    }
 
     final endpoints = <String>[
+      '/api/auth/refresh',
       '/api/users/refresh-token',
       '/api/users/refresh',
       '/api/auth/refresh-token',
-      '/api/auth/refresh',
     ];
 
     for (final path in endpoints) {
@@ -565,7 +595,7 @@ class ApiManager {
           Uri.parse('${AppConfig.baseApiUrl}$path'),
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer $refreshToken',
+            ..._injectDeviceHeaders(const {}),
           },
           body: jsonEncode({
             'refreshToken': refreshToken,
@@ -598,11 +628,16 @@ class ApiManager {
         if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
           appState.refreshToken = newRefreshToken;
         }
+        onAccessTokenRefreshed?.call();
+        completer.complete(newAccessToken);
+        _refreshInFlight = null;
         return newAccessToken;
       } catch (_) {
         // Try next endpoint candidate.
       }
     }
+    completer.complete(null);
+    _refreshInFlight = null;
     return null;
   }
 
@@ -625,6 +660,7 @@ class ApiManager {
     ApiCallOptions? options,
     http.Client? client,
   }) async {
+    headers = _injectDeviceHeaders(headers);
     final callOptions = options ??
         ApiCallOptions(
           callName: callName,
@@ -777,8 +813,18 @@ class ApiManager {
           client: client,
         );
       } else {
-        FFAppState().clearAuthSession();
+        onUnauthenticated?.call('refresh_failed');
       }
+    }
+
+    if (response.statusCode == 401) {
+      final body = response.jsonBody;
+      String? reason;
+      if (body is Map) {
+        reason = (body['code'] ?? (body['data'] is Map ? body['data']['code'] : null))
+            ?.toString();
+      }
+      onUnauthenticated?.call(reason);
     }
 
     if (cache && response.statusCode >= 200 && response.statusCode < 300) {

@@ -1,13 +1,17 @@
 // ignore_for_file: depend_on_referenced_packages
 
+import 'dart:async';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '/app_state.dart';
+import '/backend/api_requests/api_calls.dart';
 import '/ride_request/ride_request_screen.dart';
 import '/flutter_flow/nav/nav.dart';
 import '/ridecomplete/ridecomplete_widget.dart';
+import 'ride_chat_in_app_banner.dart';
 
 /// Background message handler - MUST be top-level function.
 /// Runs when app is in background/terminated and a data message is received.
@@ -42,6 +46,11 @@ const _kRideEventTypes = {
 
 /// Completion types that should open Ride Complete.
 const _kCompletedTypes = {'completed', 'complete'};
+
+/// Backend `rideChatPush.service` sends `data.type = ride_chat`.
+bool _isRideChatData(Map<String, dynamic> data) =>
+    _getEventType(data) == 'ride_chat';
+
 
 /// Extracts ride ID from FCM data payload.
 int? _getRideId(Map<String, dynamic> data) {
@@ -79,15 +88,42 @@ void _handleRideNotification(
   }
 }
 
+String _rideChatPlatformLabel() {
+  if (kIsWeb) return 'web';
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.iOS:
+      return 'ios';
+    case TargetPlatform.android:
+      return 'android';
+    default:
+      return 'other';
+  }
+}
+
+void _syncRideChatDeviceToken(String? token) {
+  if (token == null || token.isEmpty) return;
+  if (FFAppState().userid == 0) return;
+  final access = FFAppState().accessToken;
+  if (access.isEmpty) return;
+  unawaited(
+    RideChatRegisterDeviceTokenCall.call(
+      fcmToken: token,
+      platform: _rideChatPlatformLabel(),
+      accessToken: access,
+    ),
+  );
+}
+
 /// Sets up Firebase Cloud Messaging handlers.
 /// Call from [MyApp.initState] after router is created.
 void setupFirebaseMessaging(GoRouter router) {
   final messaging = FirebaseMessaging.instance;
 
-  // 0. Get and store FCM token for backend
+  // 0. Get and store FCM token for backend + chat push registry
   messaging.getToken().then((token) {
     if (token != null && token.isNotEmpty) {
       FFAppState().fcmToken = token;
+      _syncRideChatDeviceToken(token);
       if (kDebugMode) {
         print('🔔 FCM Token: ${token.substring(0, 20)}...');
       }
@@ -95,6 +131,7 @@ void setupFirebaseMessaging(GoRouter router) {
   });
   messaging.onTokenRefresh.listen((token) {
     FFAppState().fcmToken = token;
+    _syncRideChatDeviceToken(token);
     if (kDebugMode) {
       print('🔔 FCM Token refreshed');
     }
@@ -118,8 +155,19 @@ void setupFirebaseMessaging(GoRouter router) {
     if (kDebugMode) {
       print('🔔 [FCM Foreground] ${message.notification?.title ?? message.messageId}');
     }
-    final data = message.data;
-    if (data.isEmpty) return;
+    final raw = message.data;
+    if (raw.isEmpty) return;
+    final data = Map<String, dynamic>.from(raw);
+
+    if (_isRideChatData(data)) {
+      final rideId = _getRideId(data);
+      if (rideId != null && FFAppState().userid != 0) {
+        FFAppState().currentRideId = rideId;
+        FFAppState().bookingInProgress = true;
+        showRideChatInAppFromForegroundFcm(router, message, data, rideId);
+      }
+      return;
+    }
 
     final rideId = _getRideId(data);
     final eventType = _getEventType(data);
@@ -147,8 +195,19 @@ void setupFirebaseMessaging(GoRouter router) {
     if (kDebugMode) {
       print('🔔 [FCM OpenedApp] ${message.data}');
     }
-    final data = message.data;
-    if (data.isEmpty) return;
+    final raw = message.data;
+    if (raw.isEmpty) return;
+    final data = Map<String, dynamic>.from(raw);
+
+    if (_isRideChatData(data)) {
+      final rideId = _getRideId(data);
+      if (rideId != null && FFAppState().userid != 0) {
+        FFAppState().currentRideId = rideId;
+        FFAppState().bookingInProgress = true;
+        openRideChatFromFcmData(router, data);
+      }
+      return;
+    }
 
     final rideId = _getRideId(data);
     final eventType = _getEventType(data);
@@ -166,8 +225,21 @@ void setupFirebaseMessaging(GoRouter router) {
     if (kDebugMode) {
       print('🔔 [FCM Initial] ${message.data}');
     }
-    final data = message.data;
-    if (data.isEmpty) return;
+    final raw = message.data;
+    if (raw.isEmpty) return;
+    final data = Map<String, dynamic>.from(raw);
+
+    if (_isRideChatData(data)) {
+      final rideId = _getRideId(data);
+      if (rideId != null && FFAppState().userid != 0) {
+        FFAppState().currentRideId = rideId;
+        FFAppState().bookingInProgress = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          openRideChatFromFcmData(router, data);
+        });
+      }
+      return;
+    }
 
     final rideId = _getRideId(data);
     final eventType = _getEventType(data);
@@ -180,4 +252,9 @@ void setupFirebaseMessaging(GoRouter router) {
       });
     }
   });
+}
+
+/// After login/registration sets [FFAppState.accessToken] and userid, register FCM for chat pushes.
+void syncRideChatFcmRegistration() {
+  _syncRideChatDeviceToken(FFAppState().fcmToken);
 }

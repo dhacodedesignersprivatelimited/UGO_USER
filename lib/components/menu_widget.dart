@@ -484,28 +484,34 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
   Widget _buildFooter(bool isNarrow, bool isTablet) {
     return InkWell(
       onTap: () async {
+        var remoteLogoutFailed = false;
         try {
           final token = FFAppState().accessToken;
           if (token.isNotEmpty) {
             await UserLogoutCall.call(token: token);
           }
-          await FirebaseAuth.instance.signOut();
-
-          FFAppState().clearAuthSession();
-
-          context.goNamedAuth(LoginWidget.routeName, context.mounted);
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(FFLocalizations.of(context).getText('logged_out_success')),
-              backgroundColor: primaryOrange,
-            ),
-          );
         } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Logout error: $e')),
-          );
+          remoteLogoutFailed = true;
         }
+
+        try {
+          await FirebaseAuth.instance.signOut();
+        } catch (_) {}
+
+        FFAppState().clearAuthSession();
+        if (!mounted) return;
+
+        context.goNamedAuth(LoginWidget.routeName, context.mounted);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              remoteLogoutFailed
+                  ? 'Logged out on this device. Some server cleanup may complete later.'
+                  : FFLocalizations.of(context).getText('logged_out_success'),
+            ),
+            backgroundColor: primaryOrange,
+          ),
+        );
       },
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: isNarrow ? 16 : 24),

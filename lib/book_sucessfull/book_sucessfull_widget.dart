@@ -158,8 +158,12 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
     if (d is! Map) return 'Driver';
     final fn = d['first_name']?.toString() ?? '';
     final ln = d['last_name']?.toString() ?? '';
-    final name = ('$fn $ln').trim();
-    return name.isEmpty ? 'Driver' : name;
+    final raw = ('$fn $ln').trim();
+    if (raw.isEmpty) return 'Driver';
+    return raw
+        .replaceAll(RegExp(r'[\r\n\t]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 
   String _plate() {
@@ -407,34 +411,44 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
+                                      _driverName(),
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 15,
+                                        color: const Color(0xFF1A1A1A),
+                                      ),
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
                                       _plate(),
                                       style: GoogleFonts.inter(
                                         fontWeight: FontWeight.w800,
                                         fontSize: 16,
+                                        letterSpacing: 0.3,
                                       ),
+                                      maxLines: 1,
+                                      softWrap: false,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    Text(
-                                      _driverName(),
-                                      style: GoogleFonts.inter(
-                                        color: Colors.grey[600],
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    if (_ratingLine().isNotEmpty)
+                                    if (_ratingLine().isNotEmpty) ...[
+                                      const SizedBox(height: 2),
                                       Row(
                                         children: [
-                                          const Icon(Icons.star, color: Color(0xFFFFD700), size: 14),
-                                          const SizedBox(width: 4),
+                                          const Icon(Icons.star_rounded, color: Color(0xFFFFB800), size: 14),
+                                          const SizedBox(width: 3),
                                           Text(
                                             _ratingLine(),
                                             style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.bold,
+                                              fontWeight: FontWeight.w600,
                                               fontSize: 12,
                                             ),
                                           ),
                                         ],
                                       ),
+                                    ],
                                   ],
                                 ),
                               ),

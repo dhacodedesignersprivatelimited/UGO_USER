@@ -74,11 +74,11 @@ class LoginCall {
     int? mobile,
     String? fcmToken = '',
   }) async {
-    final ffApiRequestBody = '''
-{
-  "mobile_number": "${mobile}",
-  "fcm_token": "${fcmToken}"
-}''';
+    // Backend Joi: mobile_number + fcm_token are strings (required).
+    final ffApiRequestBody = jsonEncode({
+      'mobile_number': mobile?.toString() ?? '',
+      'fcm_token': fcmToken ?? '',
+    });
     return ApiManager.instance.makeApiCall(
       callName: 'login',
       apiUrl: '$_baseUrl/api/users/login',
@@ -306,6 +306,195 @@ class GetUserReferralStatsCall {
         response,
         r'''$.data.total_earned''',
       );
+  static bool referralMasterBadge(dynamic response) {
+    final raw = getJsonField(response, r'''$.data.referral_master_badge''');
+    if (raw == null) return false;
+    if (raw is bool) return raw;
+    final s = raw.toString().toLowerCase();
+    return s == 'true' || s == '1';
+  }
+
+  static int? inviterCompletedThisMonth(dynamic response) {
+    final raw =
+        getJsonField(response, r'''$.data.inviter_completed_this_month''');
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  static int? inviterMonthlyRewardCap(dynamic response) {
+    final raw =
+        getJsonField(response, r'''$.data.inviter_monthly_reward_cap''');
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  /// Completed Pro rides that paid referral coins to this inviter (backend v2).
+  static int? referralProRidePayouts(dynamic response) {
+    final raw = getJsonField(response, r'''$.data.referral_pro_ride_payouts''');
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  /// Sum of coins awarded from Pro-ride referrals (earned rows).
+  static int? referralRewardCoinsTotal(dynamic response) {
+    final raw =
+        getJsonField(response, r'''$.data.referral_reward_coins_total''');
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  /// Distinct friends with at least one Pro-ride referral payout.
+  static int? referralsWithProReward(dynamic response) {
+    final raw =
+        getJsonField(response, r'''$.data.referrals_with_pro_reward''');
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  /// Mirrors `users.coins_balance` from the same payload (keeps app state in sync).
+  static int? coinsBalance(dynamic response) {
+    final raw = getJsonField(response, r'''$.data.coins_balance''');
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  /// Nested ledger from `wallets` row: earned / used / available (optional).
+  static Map<String, int>? walletCoinsLedger(dynamic response) {
+    final raw = getJsonField(response, r'''$.data.wallet_coins_ledger''');
+    if (raw == null || raw is! Map) return null;
+    final m = Map<String, dynamic>.from(raw);
+    return {
+      'total_earned_coins':
+          int.tryParse(m['total_earned_coins']?.toString() ?? '') ?? 0,
+      'total_used_coins':
+          int.tryParse(m['total_used_coins']?.toString() ?? '') ?? 0,
+      'available_coins':
+          int.tryParse(m['available_coins']?.toString() ?? '') ?? 0,
+    };
+  }
+}
+
+/// GET /api/users/me/coins/economy — rates, festival multiplier, streak (rider JWT).
+class GetMyCoinsEconomyCall {
+  static Future<ApiCallResponse> call({required String token}) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getMyCoinsEconomy',
+      apiUrl: '$_baseUrl/api/users/me/coins/economy',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static double? earnMultiplier(dynamic response) {
+    final v = getJsonField(response, r'''$.data.earn_multiplier''');
+    if (v == null) return null;
+    return double.tryParse(v.toString());
+  }
+}
+
+/// POST /api/users/me/coins/redeem
+/// redemption: free_ride_50 | premium_support (+ ticket_title, ticket_description)
+class RedeemCoinsCall {
+  static Future<ApiCallResponse> call({
+    required String token,
+    required String redemption,
+    String? ticketTitle,
+    String? ticketDescription,
+    int? rideId,
+  }) async {
+    final body = <String, dynamic>{'redemption': redemption};
+    if (ticketTitle != null) body['ticket_title'] = ticketTitle;
+    if (ticketDescription != null) {
+      body['ticket_description'] = ticketDescription;
+    }
+    if (rideId != null) body['ride_id'] = rideId;
+    return ApiManager.instance.makeApiCall(
+      callName: 'redeemCoins',
+      apiUrl: '$_baseUrl/api/users/me/coins/redeem',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode(body),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      cache: false,
+    );
+  }
+}
+
+/// GET /api/users/me/coins/ledger — each earn/spend row (rider JWT).
+class GetMyCoinLedgerCall {
+  static Future<ApiCallResponse> call({
+    required String token,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getMyCoinLedger',
+      apiUrl:
+          '$_baseUrl/api/users/me/coins/ledger?page=$page&limit=$limit',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static List<Map<String, dynamic>> transactions(dynamic response) {
+    final list = getJsonField(response, r'''$.data.transactions''');
+    if (list is! List) return [];
+    return list
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  static int? totalCount(dynamic response) {
+    final raw = getJsonField(response, r'''$.data.total''');
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+}
+
+/// PATCH /api/users/me/date-of-birth — body { "date_of_birth": "YYYY-MM-DD" }
+class UpdateUserDateOfBirthCall {
+  static Future<ApiCallResponse> call({
+    required String token,
+    required String dateOfBirth,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'updateUserDob',
+      apiUrl: '$_baseUrl/api/users/me/date-of-birth',
+      callType: ApiCallType.PATCH,
+      headers: {
+        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode({'date_of_birth': dateOfBirth}),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      cache: false,
+    );
+  }
 }
 
 /// GET /api/users/referrals/:userId — people you referred (userController.getReferrals).
@@ -1073,7 +1262,7 @@ class GetVehicleDetailsCall {
   }
 
   // ✅ STATIC API CALL
-  static Future<ApiCallResponse> call({int retryCount = 0}) async {
+  static Future<ApiCallResponse> call({int retryCount = 0, String? token}) async {
     const int maxRetries = 3;
     const Duration delayDuration = Duration(seconds: 2);
 
@@ -1083,10 +1272,12 @@ class GetVehicleDetailsCall {
     while (currentRetry <= maxRetries) {
       response = await ApiManager.instance.makeApiCall(
         callName: 'GetVehicleDetails',
-        // ✅ Updated URL
+        // ✅ Fixed URL (removed redundant api/admins/)
         apiUrl: '$_baseUrl/api/admins/api/admins/vehicles',
         callType: ApiCallType.GET,
-        headers: {},
+        headers: {
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
         params: {},
         returnBody: true,
         encodeBodyUtf8: false,
@@ -1196,12 +1387,14 @@ class GetVehicleDetailsCall {
 /// GET ALL DRIVERS (filter by vehicle type like Rapido)
 /// ---------------------------------------------------------------------------
 class GetAllDriversCall {
-  static Future<ApiCallResponse> call() async {
+  static Future<ApiCallResponse> call({String? token}) async {
     return ApiManager.instance.makeApiCall(
       callName: 'GetAllDrivers',
       apiUrl: '$_baseUrl/api/drivers/getall',
       callType: ApiCallType.GET,
-      headers: {},
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
       params: {},
       returnBody: true,
       encodeBodyUtf8: false,
@@ -1657,6 +1850,8 @@ class CreateRideCall {
     List<Map<String, dynamic>>? stops, // ✅ PRD: Multiple stops (max 4)
     DateTime? scheduledAt, // ✅ Scheduled rides: ISO 8601 pickup time
     int? coinsToUse, // Referral coins; backend: multiple of 10, 10 coins = ₹1 discount
+    bool? autoApplyBestVoucher,
+    int? userWalletVoucherId,
   }) async {
     const int maxRetries = 3;
     const Duration delayDuration = Duration(seconds: 2);
@@ -1713,6 +1908,12 @@ class CreateRideCall {
       }
       if (coinsToUse != null && coinsToUse > 0) {
         requestBody["coins_to_use"] = coinsToUse;
+      }
+      if (autoApplyBestVoucher == true) {
+        requestBody["auto_apply_best_voucher"] = true;
+      }
+      if (userWalletVoucherId != null && userWalletVoucherId > 0) {
+        requestBody["user_wallet_voucher_id"] = userWalletVoucherId;
       }
 
       response = await ApiManager.instance.makeApiCall(
@@ -2408,6 +2609,14 @@ class GetUserByIdCall {
     return int.tryParse(raw.toString());
   }
 
+  static bool referralMasterBadge(dynamic response) {
+    final raw = getJsonField(response, r'''$.data.referral_master_badge''');
+    if (raw == null) return false;
+    if (raw is bool) return raw;
+    final s = raw.toString().toLowerCase();
+    return s == 'true' || s == '1';
+  }
+
   static String? firstName(dynamic response) =>
       getJsonField(response, r'''$.data.first_name''')?.toString();
 
@@ -2560,6 +2769,11 @@ class GetwalletCall {
         r'''$.data.wallet_balance''',
       )?.toString();
 
+  /// Main + cashback (server); falls back to wallet_balance if absent.
+  static String? spendableInr(dynamic response) =>
+      getJsonField(response, r'''$.data.spendable_inr''')?.toString() ??
+      walletBalance(response);
+
   /// Optional: Convert to double if needed
   static double? walletBalanceDouble(dynamic response) {
     final value = getJsonField(
@@ -2578,6 +2792,119 @@ class GetwalletCall {
         response,
         r'''$.data.total_spent_amount''',
       )?.toString();
+}
+
+/// GET /api/wallets/me/summary — main, cashback, coins, voucher count (rider JWT).
+class GetWalletSummaryCall {
+  static Future<ApiCallResponse> call({required String token}) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'getWalletSummary',
+      apiUrl: '$_baseUrl/api/wallets/me/summary',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static double? mainWalletInr(dynamic response) {
+    final v = getJsonField(response, r'''$.data.main_wallet_inr''');
+    if (v == null) return null;
+    return double.tryParse(v.toString());
+  }
+
+  static double? cashbackInr(dynamic response) {
+    final v = getJsonField(response, r'''$.data.cashback_inr''');
+    if (v == null) return null;
+    return double.tryParse(v.toString());
+  }
+
+  static double? spendableInr(dynamic response) {
+    final v = getJsonField(response, r'''$.data.spendable_inr''');
+    if (v == null) return null;
+    return double.tryParse(v.toString());
+  }
+
+  static int? coins(dynamic response) => castToType<int>(
+        getJsonField(response, r'''$.data.coins'''),
+      );
+
+  static int? vouchersActiveCount(dynamic response) => castToType<int>(
+        getJsonField(response, r'''$.data.vouchers_active_count'''),
+      );
+
+  /// Server-computed rupee equivalent (10 coins = ₹1).
+  static double? coinsValueInr(dynamic response) {
+    final v = getJsonField(response, r'''$.data.coins_value_inr''');
+    if (v == null) return null;
+    return double.tryParse(v.toString());
+  }
+}
+
+/// GET /api/wallets/me/transactions — rider JWT; optional filters.
+class GetWalletTransactionsMeCall {
+  static Future<ApiCallResponse> call({
+    required String token,
+    int page = 1,
+    int limit = 20,
+    String? transactionType,
+    String? from,
+    String? to,
+    String? q,
+  }) async {
+    final qp = <String, String>{
+      'page': '$page',
+      'limit': '$limit',
+    };
+    if (transactionType != null && transactionType.isNotEmpty) {
+      qp['transaction_type'] = transactionType;
+    }
+    if (from != null && from.isNotEmpty) qp['from'] = from;
+    if (to != null && to.isNotEmpty) qp['to'] = to;
+    if (q != null && q.isNotEmpty) qp['q'] = q;
+    final qs = qp.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
+    return ApiManager.instance.makeApiCall(
+      callName: 'getWalletTransactionsMe',
+      apiUrl: '$_baseUrl/api/wallets/me/transactions?$qs',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static List<dynamic>? transactions(dynamic response) =>
+      getJsonField(response, r'''$.data.transactions''') as List<dynamic>?;
+}
+
+/// GET /api/users/me/vouchers — rider JWT; optional include_used=1.
+class ListMyVouchersCall {
+  static Future<ApiCallResponse> call({
+    required String token,
+    bool includeUsed = false,
+  }) async {
+    final q = includeUsed ? '?include_used=1' : '';
+    return ApiManager.instance.makeApiCall(
+      callName: 'listMyVouchers',
+      apiUrl: '$_baseUrl/api/users/me/vouchers$q',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+
+  static List<dynamic>? vouchers(dynamic response) =>
+      getJsonField(response, r'''$.data.vouchers''') as List<dynamic>?;
 }
 
 /// GET /api/payments/transactions?user_id=&page=&limit=
@@ -2916,6 +3243,108 @@ class DeleteSupportTicketCall {
 }
 
 /// ---------------------------------------------------------------------------
+/// RIDE CHAT (REST — same thread every time you open; complements WebSocket)
+/// ---------------------------------------------------------------------------
+
+class RideChatGetMessagesCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    String? token,
+    int? beforeId,
+    int limit = 100,
+  }) async {
+    final q = <String, String>{
+      'limit': limit.clamp(1, 100).toString(),
+      if (beforeId != null) 'before_id': beforeId.toString(),
+    };
+    final qs = q.entries.map((e) => '${e.key}=${e.value}').join('&');
+    return ApiManager.instance.makeApiCall(
+      callName: 'RideChatGetMessages',
+      apiUrl: '$_baseUrl/api/chat/ride/$rideId/messages?$qs',
+      callType: ApiCallType.GET,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+}
+
+class RideChatMarkReadCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    String? token,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'RideChatMarkRead',
+      apiUrl: '$_baseUrl/api/chat/ride/$rideId/read',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+      alwaysAllowBody: true,
+    );
+  }
+}
+
+class RideChatInitCall {
+  static Future<ApiCallResponse> call({
+    required int rideId,
+    String? token,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'RideChatInit',
+      apiUrl: '$_baseUrl/api/chat/ride/init',
+      callType: ApiCallType.POST,
+      headers: {
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode({'ride_id': rideId}),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      cache: false,
+      alwaysAllowBody: true,
+    );
+  }
+}
+
+/// Registers FCM token for ride-chat pushes (`user_notification_tokens` on backend).
+class RideChatRegisterDeviceTokenCall {
+  static Future<ApiCallResponse> call({
+    required String fcmToken,
+    String? platform,
+    String? accessToken,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'RideChatRegisterDeviceToken',
+      apiUrl: '$_baseUrl/api/chat/device/token',
+      callType: ApiCallType.POST,
+      headers: {
+        if (accessToken != null && accessToken.isNotEmpty)
+          'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: jsonEncode({
+        'fcm_token': fcmToken,
+        if (platform != null && platform.isNotEmpty) 'platform': platform,
+      }),
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      cache: false,
+      alwaysAllowBody: true,
+    );
+  }
+}
+
+/// ---------------------------------------------------------------------------
 /// AI AGENT (LLM + server-side database snapshot)
 /// ---------------------------------------------------------------------------
 
@@ -2946,6 +3375,69 @@ class AiAgentChatCall {
 
   static String? replyText(dynamic response) =>
       getJsonField(response, r'$.data.reply')?.toString();
+}
+
+class AuthGetSessionsCall {
+  static Future<ApiCallResponse> call({
+    required String token,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'authGetSessions',
+      apiUrl: '$_baseUrl/api/auth/sessions',
+      callType: ApiCallType.GET,
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+      params: {},
+      returnBody: true,
+      cache: false,
+    );
+  }
+}
+
+class AuthLogoutAllCall {
+  static Future<ApiCallResponse> call({
+    required String token,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'authLogoutAll',
+      apiUrl: '$_baseUrl/api/auth/logout-all',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: '{}',
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      cache: false,
+      alwaysAllowBody: true,
+    );
+  }
+}
+
+class AuthRevokeSessionCall {
+  static Future<ApiCallResponse> call({
+    required String token,
+    required int sessionId,
+  }) async {
+    return ApiManager.instance.makeApiCall(
+      callName: 'authRevokeSession',
+      apiUrl: '$_baseUrl/api/auth/revoke-session/$sessionId',
+      callType: ApiCallType.POST,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      params: {},
+      body: '{}',
+      bodyType: BodyType.JSON,
+      returnBody: true,
+      cache: false,
+      alwaysAllowBody: true,
+    );
+  }
 }
 
 class ApiPagingParams {

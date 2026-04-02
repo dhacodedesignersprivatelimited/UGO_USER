@@ -17,6 +17,7 @@ export '/account_management/account_management_widget.dart'
     show AccountManagementWidget;
 export '/support/support_widget.dart' show SupportWidget;
 export '/wallet/wallet_widget.dart' show WalletWidget;
+export '/wallet_history/wallet_history_widget.dart' show WalletHistoryWidget;
 export '/balance/balance_widget.dart' show BalanceWidget;
 export '/auto_book/auto_book_widget.dart' show AutoBookWidget;
 export '/ride_request/ride_request_screen.dart' show RideRequestScreen;

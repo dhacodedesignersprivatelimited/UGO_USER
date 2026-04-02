@@ -78,6 +78,9 @@ class DriverVerificationCard extends StatelessWidget {
                         fontSize: 18,
                         color: Colors.black87,
                       ),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -88,6 +91,9 @@ class DriverVerificationCard extends StatelessWidget {
                         color: primaryOrange,
                         letterSpacing: 1.2,
                       ),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     RatingBarIndicator(

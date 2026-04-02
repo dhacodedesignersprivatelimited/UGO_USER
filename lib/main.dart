@@ -8,12 +8,15 @@ import 'auth/firebase_auth/firebase_user_provider.dart';
 import 'auth/firebase_auth/auth_util.dart';
 import 'backend/firebase/firebase_config.dart';
 import 'backend/api_requests/api_calls.dart';
+import 'backend/api_requests/api_manager.dart';
+import 'login/login_widget.dart';
 import 'config/payment_config.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import 'flutter_flow/flutter_flow_util.dart';
 import 'flutter_flow/internationalization.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'flutter_flow/firebase_app_check_util.dart';
+import 'flutter_flow/nav/nav.dart';
 import 'notifications/fcm_service.dart';
 import 'services/active_ride_navigation.dart';
 import 'dart:async';
@@ -287,6 +290,33 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           .toList();
   late Stream<BaseAuthUser> userStream;
 
+  Future<void> _showSessionExpiredDialog({
+    required bool anotherDevice,
+  }) async {
+    final ctx = appNavigatorKey.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    await showDialog<void>(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Session Ended'),
+          content: Text(
+            anotherDevice
+                ? 'Your account was logged in on another device. Please login again.'
+                : 'Your session expired. Please login again.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -295,6 +325,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _appStateNotifier = AppStateNotifier.instance;
     _router = createRouter(_appStateNotifier);
     setupFirebaseMessaging(_router);
+    ApiManager.onAccessTokenRefreshed = () {
+      syncRideChatFcmRegistration();
+    };
+    ApiManager.onUnauthenticated = (reason) async {
+      if (!_appStateNotifier.loggedIn) return;
+      final anotherDevice = (reason ?? '').contains('another_device');
+      await FirebaseAuth.instance.signOut().catchError((_) => null);
+      FFAppState().clearAuthSession();
+      _router.goNamed(LoginWidget.routeName);
+      unawaited(Future<void>.delayed(const Duration(milliseconds: 120), () {
+        return _showSessionExpiredDialog(anotherDevice: anotherDevice);
+      }));
+    };
     userStream = ugouserFirebaseUserStream()
       ..listen((user) {
         _appStateNotifier.update(user);
@@ -308,6 +351,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    ApiManager.onUnauthenticated = null;
+    ApiManager.onAccessTokenRefreshed = null;
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -333,6 +378,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
+      scaffoldMessengerKey: appScaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       title: 'ugouser',
       localizationsDelegates: [

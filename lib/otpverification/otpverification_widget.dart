@@ -4,6 +4,7 @@ import '/auth/firebase_auth/auth_util.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/notifications/fcm_service.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/index.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
@@ -292,6 +293,7 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                           FFAppState().refreshToken = refreshToken;
                         }
                         if (userId != null) FFAppState().userid = userId;
+                        syncRideChatFcmRegistration();
 
                         context.goNamedAuth(HomeWidget.routeName, context.mounted);
                       } else {

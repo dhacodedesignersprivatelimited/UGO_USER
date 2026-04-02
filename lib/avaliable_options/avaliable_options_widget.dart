@@ -1,4 +1,5 @@
 import '/backend/api_requests/api_calls.dart';
+import '/core/app_config.dart';
 import '/flutter_flow/flutter_flow_google_map.dart' show GoogleMapStyle, googleMapStyleStrings;
 import '/flutter_flow/flutter_flow_util.dart' hide LatLng;
 import '/index.dart';
@@ -175,7 +176,9 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     try {
       await _loadVehicleIconsIfNeeded();
 
-      final response = await GetAllDriversCall.call();
+      final response = await GetAllDriversCall.call(
+        token: appState.accessToken,
+      );
       if (!response.succeeded) return result;
       final allDrivers =
           (getJsonField(response.jsonBody, r'''$.data''') as List?)?.toList() ??
@@ -307,8 +310,13 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
 
   Future<List<dynamic>> _getVehicleData() async {
     try {
-      final vehiclesResponse = await GetVehicleDetailsCall.call();
-      final driversResponse = await GetAllDriversCall.call();
+      final accessToken = FFAppState().accessToken;
+      final vehiclesResponse = await GetVehicleDetailsCall.call(
+        token: accessToken,
+      );
+      final driversResponse = await GetAllDriversCall.call(
+        token: accessToken,
+      );
 
       List<dynamic> vehicles = [];
       if (vehiclesResponse.succeeded) {
@@ -635,24 +643,34 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         return false;
       }
 
-      final walletBalanceStr = GetwalletCall.walletBalance(walletRes.jsonBody);
-      final double walletBalance =
-          double.tryParse(walletBalanceStr ?? '0') ?? 0.0;
+      final spendableStr = GetwalletCall.spendableInr(walletRes.jsonBody);
+      final double spendable =
+          double.tryParse(spendableStr ?? '0') ?? 0.0;
 
-      print('💰 Wallet Balance: ₹$walletBalance');
-      print('💰 Shortfall: ₹${amountDue - walletBalance}');
+      print('💰 Spendable (main + cashback): ₹$spendable');
+      print('💰 Shortfall: ₹${amountDue - spendable}');
 
       // 2️⃣ CHECK IF WALLET HAS SUFFICIENT BALANCE (after coin discount)
-      if (walletBalance >= amountDue) {
+      if (spendable >= amountDue) {
         print('✅ Wallet has sufficient balance');
         return true;
       }
 
       // 3️⃣ INSUFFICIENT BALANCE - top up shortfall only
-      final double shortfall = amountDue - walletBalance;
+      final double shortfall = amountDue - spendable;
       final int differenceAmount = shortfall.ceil().clamp(1, 999999);
       print(
           '🔴 Insufficient balance, opening Razorpay for: ₹$differenceAmount');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            'Wallet is short by ₹${shortfall.toStringAsFixed(0)} after coins. Opening UPI top-up — or switch payment to Online (UPI) or Cash.',
+          ),
+          duration: const Duration(seconds: 5),
+          backgroundColor: Colors.orange.shade800,
+        ));
+      }
 
       _pendingWalletShortfall = shortfall;
       _pendingFinalFare = rideAmount;
@@ -785,6 +803,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
       estimatedFare: finalFare.toString(),
       paymentType: selectedPaymentMethod.toLowerCase(),
       coinsToUse: coinsToUse > 0 ? coinsToUse : null,
+      autoApplyBestVoucher:
+          appState.autoApplyBestVoucher ? true : null,
     );
 
     if (createRideRes.succeeded) {
@@ -1216,8 +1236,9 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
 
     // Image Handling
     String? imgUrl = getJsonField(data, r'''$.vehicle_image''')?.toString();
-    if (imgUrl != null && !imgUrl.startsWith('http'))
-      imgUrl = 'https://ugo-api.icacorp.org/$imgUrl';
+    if (imgUrl != null && imgUrl.isNotEmpty && !imgUrl.startsWith('http')) {
+      imgUrl = AppConfig.resolveMediaUrl(imgUrl);
+    }
 
     final surface = theme.colorScheme.surface;
     final onSurface = theme.colorScheme.onSurface;

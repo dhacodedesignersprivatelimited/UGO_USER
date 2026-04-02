@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:math';
 import '/services/secure_storage_service.dart';
+import '/utils/coin_wallet_inr.dart';
 
 class FFAppState extends ChangeNotifier {
   static FFAppState _instance = FFAppState._internal();
@@ -48,6 +50,15 @@ class FFAppState extends ChangeNotifier {
         }
       }
       if (token != null && token.isNotEmpty) _refreshToken = token;
+    } catch (_) {}
+    try {
+      final sec = SecureStorageService.instance;
+      var storedDeviceId = await sec.read(SecureStorageService.keyDeviceId);
+      if (storedDeviceId == null || storedDeviceId.isEmpty) {
+        storedDeviceId = _generateDeviceId();
+        await sec.write(SecureStorageService.keyDeviceId, storedDeviceId);
+      }
+      _deviceId = storedDeviceId;
     } catch (_) {}
     _safeInit(() {
       _userid = prefs.getInt('ff_userid') ?? _userid;
@@ -96,6 +107,10 @@ class FFAppState extends ChangeNotifier {
     });
     _safeInit(() {
       _coinsBalance = prefs.getInt('ff_coinsBalance') ?? _coinsBalance;
+    });
+    _safeInit(() {
+      _autoApplyBestVoucher =
+          prefs.getBool('ff_autoApplyBestVoucher') ?? _autoApplyBestVoucher;
     });
     _safeInit(() {
       _recentSearches = prefs.getStringList('ff_recentSearches') ?? _recentSearches;
@@ -251,6 +266,18 @@ class FFAppState extends ChangeNotifier {
     }
   }
 
+  String _deviceId = '';
+  String get deviceId => _deviceId;
+  set deviceId(String value) {
+    _deviceId = value;
+    final sec = SecureStorageService.instance;
+    if (value.isEmpty) {
+      sec.delete(SecureStorageService.keyDeviceId);
+    } else {
+      sec.write(SecureStorageService.keyDeviceId, value);
+    }
+  }
+
   bool _bookingInProgress = false;
   bool get bookingInProgress => _bookingInProgress;
   set bookingInProgress(bool value) {
@@ -332,10 +359,20 @@ class FFAppState extends ChangeNotifier {
   int _coinsBalance = 0;
   int get coinsBalance => _coinsBalance;
   /// Rupee value of coins for display only (not withdrawable cash).
-  double get referralCoinsValueRs => _coinsBalance / 10.0;
+  double get referralCoinsValueRs =>
+      CoinWalletInr.toInr(_coinsBalance);
   set coinsBalance(int value) {
     _coinsBalance = value < 0 ? 0 : value;
     prefs.setInt('ff_coinsBalance', _coinsBalance);
+    notifyListeners();
+  }
+
+  /// When true, ride booking sends auto_apply_best_voucher to the API.
+  bool _autoApplyBestVoucher = true;
+  bool get autoApplyBestVoucher => _autoApplyBestVoucher;
+  set autoApplyBestVoucher(bool value) {
+    _autoApplyBestVoucher = value;
+    prefs.setBool('ff_autoApplyBestVoucher', value);
     notifyListeners();
   }
 
@@ -422,6 +459,15 @@ class FFAppState extends ChangeNotifier {
     prefs.remove('ff_coinsBalance');
     notifyListeners();
   }
+}
+
+String _generateDeviceId() {
+  final random = Random.secure();
+  final ts = DateTime.now().microsecondsSinceEpoch.toRadixString(16);
+  final salt = List<int>.generate(8, (_) => random.nextInt(256))
+      .map((n) => n.toRadixString(16).padLeft(2, '0'))
+      .join();
+  return 'ugo-user-$ts-$salt';
 }
 
 void _safeInit(Function() initializeField) {

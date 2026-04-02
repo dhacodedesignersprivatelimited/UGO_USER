@@ -2,6 +2,7 @@
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/utils/coin_wallet_inr.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'payment_options_model.dart';
@@ -43,7 +44,8 @@ class _PaymentOptionsWidgetState extends State<PaymentOptionsWidget> {
   Widget build(BuildContext context) {
     final app = FFAppState();
     final double walletBalance = app.walletBalance;
-    final double referralRs = app.referralCoinsValueRs;
+    final int coins = app.coinsBalance;
+    final double referralRs = CoinWalletInr.toInr(coins);
 
     return Scaffold(
       key: scaffoldKey,
@@ -104,7 +106,7 @@ class _PaymentOptionsWidgetState extends State<PaymentOptionsWidget> {
               icon: Icons.account_balance_wallet,
               color: const Color(0xFFFF7B10),
               subtitle:
-                  '₹${walletBalance.toStringAsFixed(2)} Ugo cash + ≈₹${referralRs.toStringAsFixed(1)} referral ride credit (not withdrawable)',
+                  '₹${walletBalance.toStringAsFixed(2)} Ugo cash · $coins coins = ₹${referralRs.toStringAsFixed(2)} ride credit (${CoinWalletInr.rateCaption()}, not withdrawable)',
             ),
 
             // ONLINE

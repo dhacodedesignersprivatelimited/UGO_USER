@@ -20,6 +20,7 @@ class FlutterFlowPlacePicker extends StatefulWidget {
     required this.buttonOptions,
     required this.onSelect,
     this.proxyBaseUrl,
+    this.onPlaceDetailsBusy,
   }) : super(key: key);
 
   final String iOSGoogleMapsApiKey;
@@ -30,6 +31,8 @@ class FlutterFlowPlacePicker extends StatefulWidget {
   final FFButtonOptions buttonOptions;
   final Function(FFPlace place) onSelect;
   final String? proxyBaseUrl;
+  /// True while fetching place details after user picks a prediction (for in-app loaders).
+  final ValueChanged<bool>? onPlaceDetailsBusy;
 
   @override
   _FFPlacePickerState createState() => _FFPlacePickerState();
@@ -90,49 +93,54 @@ class _FFPlacePickerState extends State<FlutterFlowPlacePicker> {
     if (placeId == null) {
       return;
     }
-    GoogleMapsPlaces _places = GoogleMapsPlaces(
-      apiKey: googleMapsApiKey,
-      baseUrl: widget.proxyBaseUrl,
-      apiHeaders: await const GoogleApiHeaders().getHeaders(),
-    );
-    PlacesDetailsResponse detail =
-        await _places.getDetailsByPlaceId(placeId, language: languageCode);
-    if (mounted) {
-      setState(() {
-        _selectedPlace = detail.result.name;
-      });
-    }
+    widget.onPlaceDetailsBusy?.call(true);
+    try {
+      GoogleMapsPlaces places = GoogleMapsPlaces(
+        apiKey: googleMapsApiKey,
+        baseUrl: widget.proxyBaseUrl,
+        apiHeaders: await const GoogleApiHeaders().getHeaders(),
+      );
+      PlacesDetailsResponse detail =
+          await places.getDetailsByPlaceId(placeId, language: languageCode);
+      if (mounted) {
+        setState(() {
+          _selectedPlace = detail.result.name;
+        });
+      }
 
-    widget.onSelect(
-      FFPlace(
-        latLng: LatLng(
-          detail.result.geometry?.location.lat ?? 0,
-          detail.result.geometry?.location.lng ?? 0,
+      widget.onSelect(
+        FFPlace(
+          latLng: LatLng(
+            detail.result.geometry?.location.lat ?? 0,
+            detail.result.geometry?.location.lng ?? 0,
+          ),
+          name: detail.result.name,
+          address: detail.result.formattedAddress ?? '',
+          city: detail.result.addressComponents
+                  .firstWhereOrNull((e) => e.types.contains('locality'))
+                  ?.shortName ??
+              detail.result.addressComponents
+                  .firstWhereOrNull((e) => e.types.contains('sublocality'))
+                  ?.shortName ??
+              '',
+          state: detail.result.addressComponents
+                  .firstWhereOrNull(
+                      (e) => e.types.contains('administrative_area_level_1'))
+                  ?.shortName ??
+              '',
+          country: detail.result.addressComponents
+                  .firstWhereOrNull((e) => e.types.contains('country'))
+                  ?.shortName ??
+              '',
+          zipCode: detail.result.addressComponents
+                  .firstWhereOrNull((e) => e.types.contains('postal_code'))
+                  ?.shortName ??
+              '',
         ),
-        name: detail.result.name,
-        address: detail.result.formattedAddress ?? '',
-        city: detail.result.addressComponents
-                .firstWhereOrNull((e) => e.types.contains('locality'))
-                ?.shortName ??
-            detail.result.addressComponents
-                .firstWhereOrNull((e) => e.types.contains('sublocality'))
-                ?.shortName ??
-            '',
-        state: detail.result.addressComponents
-                .firstWhereOrNull(
-                    (e) => e.types.contains('administrative_area_level_1'))
-                ?.shortName ??
-            '',
-        country: detail.result.addressComponents
-                .firstWhereOrNull((e) => e.types.contains('country'))
-                ?.shortName ??
-            '',
-        zipCode: detail.result.addressComponents
-                .firstWhereOrNull((e) => e.types.contains('postal_code'))
-                ?.shortName ??
-            '',
-      ),
-    );
+      );
+    } finally {
+      widget.onPlaceDetailsBusy?.call(false);
+    }
   }
 }
 

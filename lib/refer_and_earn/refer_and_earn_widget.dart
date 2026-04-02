@@ -1,12 +1,27 @@
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/utils/coin_wallet_inr.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'refer_and_earn_model.dart';
 export 'refer_and_earn_model.dart';
+
+/// Vibrant Refer & Earn palette — high contrast, friendly “coach” energy.
+class _ReferPalette {
+  static const Color violet = Color(0xFF5B21B6);
+  static const Color violetLight = Color(0xFF7C3AED);
+  static const Color coral = Color(0xFFFF4D2E);
+  static const Color sun = Color(0xFFFFB547);
+  static const Color mint = Color(0xFF10B981);
+  static const Color ocean = Color(0xFF0EA5E9);
+  static const Color ink = Color(0xFF0F172A);
+  static const Color cream = Color(0xFFFFFBF5);
+  static const Color card = Colors.white;
+}
 
 class ReferAndEarnWidget extends StatefulWidget {
   const ReferAndEarnWidget({super.key});
@@ -30,9 +45,13 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
   int _referralsPending = 0;
   double _totalEarned = 0.0;
   int _coinsBalance = 0;
+  int _proRidePayouts = 0;
+  int _referralRewardCoinsTotal = 0;
+  Map<String, int>? _walletCoinsLedger;
   List<dynamic> _referralRows = [];
+  List<Map<String, dynamic>> _coinLedger = [];
+  int _ledgerTotal = 0;
   String _firstName = '';
-  String _lastName = '';
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -41,33 +60,23 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
   void initState() {
     super.initState();
     _model = createModel(context, () => ReferAndEarnModel());
-
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 650),
     );
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _slideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.08),
+      begin: const Offset(0, 0.06),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOut));
-
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
     _fetchUserData(showPageLoader: true);
   }
 
-  // ─── API CALL: Get user by ID ─────────────────────────────────────────────
   Future<void> _fetchUserData({bool showPageLoader = true}) async {
-    // From app_state.dart:
-    //   int _userid = 0;       → default 0 means NOT logged in (not null)
-    //   String _accessToken = ''; → empty string means NOT authenticated
-    final int    userId = FFAppState().userid;
-    final String token  = FFAppState().accessToken;
+    final int userId = FFAppState().userid;
+    final String token = FFAppState().accessToken;
 
-    debugPrint('▶ ReferAndEarn: userId=$userId  tokenEmpty=${token.isEmpty}');
-
-    // Guard: 0 = not logged in, empty token = not authenticated
     if (userId <= 0 || token.isEmpty) {
-      debugPrint('✖ Skipping API – userId=$userId  token.isEmpty=${token.isEmpty}');
       if (mounted) {
         setState(() {
           if (showPageLoader) _isLoading = false;
@@ -77,83 +86,111 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       return;
     }
 
-    if (showPageLoader && mounted) {
-      setState(() => _isLoading = true);
-    }
+    if (showPageLoader && mounted) setState(() => _isLoading = true);
 
-    // ── 1. Fetch user profile from GET /api/users/{userId} ───────────────
     try {
-      final userResponse = await GetUserByIdCall.call(
-        userId: userId,
-        token: token,
-      );
-
-      debugPrint('◀ GetUserByIdCall status: ${userResponse.statusCode}');
-      debugPrint('◀ GetUserByIdCall body: ${userResponse.jsonBody}');
-
-      if (userResponse.statusCode >= 200 && userResponse.statusCode < 300) {
+      final userResponse = await GetUserByIdCall.call(userId: userId, token: token);
+      if (userResponse.statusCode >= 200 &&
+          userResponse.statusCode < 300 &&
+          mounted) {
         final body = userResponse.jsonBody;
-        // Exact paths matching your API: { "success":true, "data": { "referral_code":"USR19THM3", ... } }
-        final String code  = getJsonField(body, r'''$.data.referral_code''')?.toString() ?? '';
-        final int    coins = int.tryParse(getJsonField(body, r'''$.data.coins_balance''')?.toString() ?? '') ?? 0;
-        final String fName = getJsonField(body, r'''$.data.first_name''')?.toString() ?? '';
-        final String lName = getJsonField(body, r'''$.data.last_name''')?.toString() ?? '';
-
-        debugPrint('✔ code=$code  coins=$coins  name="$fName $lName"');
-
-        if (mounted) {
-          FFAppState().coinsBalance = coins;
-          setState(() {
-            _referralCode = code;
-            _coinsBalance = coins;
-            _firstName    = fName;
-            _lastName     = lName;
-          });
-        }
-      } else {
-        debugPrint('✖ GetUserByIdCall HTTP ${userResponse.statusCode}');
+        final code =
+            getJsonField(body, r'''$.data.referral_code''')?.toString() ?? '';
+        final coins = int.tryParse(
+                getJsonField(body, r'''$.data.coins_balance''')?.toString() ??
+                    '') ??
+            0;
+        final fName =
+            getJsonField(body, r'''$.data.first_name''')?.toString() ?? '';
+        FFAppState().coinsBalance = coins;
+        setState(() {
+          _referralCode = code;
+          _coinsBalance = coins;
+          _firstName = fName;
+        });
       }
     } catch (e) {
-      debugPrint('✖ GetUserByIdCall exception: $e');
+      debugPrint('GetUserByIdCall: $e');
     }
 
-    // ── 2. Fetch referral stats (non-critical) ────────────────────────────
     try {
-      final statsResponse = await GetUserReferralStatsCall.call(
-        userId: userId,
-        token: token,
-      );
-      if (statsResponse.statusCode >= 200 && statsResponse.statusCode < 300) {
+      final statsResponse =
+          await GetUserReferralStatsCall.call(userId: userId, token: token);
+      if (statsResponse.statusCode >= 200 &&
+          statsResponse.statusCode < 300 &&
+          mounted) {
         final body = statsResponse.jsonBody;
-        final int refs = int.tryParse(getJsonField(body, r'''$.data.total_referrals''')?.toString() ?? '') ?? 0;
-        final double earned = double.tryParse(getJsonField(body, r'''$.data.total_earned''')?.toString() ?? '') ?? 0.0;
-        final int act = int.tryParse(getJsonField(body, r'''$.data.referrals_activated''')?.toString() ?? '') ?? 0;
-        final int pend = int.tryParse(getJsonField(body, r'''$.data.referrals_pending''')?.toString() ?? '') ?? 0;
-        if (mounted) {
-          setState(() {
-            _totalReferrals = refs;
-            _totalEarned = earned;
-            _referralsActivated = act;
-            _referralsPending = pend;
-          });
-        }
+        final refs = int.tryParse(
+                GetUserReferralStatsCall.totalReferrals(body)?.toString() ??
+                    '') ??
+            0;
+        final earned = double.tryParse(
+                GetUserReferralStatsCall.totalEarned(body)?.toString() ?? '') ??
+            0.0;
+        final withPro = GetUserReferralStatsCall.referralsWithProReward(body) ??
+            int.tryParse(getJsonField(
+                        body, r'''$.data.referrals_activated''')
+                    ?.toString() ??
+                '') ??
+            0;
+        final pend = int.tryParse(
+                getJsonField(body, r'''$.data.referrals_pending''')
+                        ?.toString() ??
+                    '') ??
+            0;
+        final proPayouts =
+            GetUserReferralStatsCall.referralProRidePayouts(body) ?? 0;
+        final refCoins =
+            GetUserReferralStatsCall.referralRewardCoinsTotal(body) ?? 0;
+        final ledger = GetUserReferralStatsCall.walletCoinsLedger(body);
+        final statsCoins = GetUserReferralStatsCall.coinsBalance(body);
+        setState(() {
+          _totalReferrals = refs;
+          _totalEarned = earned;
+          _referralsActivated = withPro;
+          _referralsPending = pend;
+          _proRidePayouts = proPayouts;
+          _referralRewardCoinsTotal = refCoins;
+          _walletCoinsLedger = ledger;
+          if (statsCoins != null) {
+            _coinsBalance = statsCoins;
+            FFAppState().coinsBalance = statsCoins;
+          }
+        });
       }
     } catch (e) {
-      debugPrint('⚠ ReferralStats non-fatal: $e');
+      debugPrint('ReferralStats: $e');
     }
 
     try {
-      final refListRes = await GetUserReferralsCall.call(
-        userId: userId,
-        token: token,
-      );
-      if (refListRes.statusCode >= 200 && refListRes.statusCode < 300 && mounted) {
+      final refListRes =
+          await GetUserReferralsCall.call(userId: userId, token: token);
+      if (refListRes.statusCode >= 200 &&
+          refListRes.statusCode < 300 &&
+          mounted) {
         setState(() {
           _referralRows = GetUserReferralsCall.referrals(refListRes.jsonBody);
         });
       }
     } catch (e) {
-      debugPrint('⚠ Referrals list non-fatal: $e');
+      debugPrint('Referrals list: $e');
+    }
+
+    try {
+      final ledgerRes =
+          await GetMyCoinLedgerCall.call(token: token, limit: 60);
+      if (ledgerRes.statusCode >= 200 &&
+          ledgerRes.statusCode < 300 &&
+          mounted) {
+        setState(() {
+          _coinLedger = GetMyCoinLedgerCall.transactions(ledgerRes.jsonBody);
+          _ledgerTotal =
+              GetMyCoinLedgerCall.totalCount(ledgerRes.jsonBody) ??
+                  _coinLedger.length;
+        });
+      }
+    } catch (e) {
+      debugPrint('Coin ledger: $e');
     }
 
     if (mounted) {
@@ -164,24 +201,41 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     }
   }
 
-  // ─── Share via WhatsApp ───────────────────────────────────────────────────
+  String get _referralSharePlain =>
+      'Hey! Join UGO for Pro rides.\n\nUse my code: $_referralCode\n\nAdd it in the app at signup or Profile → Referral.';
+
   Future<void> _shareOnWhatsApp() async {
     if (_referralCode.isEmpty) return;
-    final message = Uri.encodeComponent(
-      'Hey! 👋 Join UGO – built for Pro Rides! 🚗\n\nUse my referral code *$_referralCode* when you sign up and get started.\n\nDownload now and let\'s ride! 🎉',
-    );
+    final message = Uri.encodeComponent(_referralSharePlain);
     final whatsappUrl = Uri.parse('whatsapp://send?text=$message');
-    final fallbackUrl =
+    final fallback =
         Uri.parse('https://api.whatsapp.com/send?text=$message');
-
     if (await canLaunchUrl(whatsappUrl)) {
       await launchUrl(whatsappUrl);
     } else {
-      await launchUrl(fallbackUrl, mode: LaunchMode.externalApplication);
+      await launchUrl(fallback, mode: LaunchMode.externalApplication);
     }
   }
 
-  // ─── Copy code to clipboard ───────────────────────────────────────────────
+  Future<void> _shareViaSystemSheet() async {
+    if (_referralCode.isEmpty) return;
+    await SharePlus.instance.share(
+      ShareParams(
+        text: _referralSharePlain,
+        subject: 'UGO — my referral code',
+      ),
+    );
+  }
+
+  Future<void> _shareViaSms() async {
+    if (_referralCode.isEmpty) return;
+    final body = Uri.encodeComponent(_referralSharePlain);
+    final sms = Uri.parse('sms:?body=$body');
+    if (await canLaunchUrl(sms)) {
+      await launchUrl(sms);
+    }
+  }
+
   void _copyCode() {
     if (_referralCode.isEmpty) return;
     Clipboard.setData(ClipboardData(text: _referralCode));
@@ -189,24 +243,47 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              'Referral code copied!',
-              style: GoogleFonts.inter(color: Colors.white),
-            ),
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Text('Code copied — paste it for your friends!',
+                style: GoogleFonts.inter(color: Colors.white)),
           ],
         ),
-        backgroundColor: const Color(0xFFFF7B10),
+        backgroundColor: _ReferPalette.violetLight,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
-  // ─── Coins → Rupees conversion ────────────────────────────────────────────
-  double get _coinsInRupees => _coinsBalance / 10.0;
+  double get _coinsInRupees => CoinWalletInr.toInr(_coinsBalance);
+
+  String _statusLabel(Map<dynamic, dynamic> row) {
+    final rowSt = row['referral_row_status']?.toString().toLowerCase() ?? '';
+    if (rowSt == 'fraud_blocked') return 'Blocked';
+    final s = row['status']?.toString().toLowerCase() ?? '';
+    if (s == 'completed') return 'Earning from Pro rides';
+    if (s == 'active') return 'Active — pays per Pro ride';
+    if (s == 'pending') return 'Waiting for first Pro ride';
+    return s.isEmpty ? '—' : s;
+  }
+
+  String _ledgerWhen(Map<String, dynamic> m) {
+    final raw = m['created_at'];
+    if (raw == null) return '';
+    final dt = DateTime.tryParse(raw.toString());
+    if (dt == null) return raw.toString();
+    return DateFormat('d MMM · h:mm a').format(dt.toLocal());
+  }
+
+  String _ledgerHeadline(Map<String, dynamic> m) {
+    final d = (m['description'] ?? '').toString().trim();
+    if (d.isEmpty) {
+      final isEarn = m['type']?.toString() == 'earn';
+      return isEarn ? 'Coins added' : 'Coins used';
+    }
+    return d;
+  }
 
   @override
   void dispose() {
@@ -215,16 +292,48 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     super.dispose();
   }
 
-  // ─── BUILD ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: scaffoldKey,
-      backgroundColor: const Color(0xFFF7F7F7),
+      backgroundColor: _ReferPalette.cream,
       body: _isLoading
-          ? const Center(
-              child:
-                  CircularProgressIndicator(color: Color(0xFFFF7B10)),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          _ReferPalette.violetLight,
+                          _ReferPalette.coral,
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _ReferPalette.coral.withValues(alpha: 0.35),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.card_giftcard_rounded,
+                        color: Colors.white, size: 40),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Loading your rewards…',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: _ReferPalette.ink,
+                    ),
+                  ),
+                ],
+              ),
             )
           : _buildBody(),
     );
@@ -236,194 +345,212 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       child: SlideTransition(
         position: _slideAnim,
         child: RefreshIndicator(
-          color: const Color(0xFFFF7B10),
+          color: _ReferPalette.coral,
           onRefresh: () => _fetchUserData(showPageLoader: false),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics(),
             ),
             slivers: [
-            // ── Collapsible AppBar with gradient ──────────────────────────
-            SliverAppBar(
-              expandedHeight: 220,
-              pinned: true,
-              stretch: true,
-              backgroundColor: const Color(0xFFFF7B10),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new,
-                    color: Colors.white, size: 20),
-                onPressed: () => context.safePop(),
-              ),
-              flexibleSpace: FlexibleSpaceBar(
-                stretchModes: const [
-                  StretchMode.zoomBackground,
-                  StretchMode.fadeTitle,
-                ],
-                titlePadding:
-                    const EdgeInsets.only(left: 16, bottom: 16),
-                title: Text(
-                  'Refer & Earn',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
+              SliverAppBar(
+                expandedHeight: 200,
+                pinned: true,
+                stretch: true,
+                elevation: 0,
+                backgroundColor: _ReferPalette.violet,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white, size: 20),
+                  onPressed: () => context.safePop(),
                 ),
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFFF9A3C),
-                            Color(0xFFFF6B00),
+                flexibleSpace: FlexibleSpaceBar(
+                  titlePadding:
+                      const EdgeInsetsDirectional.only(start: 16, bottom: 14),
+                  title: Text(
+                    'Refer & Earn',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF4C1D95),
+                              Color(0xFF7C3AED),
+                              Color(0xFFFF6B4A),
+                            ],
+                            stops: [0.0, 0.55, 1.0],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: -40,
+                        top: 20,
+                        child: Icon(Icons.auto_awesome_rounded,
+                            size: 120, color: Colors.white.withValues(alpha: 0.08)),
+                      ),
+                      Positioned(
+                        left: 20,
+                        right: 20,
+                        bottom: 56,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_firstName.isNotEmpty)
+                              Text(
+                                'Hi $_firstName 👋',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Your personal rewards coach — we’ll show every coin you earn.',
+                              style: GoogleFonts.inter(
+                                color: Colors.white.withValues(alpha: 0.92),
+                                fontSize: 13,
+                                height: 1.35,
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                    // Decorative circles
-                    Positioned(
-                      top: -30,
-                      right: -30,
-                      child: Container(
-                        width: 160,
-                        height: 160,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.08),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 20,
-                      left: -20,
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.06),
-                        ),
-                      ),
-                    ),
-                    // Hero content
-                    Positioned(
-                      top: 56,
-                      left: 0,
-                      right: 0,
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 72,
-                            height: 72,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.card_giftcard_rounded,
-                              color: Colors.white,
-                              size: 38,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          if (_firstName.isNotEmpty)
-                            Text(
-                              'Hi $_firstName! Invite & Earn 🎉',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // ── Body Content ──────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Description card
-                    _buildDescriptionCard(),
-                    const SizedBox(height: 20),
-
-                    // Referral code card
-                    _buildReferralCodeCard(),
-                    const SizedBox(height: 16),
-
-                    // Share on WhatsApp button
-                    _buildWhatsAppButton(),
-                    const SizedBox(height: 28),
-
-                    // Stats row
-                    _buildStatsRow(),
-                    if (_totalReferrals > 0 || _referralsActivated > 0) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        '$_referralsActivated of $_totalReferrals friends have completed a Pro ride · $_referralsPending still pending',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          height: 1.35,
-                        ),
-                      ),
                     ],
-                    const SizedBox(height: 20),
-
-                    _buildFriendsList(),
-                    if (_referralRows.isNotEmpty) const SizedBox(height: 20),
-
-                    // Coins card
-                    _buildCoinsCard(),
-                    const SizedBox(height: 28),
-
-                    // How it works
-                    _buildHowItWorks(),
-                    const SizedBox(height: 20),
-                    _buildSignupTip(),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 20, 18, 36),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildCoachCard(),
+                      const SizedBox(height: 18),
+                      if (_referralsPending > 0) ...[
+                        _buildPendingCard(),
+                        const SizedBox(height: 18),
+                      ],
+                      _buildWalletHero(),
+                      const SizedBox(height: 16),
+                      _buildStatPills(),
+                      const SizedBox(height: 20),
+                      _buildCodeCard(),
+                      const SizedBox(height: 14),
+                      _buildShareRow(),
+                      const SizedBox(height: 12),
+                      _buildShortcutsRow(),
+                      const SizedBox(height: 28),
+                      _buildSectionTitle(
+                        'Your coin diary',
+                        'Every +/− in one place — referrals, rides & more',
+                        Icons.receipt_long_rounded,
+                        _ReferPalette.ocean,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildLedgerSection(),
+                      const SizedBox(height: 28),
+                      _buildFriendsSection(),
+                      const SizedBox(height: 28),
+                      _buildJourneySteps(),
+                      const SizedBox(height: 20),
+                      _buildTipCard(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSignupTip() {
+  Widget _buildCoachCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F4FD),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF5B7BFE).withOpacity(0.25)),
+        gradient: LinearGradient(
+          colors: [
+            _ReferPalette.mint.withValues(alpha: 0.12),
+            _ReferPalette.ocean.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _ReferPalette.mint.withValues(alpha: 0.35)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lightbulb_outline_rounded,
-              color: Colors.blue.shade700, size: 22),
-          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: _ReferPalette.mint.withValues(alpha: 0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(Icons.support_agent_rounded,
+                color: _ReferPalette.mint, size: 28),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'How you earn (simple)',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _ReferPalette.ink,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _coachLine(Icons.tag_rounded,
+                    'Share your code — friends add it at signup or Profile.'),
+                _coachLine(Icons.directions_car_rounded,
+                    'When they finish a Pro ride, you get +10 coins (₹1 off).'),
+                _coachLine(Icons.payments_rounded,
+                    'Use coins only at ride checkout — not cash out.'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _coachLine(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: _ReferPalette.violetLight),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Missed entering a code at signup? Open Profile settings anytime and tap “Apply code” under Referral.',
+              text,
               style: GoogleFonts.inter(
-                fontSize: 12.5,
-                color: Colors.grey[800],
-                height: 1.45,
+                fontSize: 13,
+                height: 1.4,
+                color: Colors.grey.shade800,
               ),
             ),
           ),
@@ -432,53 +559,610 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     );
   }
 
-  String _statusLabel(dynamic status) {
-    final s = status?.toString().toLowerCase() ?? '';
-    if (s == 'completed') return 'Started earning';
-    if (s == 'pending') return 'Waiting for Pro ride';
-    return s.isEmpty ? '—' : s;
+  Widget _buildPendingCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _ReferPalette.sun.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.hourglass_top_rounded, color: _ReferPalette.coral, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '$_referralsPending friend(s) — not paid yet',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: _ReferPalette.ink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'They need to complete a Pro ride. You’ll get +10 coins each time.',
+                  style: GoogleFonts.inter(fontSize: 12.5, height: 1.35),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  Widget _buildFriendsList() {
-    if (_referralRows.isEmpty) return const SizedBox.shrink();
+  Widget _buildWalletHero() {
+    final r = _coinsInRupees;
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1E1B4B), Color(0xFF312E81), Color(0xFF4C1D95)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _ReferPalette.violet.withValues(alpha: 0.45),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _ReferPalette.sun.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  '10 coins = ₹1 ride discount',
+                  style: GoogleFonts.inter(
+                    color: _ReferPalette.sun,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Your balance',
+            style: GoogleFonts.inter(
+              color: Colors.white70,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$_coinsBalance',
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontSize: 42,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(left: 8, bottom: 6),
+                child: Text(
+                  'coins',
+                  style: GoogleFonts.inter(
+                    color: Colors.white70,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '≈ ₹${r.toStringAsFixed(2)}',
+                    style: GoogleFonts.poppins(
+                      color: _ReferPalette.mint,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    'off next rides',
+                    style: GoogleFonts.inter(
+                      color: Colors.white54,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (_walletCoinsLedger != null &&
+              (_walletCoinsLedger!['total_earned_coins']! > 0 ||
+                  _walletCoinsLedger!['total_used_coins']! > 0)) ...[
+            const SizedBox(height: 16),
+            Divider(color: Colors.white.withValues(alpha: 0.15)),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _walletMini(
+                    'Earned', '${_walletCoinsLedger!['total_earned_coins']}'),
+                _walletMini('Used', '${_walletCoinsLedger!['total_used_coins']}'),
+                _walletMini(
+                    'Avail.', '${_walletCoinsLedger!['available_coins']}'),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _walletMini(String label, String val) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Your invites',
-          style: GoogleFonts.poppins(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
+        Text(label, style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
+        Text(val,
+            style: GoogleFonts.poppins(
+                color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+      ],
+    );
+  }
+
+  Widget _buildStatPills() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        _pill(Icons.group_rounded, 'Friends', '$_totalReferrals', _ReferPalette.ocean),
+        _pill(Icons.verified_rounded, 'Paid friends',
+            '$_referralsActivated', _ReferPalette.mint),
+        _pill(Icons.local_fire_department_rounded, 'Pro payouts',
+            '$_proRidePayouts', _ReferPalette.coral),
+        _pill(Icons.stars_rounded, 'Ref. coins',
+            '$_referralRewardCoinsTotal', _ReferPalette.sun),
+        if (_totalEarned > 0)
+          _pill(Icons.currency_rupee_rounded, 'Ref. value',
+              '₹${_totalEarned.toStringAsFixed(0)}+', _ReferPalette.mint),
+      ],
+    );
+  }
+
+  Widget _pill(IconData icon, String label, String value, Color c) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: _ReferPalette.card,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: c.withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: c.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: c, size: 22),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value,
+                  style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: _ReferPalette.ink)),
+              Text(label,
+                  style: GoogleFonts.inter(
+                      fontSize: 11, color: Colors.grey.shade600)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCodeCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            _ReferPalette.sun.withValues(alpha: 0.35),
+            Colors.white,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+            color: _ReferPalette.coral.withValues(alpha: 0.3), width: 1.5),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'YOUR CODE',
+            style: GoogleFonts.inter(
+              letterSpacing: 2,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: _ReferPalette.coral,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            _referralCode.isEmpty ? '••••••••' : _referralCode,
+            style: GoogleFonts.spaceMono(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: _ReferPalette.ink,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            onPressed: _referralCode.isEmpty ? null : _copyCode,
+            icon: const Icon(Icons.copy_rounded, size: 18),
+            label: Text('Copy code',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+            style: FilledButton.styleFrom(
+              backgroundColor: _ReferPalette.violetLight,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShareRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: _shareBtn(
+            'WhatsApp',
+            const Color(0xFF25D366),
+            Icons.chat_rounded,
+            _shareOnWhatsApp,
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          'Status updates after each friend completes a Pro ride.',
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color: Colors.grey[600],
+        const SizedBox(width: 10),
+        Expanded(
+          child: _shareBtn(
+            'More',
+            _ReferPalette.violetLight,
+            Icons.ios_share_rounded,
+            _referralCode.isEmpty ? null : _shareViaSystemSheet,
           ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _shareBtn(
+            'SMS',
+            _ReferPalette.ocean,
+            Icons.sms_rounded,
+            _referralCode.isEmpty ? null : _shareViaSms,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _shareBtn(
+      String label, Color bg, IconData icon, VoidCallback? onTap) {
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Column(
+            children: [
+              Icon(icon, color: Colors.white, size: 22),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShortcutsRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => context.pushNamed('Wallet'),
+            icon: const Icon(Icons.account_balance_wallet_outlined, size: 18),
+            label: Text('Wallet', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: () => context.pushNamed('voucher'),
+            icon: const Icon(Icons.local_offer_outlined, size: 18),
+            label: Text('Vouchers', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title, String subtitle, IconData icon, Color c) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: c.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: c, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: _ReferPalette.ink,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: GoogleFonts.inter(
+                  fontSize: 12.5,
+                  color: Colors.grey.shade600,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLedgerSection() {
+    if (_coinLedger.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(22),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.savings_outlined,
+                size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 12),
+            Text(
+              'No coin moves yet',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                color: _ReferPalette.ink,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'When you earn from referrals or use coins on a ride, each line will show here with date & amount.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        if (_ledgerTotal > _coinLedger.length)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Showing ${_coinLedger.length} of $_ledgerTotal — pull to refresh',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+        ..._coinLedger.map(_buildLedgerTile),
+      ],
+    );
+  }
+
+  Widget _buildLedgerTile(Map<String, dynamic> m) {
+    final isEarn = m['type']?.toString() == 'earn';
+    final coins = int.tryParse(m['coins']?.toString() ?? '0') ?? 0;
+    final absCoins = coins.abs();
+    final inr = double.tryParse(m['value_inr']?.toString() ?? '') ??
+        (absCoins / 10.0);
+    final rideId = m['ride_id'];
+    final c = isEarn ? _ReferPalette.mint : _ReferPalette.coral;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: c.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isEarn ? Icons.add_rounded : Icons.remove_rounded,
+              color: c,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _ledgerHeadline(m),
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: _ReferPalette.ink,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _ledgerWhen(m),
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                if (rideId != null &&
+                    int.tryParse(rideId.toString()) != null &&
+                    int.parse(rideId.toString()) > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Ride #${rideId.toString()}',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: _ReferPalette.ocean,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${isEarn ? '+' : '−'}$absCoins',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17,
+                  color: c,
+                ),
+              ),
+              Text(
+                'coins',
+                style: GoogleFonts.inter(fontSize: 10, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '₹${inr.toStringAsFixed(2)}',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFriendsSection() {
+    if (_referralRows.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSectionTitle(
+          'Your invites',
+          'See who’s linked and what’s happening',
+          Icons.people_alt_rounded,
+          _ReferPalette.violetLight,
         ),
         const SizedBox(height: 12),
         ..._referralRows.take(20).map((r) {
           if (r is! Map) return const SizedBox.shrink();
-          final ru = r['referred_user'];
+          final rm = Map<dynamic, dynamic>.from(r);
+          final ru = rm['referred_user'];
           String name = 'Friend';
           if (ru is Map) {
             name = (ru['name'] ?? '').toString().trim();
             if (name.isEmpty) name = 'Friend';
           }
-          final st = _statusLabel(r['status']);
+          final st = _statusLabel(rm);
+          final amt = rm['amount'];
+          final amtStr = amt != null && double.tryParse(amt.toString()) != null &&
+                  double.parse(amt.toString()) > 0
+              ? ' · ₹${double.parse(amt.toString()).toStringAsFixed(0)} logged'
+              : '';
+
           return Container(
             margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -487,13 +1171,13 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 20,
-                  backgroundColor: const Color(0xFFFF7B10).withOpacity(0.15),
+                  radius: 22,
+                  backgroundColor: _ReferPalette.violetLight.withValues(alpha: 0.15),
                   child: Text(
                     name.isNotEmpty ? name[0].toUpperCase() : '?',
                     style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFFFF7B10),
+                      fontWeight: FontWeight.w800,
+                      color: _ReferPalette.violetLight,
                     ),
                   ),
                 ),
@@ -505,20 +1189,22 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
                       Text(
                         name,
                         style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
                         ),
                       ),
                       Text(
-                        st,
+                        '$st$amtStr',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.grey[600],
+                          color: Colors.grey.shade600,
+                          height: 1.3,
                         ),
                       ),
                     ],
                   ),
                 ),
+                Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400),
               ],
             ),
           );
@@ -527,435 +1213,31 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     );
   }
 
-  Widget _buildDescriptionCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFF7B10).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.people_alt_rounded,
-              color: Color(0xFFFF7B10),
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              'Friends enter your code at signup (or later in Profile). You earn 10 coins (₹1 ride credit) every time they finish a Pro ride. Coins apply at checkout — not withdrawable cash.',
-              style: GoogleFonts.inter(
-                fontSize: 13.5,
-                color: Colors.grey[700],
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReferralCodeCard() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF3E8), Color(0xFFFFE8CC)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: const Color(0xFFFF7B10).withOpacity(0.25),
-          width: 1.5,
-        ),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'YOUR REFERRAL CODE',
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFFFF7B10),
-              letterSpacing: 1.5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _referralCode.isEmpty ? '––––––––' : _referralCode,
-            style: GoogleFonts.spaceMono(
-              fontSize: 30,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-              letterSpacing: 3,
-            ),
-          ),
-          const SizedBox(height: 16),
-          // Copy button
-          GestureDetector(
-            onTap: _copyCode,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 9),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                    color: const Color(0xFFFF7B10).withOpacity(0.4)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.copy_rounded,
-                      size: 15, color: Color(0xFFFF7B10)),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Copy Code',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFFF7B10),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWhatsAppButton() {
-    return GestureDetector(
-      onTap: _shareOnWhatsApp,
-      child: Container(
-        height: 56,
-        decoration: BoxDecoration(
-          color: const Color(0xFF25D366),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF25D366).withOpacity(0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // WhatsApp icon (using custom painter or image asset)
-            Container(
-              width: 28,
-              height: 28,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Text(
-                  'W',
-                  style: TextStyle(
-                    color: Color(0xFF25D366),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Share on WhatsApp',
-              style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            icon: Icons.group_rounded,
-            iconColor: const Color(0xFF5B7BFE),
-            bgColor: const Color(0xFFEEF1FF),
-            label: 'Friends Referred',
-            value: _totalReferrals.toString(),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: _buildStatCard(
-            icon: Icons.currency_rupee_rounded,
-            iconColor: const Color(0xFF34C759),
-            bgColor: const Color(0xFFEAF9EE),
-            label: 'From referrals',
-            value: '₹${_totalEarned.toStringAsFixed(2)}',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required Color iconColor,
-    required Color bgColor,
-    required String label,
-    required String value,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: iconColor, size: 22),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 11.5,
-              color: Colors.grey[500],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCoinsCard() {
-    final rupees = _coinsInRupees;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.18),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Text('🪙', style: TextStyle(fontSize: 22)),
-                  const SizedBox(width: 8),
-                  Text(
-                    'My Coin Wallet',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF7B10).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '10 coins = ₹1',
-                  style: GoogleFonts.inter(
-                    color: const Color(0xFFFF7B10),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Coins Balance',
-                    style: GoogleFonts.inter(
-                      color: Colors.white54,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$_coinsBalance',
-                    style: GoogleFonts.spaceMono(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'coins',
-                    style: GoogleFonts.inter(
-                      color: Colors.white54,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Container(
-                width: 1,
-                height: 60,
-                color: Colors.white12,
-              ),
-              const Spacer(),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Worth in Cash',
-                    style: GoogleFonts.inter(
-                      color: Colors.white54,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '₹${rupees.toStringAsFixed(2)}',
-                    style: GoogleFonts.spaceMono(
-                      color: const Color(0xFF34C759),
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'rupees',
-                    style: GoogleFonts.inter(
-                      color: Colors.white54,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            height: 1,
-            color: Colors.white12,
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              const Icon(Icons.info_outline,
-                  color: Colors.white38, size: 14),
-              const SizedBox(width: 6),
-              Text(
-                _coinsBalance == 0
-                    ? 'Start referring friends to earn coins!'
-                    : 'You can redeem ₹${rupees.toStringAsFixed(2)} from your rides.',
-                style: GoogleFonts.inter(
-                  color: Colors.white38,
-                  fontSize: 11.5,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHowItWorks() {
-    final steps = [
+  Widget _buildJourneySteps() {
+    final steps = <Map<String, dynamic>>[
       {
-        'icon': Icons.share_rounded,
-        'color': const Color(0xFFFF7B10),
-        'title': 'Share Your Code',
-        'desc': 'Send your unique referral code to friends via WhatsApp or any platform.',
+        'icon': Icons.rocket_launch_rounded,
+        'color': _ReferPalette.coral,
+        'title': 'Share once',
+        'desc': 'Send your code on WhatsApp, SMS, or any app.',
       },
       {
         'icon': Icons.person_add_alt_1_rounded,
-        'color': const Color(0xFF5B7BFE),
-        'title': 'Friend Signs Up',
-        'desc': 'Your friend downloads UGO and enters your code during registration.',
+        'color': _ReferPalette.ocean,
+        'title': 'Friend joins',
+        'desc': 'They enter your code when they sign up or in Profile.',
       },
       {
-        'icon': Icons.directions_car_filled_rounded,
-        'color': const Color(0xFF34C759),
-        'title': 'They Take Pro Rides',
-        'desc': 'Each time your friend completes a Pro ride, you get 10 referral coins.',
+        'icon': Icons.electric_car_rounded,
+        'color': _ReferPalette.mint,
+        'title': 'Pro ride done',
+        'desc': '+10 coins for you every time they complete a Pro ride.',
       },
       {
-        'icon': Icons.wallet_rounded,
-        'color': const Color(0xFFFF9500),
-        'title': 'You Earn Coins',
-        'desc': '10 coins = ₹1 off at checkout on future rides (in-app only).',
+        'icon': Icons.savings_rounded,
+        'color': _ReferPalette.sun,
+        'title': 'Spend on rides',
+        'desc': '10 coins = ₹1 off at checkout. Not withdrawable cash.',
       },
     ];
 
@@ -963,68 +1245,70 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'How It Works',
+          'The journey',
           style: GoogleFonts.poppins(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: Colors.black87,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: _ReferPalette.ink,
           ),
         ),
-        const SizedBox(height: 16),
-        ...steps.asMap().entries.map((entry) {
-          final i = entry.key;
-          final step = entry.value;
+        const SizedBox(height: 14),
+        ...steps.asMap().entries.map((e) {
+          final i = e.key;
+          final s = e.value;
+          final col = s['color'] as Color;
           return Padding(
-            padding: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(
                   children: [
                     Container(
-                      width: 42,
-                      height: 42,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
-                        color: (step['color'] as Color).withOpacity(0.12),
+                        color: col.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
-                        step['icon'] as IconData,
-                        color: step['color'] as Color,
-                        size: 20,
-                      ),
+                      child: Icon(s['icon'] as IconData, color: col, size: 22),
                     ),
                     if (i < steps.length - 1)
                       Container(
                         width: 2,
-                        height: 28,
+                        height: 22,
                         margin: const EdgeInsets.symmetric(vertical: 4),
-                        color: Colors.grey[200],
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [col.withValues(alpha: 0.5), Colors.grey.shade200],
+                          ),
+                        ),
                       ),
                   ],
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.only(top: 6),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          step['title'] as String,
+                          s['title'] as String,
                           style: GoogleFonts.poppins(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: _ReferPalette.ink,
                           ),
                         ),
-                        const SizedBox(height: 2),
                         Text(
-                          step['desc'] as String,
+                          s['desc'] as String,
                           style: GoogleFonts.inter(
                             fontSize: 12.5,
-                            color: Colors.grey[600],
-                            height: 1.4,
+                            color: Colors.grey.shade600,
+                            height: 1.35,
                           ),
                         ),
                       ],
@@ -1036,6 +1320,33 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
           );
         }),
       ],
+    );
+  }
+
+  Widget _buildTipCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _ReferPalette.violet.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _ReferPalette.violetLight.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lightbulb_rounded, color: _ReferPalette.violetLight, size: 26),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Missed a code at signup? Open Profile → apply a referral code anytime.',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                height: 1.4,
+                color: Colors.grey.shade800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

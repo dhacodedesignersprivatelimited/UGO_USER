@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/app_config.dart';
-import '../flutter_flow/flutter_flow_theme.dart';
 import '../flutter_flow/flutter_flow_util.dart';
 import '/backend/api_requests/api_calls.dart';
 import 'dart:math';
@@ -19,9 +18,16 @@ class DriverDetailsComponent extends StatefulWidget {
   final String? liveEtaText;
   final VoidCallback? onShare;
   final VoidCallback? onChat;
+  final int unreadChatCount;
   final double? totalRoadDistanceKm;
   final ScrollController? scrollController;
   final VoidCallback? onTripDetails;
+
+  /// After a driver accepts (until trip starts), rider can change pickup/drop via PATCH.
+  final bool canEditPickupLocation;
+  final bool canEditDropLocation;
+  final VoidCallback? onEditPickup;
+  final VoidCallback? onEditDrop;
 
   const DriverDetailsComponent({
     Key? key,
@@ -37,9 +43,14 @@ class DriverDetailsComponent extends StatefulWidget {
     this.liveEtaText,
     this.onShare,
     this.onChat,
+    this.unreadChatCount = 0,
     this.totalRoadDistanceKm,
     this.scrollController,
     this.onTripDetails,
+    this.canEditPickupLocation = false,
+    this.canEditDropLocation = false,
+    this.onEditPickup,
+    this.onEditDrop,
   }) : super(key: key);
 
   @override
@@ -192,11 +203,11 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
         widget.ridesCache.isNotEmpty ? widget.ridesCache[0] as Map : null;
 
     // Driver name: socket payload → API
-    final driverName = _firstNonEmpty([
+    final driverName = _sanitizePersonName(_firstNonEmpty([
           ride?['driver_name']?.toString(),
           GetDriverDetailsCall.name(driverData),
         ]) ??
-        'Captain';
+        'Captain');
 
     // Rating
     final driverRating = double.tryParse(
@@ -372,7 +383,17 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
                   const SizedBox(height: 14),
                   _buildActionButtons(driverPhone?.toString()),
                   const SizedBox(height: 14),
-                  _buildTripInfoCard(pickup, dropoff, amount),
+                  _buildTripInfoCard(
+                    pickup,
+                    dropoff,
+                    amount,
+                    showPickupEdit: widget.canEditPickupLocation &&
+                        widget.onEditPickup != null,
+                    showDropEdit:
+                        widget.canEditDropLocation && widget.onEditDrop != null,
+                    onEditPickup: widget.onEditPickup,
+                    onEditDrop: widget.onEditDrop,
+                  ),
                   const SizedBox(height: 14),
                   if (!isStarted) _buildBottomButtons(),
                   const SizedBox(height: 24),
@@ -518,59 +539,94 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
   // ─── OTP Section ────────────────────────────────────────────────────────
 
   Widget _buildOtpSection(List<String> digits) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: _kPrimary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _kPrimary.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Your OTP',
-                  style: _font(
-                      size: 11,
-                      color: const Color(0xFF6B7280),
-                      weight: FontWeight.w500)),
-              const SizedBox(height: 2),
-              Text('Share with captain',
-                  style: _font(size: 10, color: const Color(0xFF9CA3AF))),
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 340;
+        final boxWidth = isNarrow ? 38.0 : 44.0;
+        final boxHeight = isNarrow ? 44.0 : 50.0;
+        final digitRow = Row(
+          mainAxisSize: MainAxisSize.min,
+          children: digits.map((d) {
+            return Container(
+              width: boxWidth,
+              height: boxHeight,
+              margin: const EdgeInsets.only(left: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _kPrimary.withValues(alpha: 0.35)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                d.toUpperCase(),
+                style:
+                    _font(size: isNarrow ? 16 : 18, weight: FontWeight.w800, color: _kPrimary),
+              ),
+            );
+          }).toList(),
+        );
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: _kPrimary.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _kPrimary.withValues(alpha: 0.2)),
           ),
-          const Spacer(),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: digits.map((d) {
-              return Container(
-                width: 44,
-                height: 50,
-                margin: const EdgeInsets.only(left: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _kPrimary.withValues(alpha: 0.35)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+          child: isNarrow
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Your OTP',
+                      style: _font(
+                        size: 11,
+                        color: const Color(0xFF6B7280),
+                        weight: FontWeight.w500,
+                      ),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Share with captain',
+                      style: _font(size: 10, color: const Color(0xFF9CA3AF)),
+                    ),
+                    const SizedBox(height: 10),
+                    Align(alignment: Alignment.centerRight, child: digitRow),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your OTP',
+                          style: _font(
+                            size: 11,
+                            color: const Color(0xFF6B7280),
+                            weight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Share with captain',
+                          style: _font(size: 10, color: const Color(0xFF9CA3AF)),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    digitRow,
                   ],
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  d.toUpperCase(),
-                  style: _font(
-                      size: 18, weight: FontWeight.w800, color: _kPrimary),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -591,53 +647,107 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
         .map((w) => w[0].toUpperCase())
         .join();
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  vehiclePlate.toUpperCase(),
-                  style: _font(
-                    size: 20,
-                    weight: FontWeight.w800,
-                    color: const Color(0xFF1A1A1A),
-                    spacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  vehicleModel.isNotEmpty ? vehicleModel : 'Vehicle',
-                  style: _font(size: 14, color: const Color(0xFF6B7280)),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  driverName,
-                  style: _font(size: 14, color: const Color(0xFF6B7280)),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 340;
+        final avatarSize = isNarrow ? 50.0 : 60.0;
+        final plateSize = isNarrow ? 17.0 : 20.0;
+
+        return Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: isNarrow ? 14 : 20,
+            vertical: isNarrow ? 14 : 18,
           ),
-          const SizedBox(width: 16),
-          _buildAvatar(imageUrl, initials),
-        ],
-      ),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              _buildAvatar(imageUrl, initials, size: avatarSize),
+              SizedBox(width: isNarrow ? 12 : 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      driverName,
+                      style: _font(
+                        size: isNarrow ? 15 : 16,
+                        weight: FontWeight.w700,
+                        color: const Color(0xFF1A1A1A),
+                      ),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (rating > 0) ...[
+                          const Icon(Icons.star_rounded,
+                              color: Color(0xFFFFB800), size: 14),
+                          const SizedBox(width: 3),
+                          Text(
+                            rating.toStringAsFixed(1),
+                            style: _font(
+                              size: 12,
+                              weight: FontWeight.w600,
+                              color: const Color(0xFF374151),
+                            ),
+                          ),
+                        ],
+                        if (rating > 0 && totalTrips > 0)
+                          Text(' · ',
+                              style: _font(
+                                  size: 12, color: const Color(0xFF9CA3AF))),
+                        if (totalTrips > 0)
+                          Text(
+                            '${_formatTripCount(totalTrips)} rides',
+                            style: _font(
+                              size: 12,
+                              weight: FontWeight.w500,
+                              color: const Color(0xFF6B7280),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      vehiclePlate.toUpperCase(),
+                      style: _font(
+                        size: plateSize,
+                        weight: FontWeight.w800,
+                        color: const Color(0xFF1A1A1A),
+                        spacing: 0.5,
+                      ),
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (vehicleModel.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        vehicleModel,
+                        style: _font(size: 13, color: const Color(0xFF6B7280)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildAvatar(String? imageUrl, String initials) {
+  Widget _buildAvatar(String? imageUrl, String initials, {double size = 60}) {
     return Container(
-      width: 60,
-      height: 60,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: const Color(0xFFE5E7EB),
@@ -647,8 +757,8 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
         child: imageUrl != null && imageUrl.isNotEmpty
             ? Image.network(
                 imageUrl,
-                width: 60,
-                height: 60,
+                width: size,
+                height: size,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => _buildInitialsAvatar(initials),
               )
@@ -666,72 +776,88 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
     );
   }
 
-  Widget _buildPlateBadge(String plate, String model) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            plate.toUpperCase(),
-            style: _font(
-              size: 13,
-              weight: FontWeight.w800,
-              spacing: 1.5,
-              color: const Color(0xFF1F2937),
-            ),
-          ),
-          if (model.isNotEmpty) ...[
-            const SizedBox(height: 2),
-            Text(
-              model,
-              style: _font(size: 10, color: const Color(0xFF9CA3AF)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
   // ─── Action Buttons ─────────────────────────────────────────────────────
 
   Widget _buildActionButtons(String? phoneNumber) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildActionBtn(
-            icon: Icons.call_rounded,
-            label: 'Call',
-            color: _kGreen,
-            onTap: () => widget.onCall(phoneNumber),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildActionBtn(
-            icon: Icons.chat_bubble_rounded,
-            label: 'Chat',
-            color: _kAmber,
-            onTap: widget.onChat,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildActionBtn(
-            icon: Icons.share_rounded,
-            label: 'Share',
-            color: _kIndigo,
-            onTap: widget.onShare,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 340;
+        if (!isNarrow) {
+          return Row(
+            children: [
+              Expanded(
+                child: _buildActionBtn(
+                  icon: Icons.call_rounded,
+                  label: 'Call',
+                  color: _kGreen,
+                  onTap: () => widget.onCall(phoneNumber),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildActionBtn(
+                  icon: Icons.chat_bubble_rounded,
+                  label: 'Chat',
+                  color: _kAmber,
+                  onTap: widget.onChat,
+                  badgeCount: widget.unreadChatCount,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildActionBtn(
+                  icon: Icons.share_rounded,
+                  label: 'Share',
+                  color: _kIndigo,
+                  onTap: widget.onShare,
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActionBtn(
+                    icon: Icons.call_rounded,
+                    label: 'Call',
+                    color: _kGreen,
+                    onTap: () => widget.onCall(phoneNumber),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildActionBtn(
+                    icon: Icons.chat_bubble_rounded,
+                    label: 'Chat',
+                    color: _kAmber,
+                    onTap: widget.onChat,
+                    badgeCount: widget.unreadChatCount,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActionBtn(
+                    icon: Icons.share_rounded,
+                    label: 'Share',
+                    color: _kIndigo,
+                    onTap: widget.onShare,
+                  ),
+                ),
+                const Expanded(child: SizedBox()),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -740,6 +866,7 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
     required String label,
     required Color color,
     VoidCallback? onTap,
+    int badgeCount = 0,
   }) {
     return InkWell(
       onTap: onTap,
@@ -753,14 +880,46 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
         ),
         child: Column(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 20),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                if (badgeCount > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1.5,
+                      ),
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
+                      decoration: BoxDecoration(
+                        color: _kRed,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
+                      child: Text(
+                        badgeCount > 99 ? '99+' : '$badgeCount',
+                        textAlign: TextAlign.center,
+                        style: _font(
+                          size: 9,
+                          weight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(label,
@@ -776,7 +935,15 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
 
   // ─── Trip Info Card ─────────────────────────────────────────────────────
 
-  Widget _buildTripInfoCard(String pickup, String dropoff, String amount) {
+  Widget _buildTripInfoCard(
+    String pickup,
+    String dropoff,
+    String amount, {
+    bool showPickupEdit = false,
+    bool showDropEdit = false,
+    VoidCallback? onEditPickup,
+    VoidCallback? onEditDrop,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -787,7 +954,12 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
       child: Column(
         children: [
           _buildLocationRow(
-              Icons.radio_button_checked_rounded, _kGreen, pickup),
+            Icons.radio_button_checked_rounded,
+            _kGreen,
+            pickup,
+            onEdit: showPickupEdit ? onEditPickup : null,
+            editTooltip: 'Edit pickup',
+          ),
           Padding(
             padding: const EdgeInsets.only(left: 9),
             child: Align(
@@ -803,25 +975,36 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
               ),
             ),
           ),
-          _buildLocationRow(Icons.location_on_rounded, _kRed, dropoff),
+          _buildLocationRow(
+            Icons.location_on_rounded,
+            _kRed,
+            dropoff,
+            onEdit: showDropEdit ? onEditDrop : null,
+            editTooltip: 'Edit drop',
+          ),
           const SizedBox(height: 14),
           Container(height: 1, color: const Color(0xFFE5E7EB)),
           const SizedBox(height: 14),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Distance',
-                      style: _font(size: 11, color: const Color(0xFF9CA3AF))),
-                  const SizedBox(height: 2),
-                  Text(
-                    _formatDistance(widget.totalRoadDistanceKm),
-                    style: _font(size: 15, weight: FontWeight.w600),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Distance',
+                        style:
+                            _font(size: 11, color: const Color(0xFF9CA3AF))),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatDistance(widget.totalRoadDistanceKm),
+                      style: _font(size: 15, weight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -842,7 +1025,13 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
     );
   }
 
-  Widget _buildLocationRow(IconData icon, Color color, String text) {
+  Widget _buildLocationRow(
+    IconData icon,
+    Color color,
+    String text, {
+    VoidCallback? onEdit,
+    String? editTooltip,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -856,6 +1045,16 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
             overflow: TextOverflow.ellipsis,
           ),
         ),
+        if (onEdit != null)
+          IconButton(
+            onPressed: onEdit,
+            tooltip: editTooltip ?? 'Edit',
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            icon: Icon(Icons.edit_location_alt_outlined,
+                size: 20, color: _kPrimary),
+          ),
       ],
     );
   }
@@ -936,5 +1135,11 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
       if (v != null && v.trim().isNotEmpty && v.trim() != 'null') return v;
     }
     return null;
+  }
+
+  static String _sanitizePersonName(String raw) {
+    final normalized =
+        raw.replaceAll(RegExp(r'[\r\n\t]+'), ' ').replaceAll(RegExp(r'\s+'), ' ');
+    return normalized.trim();
   }
 }

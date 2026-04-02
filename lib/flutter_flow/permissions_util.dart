@@ -19,14 +19,21 @@ Future<bool> getPermissionStatus(Permission setting) async {
   return kPermissionStateToBool[status]!;
 }
 
+/// Requests only when needed — avoids re-showing the system sheet if already granted.
 Future<void> requestPermission(Permission setting) async {
   if (setting == Permission.photos && isAndroid) {
     final androidInfo = await DeviceInfoPlugin().androidInfo;
-    if (androidInfo.version.sdkInt <= 32) {
-      await Permission.storage.request();
-    } else {
-      await Permission.photos.request();
-    }
+    final p =
+        androidInfo.version.sdkInt <= 32 ? Permission.storage : Permission.photos;
+    final st = await p.status;
+    if (st.isGranted || st.isLimited) return;
+    if (st.isPermanentlyDenied) return;
+    await p.request();
+    return;
   }
+
+  final status = await setting.status;
+  if (status.isGranted || status.isLimited) return;
+  if (status.isPermanentlyDenied) return;
   await setting.request();
 }

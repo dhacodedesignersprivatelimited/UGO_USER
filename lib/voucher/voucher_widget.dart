@@ -1,5 +1,7 @@
 import '/backend/api_requests/api_calls.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/utils/coin_wallet_inr.dart';
+import 'package:provider/provider.dart';
 import '/refer_and_earn/refer_and_earn_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -21,6 +23,7 @@ class _VoucherWidgetState extends State<VoucherWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   List<dynamic> _vouchers = [];
+  List<Map<String, dynamic>> _myWalletVouchers = [];
   bool _referralsLoading = true;
   int _referralTotal = 0;
   List<dynamic> _referralRows = [];
@@ -59,6 +62,22 @@ class _VoucherWidgetState extends State<VoucherWidget> {
         }
       } catch (_) {}
     }
+    if (app.userid > 0 && app.accessToken.isNotEmpty) {
+      try {
+        final vRes = await ListMyVouchersCall.call(
+          token: app.accessToken,
+          includeUsed: true,
+        );
+        if (vRes.succeeded && mounted) {
+          final raw = ListMyVouchersCall.vouchers(vRes.jsonBody) ?? [];
+          _myWalletVouchers = raw
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList();
+        }
+      } catch (_) {}
+    }
+
     if (mounted) {
       setState(() => _referralsLoading = false);
     }
@@ -87,7 +106,7 @@ class _VoucherWidgetState extends State<VoucherWidget> {
   Widget _buildCoinsAndReferralsCard() {
     final app = FFAppState();
     final coins = app.coinsBalance;
-    final rupees = coins / 10.0;
+    final rupees = CoinWalletInr.toInr(coins);
     const primaryOrange = Color(0xFFFF7B10);
 
     return Container(
@@ -137,7 +156,7 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '10 coins = ₹1',
+                  CoinWalletInr.rateCaption(),
                   style: GoogleFonts.inter(
                     color: const Color(0xFFFFB366),
                     fontSize: 11,
@@ -171,13 +190,26 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                 ),
               ),
               const Spacer(),
-              Text(
-                '≈ ₹${rupees.toStringAsFixed(1)} off rides',
-                style: GoogleFonts.inter(
-                  color: const Color(0xFFFFB366),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Ride value',
+                    style: GoogleFonts.inter(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    '₹${rupees.toStringAsFixed(2)}',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFFFFB366),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -305,6 +337,24 @@ class _VoucherWidgetState extends State<VoucherWidget> {
         body: SafeArea(
           child: Column(
             children: [
+              Material(
+                color: Colors.white,
+                child: SwitchListTile(
+                  title: Text(
+                    'Auto-apply best voucher when booking',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    'We pick the highest discount for your fare (you can turn this off).',
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  value: context.watch<FFAppState>().autoApplyBestVoucher,
+                  activeThumbColor: Colors.orange,
+                  onChanged: (v) {
+                    FFAppState().autoApplyBestVoucher = v;
+                  },
+                ),
+              ),
               Container(
                 width: double.infinity,
                 color: Colors.white,
@@ -393,6 +443,44 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (_myWalletVouchers.isNotEmpty) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                          child: Text(
+                            'Your ride vouchers',
+                            style: GoogleFonts.inter(
+                                fontSize: 18, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Available',
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w700, fontSize: 13),
+                              ),
+                              ..._myWalletVouchers
+                                  .where((v) =>
+                                      '${v['status']}'.toLowerCase() == 'active')
+                                  .map((v) => _walletVoucherTile(v)),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Used / expired',
+                                style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w700, fontSize: 13),
+                              ),
+                              ..._myWalletVouchers
+                                  .where((v) =>
+                                      '${v['status']}'.toLowerCase() != 'active')
+                                  .map((v) => _walletVoucherTile(v)),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 32),
+                      ],
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
                         child: Text(
@@ -469,6 +557,23 @@ class _VoucherWidgetState extends State<VoucherWidget> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _walletVoucherTile(Map<String, dynamic> v) {
+    final exp = v['expires_at']?.toString() ?? '';
+    final st = '${v['status'] ?? ''}';
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        '${v['title'] ?? v['code'] ?? 'Voucher'}',
+        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+      ),
+      subtitle: Text(
+        '$st${exp.isNotEmpty ? ' · exp $exp' : ''}',
+        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey[600]),
       ),
     );
   }

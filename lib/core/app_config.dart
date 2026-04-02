@@ -6,9 +6,24 @@ class AppConfig {
   static final AppConfig _instance = AppConfig._();
   static AppConfig get instance => _instance;
 
-  // API
-   static const String baseApiUrl = 'https://ugo-api.icacorp.org';
-  //static const String baseApiUrl = 'https://ugotaxi.icacorp.org';
+  /// Production default; override when pointing at another environment:
+  /// `flutter run --dart-define=BASE_API_URL=https://your-host.example`
+  static const String baseApiUrl = String.fromEnvironment(
+    'BASE_API_URL',
+    defaultValue: 'https://ugo-api.icacorp.org',
+  );
+
+  /// Absolute URL for relative upload paths (`uploads/...`).
+  static String resolveMediaUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    final t = path.trim();
+    if (t.startsWith('http://') || t.startsWith('https://')) return t;
+    final base = baseApiUrl.endsWith('/')
+        ? baseApiUrl.substring(0, baseApiUrl.length - 1)
+        : baseApiUrl;
+    final rel = t.startsWith('/') ? t : '/$t';
+    return '$base$rel';
+  }
 
   // Google Maps
   static const String googleMapsApiKey =

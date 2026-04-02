@@ -17,6 +17,10 @@ const kTransitionInfoKey = '__transition_info__';
 
 GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
+/// For SnackBars / MaterialBanner from services (e.g. FCM) without a [BuildContext].
+GlobalKey<ScaffoldMessengerState> appScaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
+
 class AppStateNotifier extends ChangeNotifier {
   AppStateNotifier._();
 
@@ -212,6 +216,12 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       path: WalletWidget.routePath,
       requireAuth: true,
       builder: (context, params) => WalletWidget(),
+    ),
+    FFRoute(
+      name: WalletHistoryWidget.routeName,
+      path: WalletHistoryWidget.routePath,
+      requireAuth: true,
+      builder: (context, params) => WalletHistoryWidget(),
     ),
     FFRoute(
       name: BalanceWidget.routeName,

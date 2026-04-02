@@ -1,5 +1,6 @@
 import '/app_state.dart';
 import '/backend/api_requests/api_calls.dart';
+import '/utils/coin_wallet_inr.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -27,6 +28,7 @@ class _BalanceWidgetState extends State<BalanceWidget> {
   double _balance = 0;
   double _totalAdded = 0;
   double _totalSpent = 0;
+  int _coinsBalance = 0;
   List<Map<String, String>> _recentLines = [];
 
   @override
@@ -49,13 +51,37 @@ class _BalanceWidgetState extends State<BalanceWidget> {
     double added = 0;
     double spent = 0;
     final List<Map<String, String>> lines = [];
+    var coinsLoadedFromSummary = false;
+
+    try {
+      final sum = await GetWalletSummaryCall.call(token: token);
+      if (sum.succeeded) {
+        final main = GetWalletSummaryCall.mainWalletInr(sum.jsonBody);
+        if (main != null) bal = main;
+        final c = GetWalletSummaryCall.coins(sum.jsonBody) ?? 0;
+        app.coinsBalance = c;
+        coinsLoadedFromSummary = true;
+      }
+    } catch (_) {}
+
+    if (!coinsLoadedFromSummary) {
+      try {
+        final userRes = await GetUserByIdCall.call(userId: uid, token: token);
+        if (userRes.succeeded) {
+          app.coinsBalance =
+              GetUserByIdCall.coinsBalance(userRes.jsonBody) ?? 0;
+        }
+      } catch (_) {}
+    }
 
     try {
       final w = await GetwalletCall.call(userId: uid, token: token);
       if (w.succeeded) {
-        bal = GetwalletCall.walletBalanceDouble(w.jsonBody) ??
-            double.tryParse(GetwalletCall.walletBalance(w.jsonBody) ?? '') ??
-            0;
+        if (bal == 0) {
+          bal = GetwalletCall.walletBalanceDouble(w.jsonBody) ??
+              double.tryParse(GetwalletCall.walletBalance(w.jsonBody) ?? '') ??
+              0;
+        }
         added = double.tryParse(GetwalletCall.totalRechargeAmount(w.jsonBody) ?? '') ?? 0;
         spent = double.tryParse(GetwalletCall.totalSpentAmount(w.jsonBody) ?? '') ?? 0;
       }
@@ -96,6 +122,7 @@ class _BalanceWidgetState extends State<BalanceWidget> {
       _balance = bal;
       _totalAdded = added;
       _totalSpent = spent;
+      _coinsBalance = app.coinsBalance;
       _recentLines = lines;
       _loading = false;
     });
@@ -223,6 +250,108 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                                     ),
                               ),
                             ),
+                            if (!_loading) ...[
+                              const SizedBox(height: 20),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(14.0),
+                                decoration: BoxDecoration(
+                                  color: FlutterFlowTheme.of(context)
+                                      .primaryBackground,
+                                  borderRadius: BorderRadius.circular(12.0),
+                                  border: Border.all(
+                                    color: FlutterFlowTheme.of(context).alternate,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Referral coins',
+                                      style: FlutterFlowTheme.of(context)
+                                          .titleSmall
+                                          .override(
+                                            font: GoogleFonts.interTight(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            color: FlutterFlowTheme.of(context)
+                                                .accent1,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      CoinWalletInr.rateCaption(),
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodySmall
+                                          .override(
+                                            font: GoogleFonts.inter(),
+                                            color: FlutterFlowTheme.of(context)
+                                                .secondaryText,
+                                            fontSize: 11,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Coins',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                color: FlutterFlowTheme.of(
+                                                        context)
+                                                    .secondaryText,
+                                              ),
+                                            ),
+                                            Text(
+                                              '$_coinsBalance',
+                                              style: GoogleFonts.interTight(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w700,
+                                                color: FlutterFlowTheme.of(
+                                                        context)
+                                                    .accent1,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              'Ride value',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                color: FlutterFlowTheme.of(
+                                                        context)
+                                                    .secondaryText,
+                                              ),
+                                            ),
+                                            Text(
+                                              CoinWalletInr.formatInrLabel(
+                                                  _coinsBalance),
+                                              style: GoogleFonts.interTight(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w700,
+                                                color: FlutterFlowTheme.of(
+                                                        context)
+                                                    .accent1,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                 ),
