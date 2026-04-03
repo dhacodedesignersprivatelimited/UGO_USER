@@ -26,6 +26,7 @@ class UgouserFirebaseUser extends BaseAuthUser {
   Future? updateEmail(String email) async {
     await user?.verifyBeforeUpdateEmail(email);
   }
+
   @override
   Future? updatePassword(String newPassword) async {
     await user?.updatePassword(newPassword);

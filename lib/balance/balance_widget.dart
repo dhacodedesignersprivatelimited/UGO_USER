@@ -82,8 +82,12 @@ class _BalanceWidgetState extends State<BalanceWidget> {
               double.tryParse(GetwalletCall.walletBalance(w.jsonBody) ?? '') ??
               0;
         }
-        added = double.tryParse(GetwalletCall.totalRechargeAmount(w.jsonBody) ?? '') ?? 0;
-        spent = double.tryParse(GetwalletCall.totalSpentAmount(w.jsonBody) ?? '') ?? 0;
+        added = double.tryParse(
+                GetwalletCall.totalRechargeAmount(w.jsonBody) ?? '') ??
+            0;
+        spent =
+            double.tryParse(GetwalletCall.totalSpentAmount(w.jsonBody) ?? '') ??
+                0;
       }
     } catch (_) {}
 
@@ -102,9 +106,12 @@ class _BalanceWidgetState extends State<BalanceWidget> {
           final amt = (m['amount'] is num)
               ? (m['amount'] as num).toDouble()
               : double.tryParse(m['amount']?.toString() ?? '') ?? 0;
-          final desc = m['description']?.toString() ?? m['type']?.toString() ?? 'Activity';
+          final desc = m['description']?.toString() ??
+              m['type']?.toString() ??
+              'Activity';
           final type = m['type']?.toString() ?? '';
-          final when = m['created_at']?.toString() ?? m['date']?.toString() ?? '';
+          final when =
+              m['created_at']?.toString() ?? m['date']?.toString() ?? '';
           final sign = amt >= 0 ? '+' : '';
           lines.add({
             'title': desc,
@@ -223,8 +230,7 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                                           .displaySmall
                                           .fontStyle,
                                     ),
-                                    color:
-                                        FlutterFlowTheme.of(context).accent1,
+                                    color: FlutterFlowTheme.of(context).accent1,
                                     fontSize: 36.0,
                                     letterSpacing: 0.0,
                                     fontWeight: FontWeight.w500,
@@ -260,7 +266,8 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                                       .primaryBackground,
                                   borderRadius: BorderRadius.circular(12.0),
                                   border: Border.all(
-                                    color: FlutterFlowTheme.of(context).alternate,
+                                    color:
+                                        FlutterFlowTheme.of(context).alternate,
                                   ),
                                 ),
                                 child: Column(
@@ -303,9 +310,9 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                                               'Coins',
                                               style: GoogleFonts.inter(
                                                 fontSize: 12,
-                                                color: FlutterFlowTheme.of(
-                                                        context)
-                                                    .secondaryText,
+                                                color:
+                                                    FlutterFlowTheme.of(context)
+                                                        .secondaryText,
                                               ),
                                             ),
                                             Text(
@@ -313,9 +320,9 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                                               style: GoogleFonts.interTight(
                                                 fontSize: 22,
                                                 fontWeight: FontWeight.w700,
-                                                color: FlutterFlowTheme.of(
-                                                        context)
-                                                    .accent1,
+                                                color:
+                                                    FlutterFlowTheme.of(context)
+                                                        .accent1,
                                               ),
                                             ),
                                           ],
@@ -328,9 +335,9 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                                               'Ride value',
                                               style: GoogleFonts.inter(
                                                 fontSize: 12,
-                                                color: FlutterFlowTheme.of(
-                                                        context)
-                                                    .secondaryText,
+                                                color:
+                                                    FlutterFlowTheme.of(context)
+                                                        .secondaryText,
                                               ),
                                             ),
                                             Text(
@@ -339,9 +346,9 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                                               style: GoogleFonts.interTight(
                                                 fontSize: 22,
                                                 fontWeight: FontWeight.w700,
-                                                color: FlutterFlowTheme.of(
-                                                        context)
-                                                    .accent1,
+                                                color:
+                                                    FlutterFlowTheme.of(context)
+                                                        .accent1,
                                               ),
                                             ),
                                           ],
@@ -420,9 +427,7 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                           ].divide(SizedBox(width: 12.0)),
                         ),
                         Text(
-                          _loading
-                              ? '…'
-                              : _totalAdded.toStringAsFixed(2),
+                          _loading ? '…' : _totalAdded.toStringAsFixed(2),
                           style:
                               FlutterFlowTheme.of(context).bodyMedium.override(
                                     font: GoogleFonts.inter(
@@ -485,9 +490,7 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                           ].divide(SizedBox(width: 12.0)),
                         ),
                         Text(
-                          _loading
-                              ? '…'
-                              : _totalSpent.toStringAsFixed(2),
+                          _loading ? '…' : _totalSpent.toStringAsFixed(2),
                           style:
                               FlutterFlowTheme.of(context).bodyMedium.override(
                                     font: GoogleFonts.inter(
@@ -518,11 +521,14 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                         padding: const EdgeInsets.only(top: 8.0),
                         child: Text(
                           'Totals above are all-time (from your wallet record).',
-                          style: FlutterFlowTheme.of(context).bodySmall.override(
+                          style: FlutterFlowTheme.of(context)
+                              .bodySmall
+                              .override(
                                 font: GoogleFonts.inter(
                                   fontWeight: FontWeight.normal,
                                 ),
-                                color: FlutterFlowTheme.of(context).secondaryText,
+                                color:
+                                    FlutterFlowTheme.of(context).secondaryText,
                                 fontSize: 12.0,
                               ),
                         ),
@@ -532,13 +538,14 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                       padding: const EdgeInsets.only(top: 20.0),
                       child: Text(
                         'Recent wallet activity (last 30 days)',
-                        style: FlutterFlowTheme.of(context).titleMedium.override(
-                              font: GoogleFonts.interTight(
-                                fontWeight: FontWeight.w500,
-                              ),
-                              color: FlutterFlowTheme.of(context).accent1,
-                              fontSize: 16.0,
-                            ),
+                        style:
+                            FlutterFlowTheme.of(context).titleMedium.override(
+                                  font: GoogleFonts.interTight(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  color: FlutterFlowTheme.of(context).accent1,
+                                  fontSize: 16.0,
+                                ),
                       ),
                     ),
                     if (_recentLines.isEmpty && !_loading)
@@ -546,9 +553,12 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                         padding: const EdgeInsets.only(top: 12.0),
                         child: Text(
                           'No wallet transactions in the last 30 days. Add money from the Wallet screen or pay for a ride with wallet to see history here.',
-                          style: FlutterFlowTheme.of(context).bodyMedium.override(
+                          style: FlutterFlowTheme.of(context)
+                              .bodyMedium
+                              .override(
                                 font: GoogleFonts.inter(),
-                                color: FlutterFlowTheme.of(context).secondaryText,
+                                color:
+                                    FlutterFlowTheme.of(context).secondaryText,
                                 fontSize: 13.0,
                               ),
                         ),
@@ -582,8 +592,9 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                                             .bodySmall
                                             .override(
                                               font: GoogleFonts.inter(),
-                                              color: FlutterFlowTheme.of(context)
-                                                  .secondaryText,
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .secondaryText,
                                               fontSize: 11.0,
                                             ),
                                       ),
@@ -600,7 +611,8 @@ class _BalanceWidgetState extends State<BalanceWidget> {
                                       ),
                                       color: row['positive'] == '1'
                                           ? const Color(0xFF2E7D32)
-                                          : FlutterFlowTheme.of(context).accent1,
+                                          : FlutterFlowTheme.of(context)
+                                              .accent1,
                                       fontSize: 14.0,
                                     ),
                               ),

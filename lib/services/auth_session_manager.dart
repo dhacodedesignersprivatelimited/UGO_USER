@@ -58,10 +58,14 @@ class AuthSessionManager {
     );
     if (!res.succeeded) return false;
     final access = LoginCall.accessToken(res.jsonBody) ??
-        (res.jsonBody is Map ? res.jsonBody['accessToken']?.toString() : null) ??
+        (res.jsonBody is Map
+            ? res.jsonBody['accessToken']?.toString()
+            : null) ??
         '';
     final refresh = LoginCall.refreshToken(res.jsonBody) ??
-        (res.jsonBody is Map ? res.jsonBody['refreshToken']?.toString() : null) ??
+        (res.jsonBody is Map
+            ? res.jsonBody['refreshToken']?.toString()
+            : null) ??
         '';
     if (access.isEmpty) return false;
     appState.accessToken = access;

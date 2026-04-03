@@ -9,7 +9,8 @@ abstract final class CoinWalletInr {
     return c / coinsPerRupee;
   }
 
-  static String formatInrLabel(int coins) => '₹${toInr(coins).toStringAsFixed(2)}';
+  static String formatInrLabel(int coins) =>
+      '₹${toInr(coins).toStringAsFixed(2)}';
 
   static String rateCaption() => '10 coins = ₹1';
 }

@@ -10,7 +10,6 @@ export 'api_manager.dart' show ApiCallResponse;
 /// Base API URL - single source of truth.
 String get _baseUrl => AppConfig.baseApiUrl;
 
-
 /// ---------------------------------------------------------------------------
 /// USER MANAGEMENT
 /// ---------------------------------------------------------------------------
@@ -64,9 +63,9 @@ class CreateUserCall {
         r'''$.data.refresh_token''',
       ));
   static int? userid(dynamic response) => castToType<int>(getJsonField(
-    response,
-    r'''$.data.user.id''',
-  ));
+        response,
+        r'''$.data.user.id''',
+      ));
 }
 
 class LoginCall {
@@ -111,9 +110,9 @@ class LoginCall {
         r'''$.data.refresh_token''',
       ));
   static int? userid(dynamic response) => castToType<int>(getJsonField(
-    response,
-    r'''$.data.user.id''',
-  ));
+        response,
+        r'''$.data.user.id''',
+      ));
 }
 
 class UserLogoutCall {
@@ -160,63 +159,67 @@ class GetUserDetailsCall {
       getJsonField(response, r'''$.data''');
   static int? id(dynamic response) =>
       castToType<int>(getJsonField(response, r'''$.data.id''')) ??
-          castToType<int>(getJsonField(response, r'''$.data[0].id'''));
+      castToType<int>(getJsonField(response, r'''$.data[0].id'''));
   static String? mobileNumber(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.mobile_number''')) ??
-          castToType<String>(
-              getJsonField(response, r'''$.data[0].mobile_number'''));
+      castToType<String>(
+          getJsonField(response, r'''$.data[0].mobile_number'''));
   static String? firstName(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.first_name''')) ??
-          castToType<String>(getJsonField(response, r'''$.data[0].first_name'''));
+      castToType<String>(getJsonField(response, r'''$.data[0].first_name'''));
   static String? lastName(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.last_name''')) ??
-          castToType<String>(getJsonField(response, r'''$.data[0].last_name'''));
+      castToType<String>(getJsonField(response, r'''$.data[0].last_name'''));
   static String? email(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.email''')) ??
-          castToType<String>(getJsonField(response, r'''$.data[0].email'''));
+      castToType<String>(getJsonField(response, r'''$.data[0].email'''));
   static String? profileImage(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.profile_image''')) ??
-          castToType<String>(
-              getJsonField(response, r'''$.data[0].profile_image'''));
-  static String? overallRating(dynamic response) => castToType<String>(
-    getJsonField(response, r'''$.data.overall_rating'''),
-  ) ??
+      castToType<String>(
+          getJsonField(response, r'''$.data[0].profile_image'''));
+  static String? overallRating(dynamic response) =>
+      castToType<String>(
+        getJsonField(response, r'''$.data.overall_rating'''),
+      ) ??
       castToType<String>(
           getJsonField(response, r'''$.data[0].overall_rating'''));
   static int? totalRides(dynamic response) =>
       castToType<int>(getJsonField(response, r'''$.data.total_rides''')) ??
-          castToType<int>(getJsonField(response, r'''$.data[0].total_rides'''));
-  static String? accountStatus(dynamic response) => castToType<String>(
-    getJsonField(response, r'''$.data.account_status'''),
-  ) ??
+      castToType<int>(getJsonField(response, r'''$.data[0].total_rides'''));
+  static String? accountStatus(dynamic response) =>
+      castToType<String>(
+        getJsonField(response, r'''$.data.account_status'''),
+      ) ??
       castToType<String>(
           getJsonField(response, r'''$.data[0].account_status'''));
   static String? accountType(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.account_type''')) ??
-          castToType<String>(getJsonField(response, r'''$.data[0].account_type'''));
+      castToType<String>(getJsonField(response, r'''$.data[0].account_type'''));
   static String? createdAt(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.created_at''')) ??
-          castToType<String>(getJsonField(response, r'''$.data[0].created_at'''));
+      castToType<String>(getJsonField(response, r'''$.data[0].created_at'''));
   static String? updatedAt(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.updated_at''')) ??
-          castToType<String>(getJsonField(response, r'''$.data[0].updated_at'''));
+      castToType<String>(getJsonField(response, r'''$.data[0].updated_at'''));
   static String? lastLogin(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.last_login''')) ??
-          castToType<String>(getJsonField(response, r'''$.data[0].last_login'''));
+      castToType<String>(getJsonField(response, r'''$.data[0].last_login'''));
   static bool? isBlocked(dynamic response) =>
       castToType<bool>(getJsonField(response, r'''$.data.is_blocked''')) ??
       castToType<bool>(getJsonField(response, r'''$.data[0].is_blocked'''));
   static int? referredByUserId(dynamic response) =>
-      castToType<int>(getJsonField(response, r'''$.data.referred_by_user_id''')) ??
+      castToType<int>(
+          getJsonField(response, r'''$.data.referred_by_user_id''')) ??
       castToType<int>(
           getJsonField(response, r'''$.data[0].referred_by_user_id'''));
   static String? usedReferralCodeField(dynamic response) =>
-      castToType<String>(getJsonField(response, r'''$.data.used_referral_code''')) ??
+      castToType<String>(
+          getJsonField(response, r'''$.data.used_referral_code''')) ??
       castToType<String>(
           getJsonField(response, r'''$.data[0].used_referral_code'''));
   static String? fcmToken(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.data.fcm_token''')) ??
-          castToType<String>(getJsonField(response, r'''$.data[0].fcm_token'''));
+      castToType<String>(getJsonField(response, r'''$.data[0].fcm_token'''));
 }
 
 class UpdateUserByIdCall {
@@ -349,8 +352,7 @@ class GetUserReferralStatsCall {
 
   /// Distinct friends with at least one Pro-ride referral payout.
   static int? referralsWithProReward(dynamic response) {
-    final raw =
-        getJsonField(response, r'''$.data.referrals_with_pro_reward''');
+    final raw = getJsonField(response, r'''$.data.referrals_with_pro_reward''');
     if (raw == null) return null;
     if (raw is int) return raw;
     return int.tryParse(raw.toString());
@@ -445,8 +447,7 @@ class GetMyCoinLedgerCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'getMyCoinLedger',
-      apiUrl:
-          '$_baseUrl/api/users/me/coins/ledger?page=$page&limit=$limit',
+      apiUrl: '$_baseUrl/api/users/me/coins/ledger?page=$page&limit=$limit',
       callType: ApiCallType.GET,
       headers: {
         if (token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -563,7 +564,8 @@ class GenerateReferralCodeCall {
     );
   }
 
-  static String? referralCode(dynamic response) => castToType<String>(getJsonField(
+  static String? referralCode(dynamic response) =>
+      castToType<String>(getJsonField(
         response,
         r'''$.data.referral_code''',
       ));
@@ -634,7 +636,8 @@ class GetReferralStatusCall {
     );
   }
 
-  static String? referralCode(dynamic response) => castToType<String>(getJsonField(
+  static String? referralCode(dynamic response) =>
+      castToType<String>(getJsonField(
         response,
         r'''$.data.referral_code''',
       ));
@@ -642,11 +645,13 @@ class GetReferralStatusCall {
         response,
         r'''$.data.total_referrals''',
       ));
-  static int? successfulConversions(dynamic response) => castToType<int>(getJsonField(
+  static int? successfulConversions(dynamic response) =>
+      castToType<int>(getJsonField(
         response,
         r'''$.data.successful_conversions''',
       ));
-  static double? coinsEarned(dynamic response) => castToType<double>(getJsonField(
+  static double? coinsEarned(dynamic response) =>
+      castToType<double>(getJsonField(
         response,
         r'''$.data.coins_earned''',
       ));
@@ -680,7 +685,8 @@ class GetReferralHistoryCall {
         response,
         r'''$.data''',
         true,
-      ) as List?)?.toList();
+      ) as List?)
+          ?.toList();
 }
 
 class GetReferralEarningsCall {
@@ -707,11 +713,13 @@ class GetReferralEarningsCall {
     );
   }
 
-  static double? moneyEarned(dynamic response) => castToType<double>(getJsonField(
+  static double? moneyEarned(dynamic response) =>
+      castToType<double>(getJsonField(
         response,
         r'''$.data.money_earned''',
       ));
-  static double? coinsEarned(dynamic response) => castToType<double>(getJsonField(
+  static double? coinsEarned(dynamic response) =>
+      castToType<double>(getJsonField(
         response,
         r'''$.data.coins_earned''',
       ));
@@ -759,26 +767,26 @@ class SaveAddressCall {
 
   // Parse response data
   static int? addressId(dynamic response) => castToType<int>(getJsonField(
-    response,
-    r'''$.data.id''',
-  ));
+        response,
+        r'''$.data.id''',
+      ));
   static String? message(dynamic response) => castToType<String>(getJsonField(
-    response,
-    r'''$.message''',
-  ));
+        response,
+        r'''$.message''',
+      ));
   static bool? success(dynamic response) => castToType<bool>(getJsonField(
-    response,
-    r'''$.success''',
-  ));
+        response,
+        r'''$.success''',
+      ));
   static String? addressType(dynamic response) =>
       castToType<String>(getJsonField(
         response,
         r'''$.data.address_type''',
       ));
   static bool? isDefault(dynamic response) => castToType<bool>(getJsonField(
-    response,
-    r'''$.data.is_default''',
-  ));
+        response,
+        r'''$.data.is_default''',
+      ));
 }
 
 class GetSavedAddressesCall {
@@ -805,64 +813,64 @@ class GetSavedAddressesCall {
 
   // Helpers to parse List<dynamic> from response
   static List<int>? ids(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].id''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<int>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].id''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<int>(x))
+          .withoutNulls
+          .toList();
 
   static List<String>? addressTexts(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].address_text''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].address_text''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
 
   static List<String>? addressTypes(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].address_type''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].address_type''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
 
   static List<String>? addressNames(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].address_name''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].address_name''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
 
   static List<double>? latitudes(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].latitude''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => double.tryParse(x.toString()))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].latitude''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => double.tryParse(x.toString()))
+          .withoutNulls
+          .toList();
 
   static List<double>? longitudes(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].longitude''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => double.tryParse(x.toString()))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].longitude''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => double.tryParse(x.toString()))
+          .withoutNulls
+          .toList();
 }
 
 /// ---------------------------------------------------------------------------
@@ -931,76 +939,76 @@ class GetRideHistoryCall {
 
   // ---------- Individual ride helpers ----------
   static List<int>? rideIds(dynamic response) => (getJsonField(
-    response,
-    r'''$.data.rides[:].ride_id''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<int>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data.rides[:].ride_id''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<int>(x))
+          .withoutNulls
+          .toList();
   static List<String>? driverNames(dynamic response) => (getJsonField(
-    response,
-    r'''$.data.rides[:].driver_name''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data.rides[:].driver_name''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
   static List<String>? fromLocations(dynamic response) => (getJsonField(
-    response,
-    r'''$.data.rides[:].from_location''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data.rides[:].from_location''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
   static List<String>? toLocations(dynamic response) => (getJsonField(
-    response,
-    r'''$.data.rides[:].to_location''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data.rides[:].to_location''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
   static List<double>? amounts(dynamic response) => (getJsonField(
-    response,
-    r'''$.data.rides[:].amount''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<double>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data.rides[:].amount''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<double>(x))
+          .withoutNulls
+          .toList();
   static List<String>? dates(dynamic response) => (getJsonField(
-    response,
-    r'''$.data.rides[:].date''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data.rides[:].date''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
   static List<String>? times(dynamic response) => (getJsonField(
-    response,
-    r'''$.data.rides[:].time''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data.rides[:].time''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
   static List<String?>? ratings(dynamic response) => (getJsonField(
-    response,
-    r'''$.data.rides[:].rating''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .toList();
+        response,
+        r'''$.data.rides[:].rating''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .toList();
 
   // ---------- Convenience methods ----------
   static int ridesCount(dynamic response) => (rides(response)?.length ?? 0);
@@ -1025,6 +1033,7 @@ class GetRideHistoryCall {
   static String? firstDate(dynamic response) => dates(response)?.firstOrNull;
   static String? firstTime(dynamic response) => times(response)?.firstOrNull;
 }
+
 /// ---------------------------------------------------------------------------
 /// WALLET MANAGEMENT
 /// ---------------------------------------------------------------------------
@@ -1056,8 +1065,7 @@ class AddMoneyToWalletCall {
       apiUrl: '$_baseUrl/api/wallets/add',
       callType: ApiCallType.POST,
       headers: {
-        if (token != null && token.isNotEmpty)
-          'Authorization': 'Bearer $token',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
       params: {},
@@ -1198,7 +1206,6 @@ class CreateRazorpayOrderCall {
       castToType<String>(getJsonField(response, r'$.data.order_id'));
 }
 
-
 /// GET /api/vehicle-types/getall-vehicle - Fetch all vehicle types for Our Services
 class GetVehicleTypesCall {
   static Future<ApiCallResponse> call() async {
@@ -1222,7 +1229,6 @@ class GetVehicleTypesCall {
   static List<dynamic>? vehicles(dynamic response) =>
       (getJsonField(response, r'$.data') as List?)?.toList();
 }
-
 
 /// ---------------------------------------------------------------------------
 /// VEHICLE & RIDE MANAGEMENT
@@ -1262,7 +1268,8 @@ class GetVehicleDetailsCall {
   }
 
   // ✅ STATIC API CALL
-  static Future<ApiCallResponse> call({int retryCount = 0, String? token}) async {
+  static Future<ApiCallResponse> call(
+      {int retryCount = 0, String? token}) async {
     const int maxRetries = 3;
     const Duration delayDuration = Duration(seconds: 2);
 
@@ -1276,7 +1283,8 @@ class GetVehicleDetailsCall {
         apiUrl: '$_baseUrl/api/admins/api/admins/vehicles',
         callType: ApiCallType.GET,
         headers: {
-          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
         },
         params: {},
         returnBody: true,
@@ -1305,82 +1313,82 @@ class GetVehicleDetailsCall {
 
   // ✅ STATIC HELPER METHODS
   static List? data(dynamic response) => getJsonField(
-    response,
-    r'''$.data''',
-    true,
-  ) as List?;
+        response,
+        r'''$.data''',
+        true,
+      ) as List?;
   static List<String>? vehiclename(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].vehicle_name''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].vehicle_name''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
   static List<String>? vehicletype(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].vehicle_type''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].vehicle_type''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
   static List<double>? price(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].kilometer_per_price''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<double>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].kilometer_per_price''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<double>(x))
+          .withoutNulls
+          .toList();
   static List<int>? seating(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].seating_capacity''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<int>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].seating_capacity''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<int>(x))
+          .withoutNulls
+          .toList();
   static List<int>? luggage(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].luggage_capacity''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<int>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].luggage_capacity''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<int>(x))
+          .withoutNulls
+          .toList();
   static List<String>? vehicleimage(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].vehicle_image''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].vehicle_image''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
   static List<String>? vehicleurl(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].vehicle_image_url''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].vehicle_image_url''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .withoutNulls
+          .toList();
   static List<int>? rideCategory(dynamic response) => (getJsonField(
-    response,
-    r'''$.data[:].ride_category''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<int>(x))
-      .withoutNulls
-      .toList();
+        response,
+        r'''$.data[:].ride_category''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<int>(x))
+          .withoutNulls
+          .toList();
 }
 
 /// ---------------------------------------------------------------------------
@@ -1478,8 +1486,7 @@ class GetRideStatus {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'GetRideStatus',
-      apiUrl:
-      '$_baseUrl/api/rides/users/$userId/pending-rides',
+      apiUrl: '$_baseUrl/api/rides/users/$userId/pending-rides',
       callType: ApiCallType.GET,
       headers: {
         if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
@@ -1491,16 +1498,16 @@ class GetRideStatus {
   }
 
   static int? count(dynamic response) => castToType<int>(
-    getJsonField(
-      response,
-      r'''$.data.count''',
-    ),
-  );
+        getJsonField(
+          response,
+          r'''$.data.count''',
+        ),
+      );
   static List? rides(dynamic response) => getJsonField(
-    response,
-    r'''$.data.rides''',
-    true,
-  ) as List?;
+        response,
+        r'''$.data.rides''',
+        true,
+      ) as List?;
   static List<String>? rideStatus(dynamic response) {
     final list = getJsonField(
       response,
@@ -1511,13 +1518,13 @@ class GetRideStatus {
   }
 
   static List<String?>? dropAddress(dynamic response) => (getJsonField(
-    response,
-    r'''$.data.rides[:].drop_location_address''',
-    true,
-  ) as List?)
-      ?.withoutNulls
-      .map((x) => castToType<String>(x))
-      .toList();
+        response,
+        r'''$.data.rides[:].drop_location_address''',
+        true,
+      ) as List?)
+          ?.withoutNulls
+          .map((x) => castToType<String>(x))
+          .toList();
   static List<double>? pickupLat(dynamic response) {
     final list = getJsonField(
       response,
@@ -1531,13 +1538,13 @@ class GetRideStatus {
   }
 
   static List<double>? pickupLng(dynamic response) => (getJsonField(
-    response,
-    r'''$.data.rides[:].pickup_longitude''',
-    true,
-  ) as List?)
-      ?.where((x) => x != null)
-      .map((x) => double.tryParse(x.toString()) ?? 0.0)
-      .toList();
+        response,
+        r'''$.data.rides[:].pickup_longitude''',
+        true,
+      ) as List?)
+          ?.where((x) => x != null)
+          .map((x) => double.tryParse(x.toString()) ?? 0.0)
+          .toList();
 }
 
 /// GET /api/rides/users/:userId/scheduled-rides
@@ -1676,8 +1683,10 @@ class ScanBookRideCall {
   static int? rideId(dynamic response) =>
       castToType<int>(getJsonField(response, r'$.data.id')) ??
       castToType<int>(getJsonField(response, r'$.data.rideId'));
-  static int? rideIdAlt(dynamic response) => castToType<int>(getJsonField(response, r'$.data.id'));
-  static String? status(dynamic response) => castToType<String>(getJsonField(response, r'$.data.status'));
+  static int? rideIdAlt(dynamic response) =>
+      castToType<int>(getJsonField(response, r'$.data.id'));
+  static String? status(dynamic response) =>
+      castToType<String>(getJsonField(response, r'$.data.status'));
 }
 
 /// Confirm Scan Start: POST /api/rides/confirm-scan-start
@@ -1838,7 +1847,8 @@ class CreateRideCall {
     double? pickupLongitude,
     double? dropLatitude,
     double? dropLongitude,
-    int? adminVehicleId, // ✅ Changed from rideType (String) to adminVehicleId (int)
+    int?
+        adminVehicleId, // ✅ Changed from rideType (String) to adminVehicleId (int)
     String? guestName,
     String? guestPhone,
     String? guestInstructions,
@@ -1849,7 +1859,8 @@ class CreateRideCall {
     String? paymentType, // ✅ Added Payment Type (cash/online)
     List<Map<String, dynamic>>? stops, // ✅ PRD: Multiple stops (max 4)
     DateTime? scheduledAt, // ✅ Scheduled rides: ISO 8601 pickup time
-    int? coinsToUse, // Referral coins; backend: multiple of 10, 10 coins = ₹1 discount
+    int?
+        coinsToUse, // Referral coins; backend: multiple of 10, 10 coins = ₹1 discount
     bool? autoApplyBestVoucher,
     int? userWalletVoucherId,
   }) async {
@@ -1862,7 +1873,8 @@ class CreateRideCall {
     while (currentRetry <= maxRetries) {
       // Scan booking (driver_id present): always cash. Normal booking: use paymentType.
       final isScanBooking = driverId != null;
-      final paymentMethod = isScanBooking ? 'cash' : _createRidePaymentMethod(paymentType);
+      final paymentMethod =
+          isScanBooking ? 'cash' : _createRidePaymentMethod(paymentType);
 
       final Map<String, dynamic> requestBody = {
         "user_id": userId,
@@ -1896,11 +1908,13 @@ class CreateRideCall {
       }
       // PRD: Multiple stops - send when backend supports it
       if (stops != null && stops.isNotEmpty && stops.length <= 4) {
-        requestBody["stops"] = stops.map((s) => {
-          "address": s["address"] ?? "",
-          "latitude": (s["latitude"] ?? s["lat"])?.toDouble(),
-          "longitude": (s["longitude"] ?? s["lng"])?.toDouble(),
-        }).toList();
+        requestBody["stops"] = stops
+            .map((s) => {
+                  "address": s["address"] ?? "",
+                  "latitude": (s["latitude"] ?? s["lat"])?.toDouble(),
+                  "longitude": (s["longitude"] ?? s["lng"])?.toDouble(),
+                })
+            .toList();
       }
       // Scheduled rides
       if (scheduledAt != null) {
@@ -1994,29 +2008,29 @@ class Data {
 
   Data(
       {this.createdAt,
-        this.updatedAt,
-        this.id,
-        this.userId,
-        this.pickupLocationAddress,
-        this.pickupLatitude,
-        this.pickupLongitude,
-        this.dropLocationAddress,
-        this.dropLatitude,
-        this.dropLongitude,
-        this.rideType,
-        this.bookingMode,
-        this.rideDistanceKm,
-        this.estimatedFare,
-        this.rideStatus,
-        this.requestTime,
-        this.guestName,
-        this.guestPhone,
-        this.guestInstructions,
-        this.otp,
-        this.otpHash,
-        this.otpExpiresAt,
-        this.otpAttempts,
-        this.otpVerifiedAt});
+      this.updatedAt,
+      this.id,
+      this.userId,
+      this.pickupLocationAddress,
+      this.pickupLatitude,
+      this.pickupLongitude,
+      this.dropLocationAddress,
+      this.dropLatitude,
+      this.dropLongitude,
+      this.rideType,
+      this.bookingMode,
+      this.rideDistanceKm,
+      this.estimatedFare,
+      this.rideStatus,
+      this.requestTime,
+      this.guestName,
+      this.guestPhone,
+      this.guestInstructions,
+      this.otp,
+      this.otpHash,
+      this.otpExpiresAt,
+      this.otpAttempts,
+      this.otpVerifiedAt});
 
   Data.fromJson(Map<String, dynamic> json) {
     createdAt = json['created_at'];
@@ -2109,8 +2123,10 @@ class AddTipToRideCall {
     );
   }
 
-  static bool? success(dynamic response) => castToType<bool>(getJsonField(response, r'$.success'));
-  static String? message(dynamic response) => castToType<String>(getJsonField(response, r'$.message'));
+  static bool? success(dynamic response) =>
+      castToType<bool>(getJsonField(response, r'$.success'));
+  static String? message(dynamic response) =>
+      castToType<String>(getJsonField(response, r'$.message'));
 }
 
 /// ---------------------------------------------------------------------------
@@ -2140,17 +2156,17 @@ class DriverIdfetchCall {
   }
 
   static bool? isonline(dynamic response) => castToType<bool>(getJsonField(
-    response,
-    r'''$.data.is_online''',
-  ));
+        response,
+        r'''$.data.is_online''',
+      ));
   static String? kycstatus(dynamic response) => castToType<String>(getJsonField(
-    response,
-    r'''$.data.kyc_status''',
-  ));
+        response,
+        r'''$.data.kyc_status''',
+      ));
   static dynamic driverData(dynamic response) => getJsonField(
-    response,
-    r'''$.data''',
-  );
+        response,
+        r'''$.data''',
+      );
   static String? referralCode(dynamic response) =>
       castToType<String>(getJsonField(
         response,
@@ -2180,9 +2196,9 @@ class DriverIdfetchCall {
 
   /// Get PAN image URL
   static String? panImage(dynamic response) => castToType<String>(getJsonField(
-    response,
-    r'''$.data.pan_image''',
-  ));
+        response,
+        r'''$.data.pan_image''',
+      ));
 
   /// Get vehicle image URL
   static String? vehicleImage(dynamic response) =>
@@ -2193,27 +2209,27 @@ class DriverIdfetchCall {
 
   /// Get RC image URL
   static String? rcImage(dynamic response) => castToType<String>(getJsonField(
-    response,
-    r'''$.data.rc_image''',
-  ));
+        response,
+        r'''$.data.rc_image''',
+      ));
 
   /// Get driver first name
   static String? firstName(dynamic response) => castToType<String>(getJsonField(
-    response,
-    r'''$.data.first_name''',
-  ));
+        response,
+        r'''$.data.first_name''',
+      ));
 
   /// Get driver last name
   static String? lastName(dynamic response) => castToType<String>(getJsonField(
-    response,
-    r'''$.data.last_name''',
-  ));
+        response,
+        r'''$.data.last_name''',
+      ));
 
   /// Get driver email
   static String? email(dynamic response) => castToType<String>(getJsonField(
-    response,
-    r'''$.data.email''',
-  ));
+        response,
+        r'''$.data.email''',
+      ));
 
   /// Get driver mobile number
   static String? mobileNumber(dynamic response) =>
@@ -2252,9 +2268,9 @@ class DriverIdfetchCall {
 
   /// Check if driver is active
   static bool? isActive(dynamic response) => castToType<bool>(getJsonField(
-    response,
-    r'''$.data.is_active''',
-  ));
+        response,
+        r'''$.data.is_active''',
+      ));
 
   /// Get account status
   static String? accountStatus(dynamic response) =>
@@ -2299,6 +2315,7 @@ class GetVehicleInfoByDriverCall {
         castToType<String>(
             getJsonField(response, r'''$.data.vehicle.license_plate'''));
   }
+
   /// RC / registration when `license_plate` is empty on `by-driver` user payload.
   static String? registrationNumber(dynamic response) {
     return castToType<String>(
@@ -2306,6 +2323,7 @@ class GetVehicleInfoByDriverCall {
         castToType<String>(
             getJsonField(response, r'''$.data.vehicle.registration_number'''));
   }
+
   static String? vehicleName(dynamic response) =>
       castToType<String>(getJsonField(
         response,
@@ -2353,9 +2371,7 @@ class GetDriverDetailsCall {
   static String? profileImage(dynamic response) {
     final imagePath = DriverIdfetchCall.profileImage(response);
     if (imagePath != null && imagePath.isNotEmpty) {
-      return imagePath.startsWith('http')
-          ? imagePath
-          : '$_baseUrl/$imagePath';
+      return imagePath.startsWith('http') ? imagePath : '$_baseUrl/$imagePath';
     }
     return null;
   }
@@ -2365,8 +2381,7 @@ class GetDriverDetailsCall {
     var number =
         castToType<String>(getJsonField(response, r'''$.vehicle_plate'''));
     if (number != null) return number;
-    number =
-        castToType<String>(getJsonField(response, r'''$.license_plate'''));
+    number = castToType<String>(getJsonField(response, r'''$.license_plate'''));
     if (number != null) return number;
     number = castToType<String>(
         getJsonField(response, r'''$.registration_number'''));
@@ -2401,8 +2416,7 @@ class GetDriverDetailsCall {
     m = castToType<String>(
         getJsonField(response, r'''$.data.vehicle.vehicle_name'''));
     if (m != null) return m;
-    m = castToType<String>(
-        getJsonField(response, r'''$.data.vehicle_model'''));
+    m = castToType<String>(getJsonField(response, r'''$.data.vehicle_model'''));
     return m;
   }
 
@@ -2418,7 +2432,7 @@ class GetDriverDetailsCall {
 
   static String? vehicleType(dynamic response) {
     var type =
-    castToType<String>(getJsonField(response, r'''$.vehicle_type'''));
+        castToType<String>(getJsonField(response, r'''$.vehicle_type'''));
     type ??= castToType<String>(getJsonField(response, r'''$.vehicle_name'''));
     type ??=
         castToType<String>(getJsonField(response, r'''$.data.vehicle_type'''));
@@ -2427,7 +2441,7 @@ class GetDriverDetailsCall {
 
   static String? vehicleStatus(dynamic response) =>
       castToType<String>(getJsonField(response, r'''$.vehicle_status''')) ??
-          'pending_verification';
+      'pending_verification';
   static bool? isOnline(dynamic response) =>
       DriverIdfetchCall.isonline(response);
   static String? kycStatus(dynamic response) =>
@@ -2499,11 +2513,11 @@ class CancelRide {
 
   // ✅ Added Response Helper Methods
   static bool? success(dynamic response) => castToType<bool>(
-    getJsonField(response, r'''$.success'''),
-  );
+        getJsonField(response, r'''$.success'''),
+      );
   static String? message(dynamic response) => castToType<String>(
-    getJsonField(response, r'''$.message'''),
-  );
+        getJsonField(response, r'''$.message'''),
+      );
 }
 
 class RebookRideCall {
@@ -2512,9 +2526,7 @@ class RebookRideCall {
     String? token = '',
     int extraFare = 0,
   }) async {
-    final body = extraFare > 0
-        ? '{"extra_fare": $extraFare}'
-        : '{}';
+    final body = extraFare > 0 ? '{"extra_fare": $extraFare}' : '{}';
     return ApiManager.instance.makeApiCall(
       callName: 'rebookRide',
       apiUrl: '$_baseUrl/api/rides/rebook/$rideId',
@@ -2534,19 +2546,20 @@ class RebookRideCall {
   }
 
   static bool? success(dynamic response) => castToType<bool>(
-    getJsonField(response, r'''$.success'''),
-  );
+        getJsonField(response, r'''$.success'''),
+      );
   static String? message(dynamic response) => castToType<String>(
-    getJsonField(response, r'''$.message'''),
-  );
+        getJsonField(response, r'''$.message'''),
+      );
   static int? newRideId(dynamic response) => castToType<int>(
-    getJsonField(response, r'''$.data.ride_id'''),
-  );
+        getJsonField(response, r'''$.data.ride_id'''),
+      );
   static double? estimatedFare(dynamic response) {
     final v = getJsonField(response, r'''$.data.estimated_fare''');
     if (v == null) return null;
     return double.tryParse(v.toString());
   }
+
   static double? extraFareResponse(dynamic response) {
     final v = getJsonField(response, r'''$.data.extra_fare''');
     if (v == null) return null;
@@ -2692,14 +2705,14 @@ class GetAllNotificationsCall {
   }
 
   static List? notifications(dynamic response) => getJsonField(
-    response,
-    r'''$.data.notifications''',
-    true,
-  ) as List?;
+        response,
+        r'''$.data.notifications''',
+        true,
+      ) as List?;
   static int? total(dynamic response) => castToType<int>(getJsonField(
-    response,
-    r'''$.data.total''',
-  ));
+        response,
+        r'''$.data.total''',
+      ));
 
   /// Server-computed unread count for the authenticated rider inbox.
   static int? unreadCount(dynamic response) => castToType<int>(getJsonField(
@@ -2744,6 +2757,7 @@ class MarkAllNotificationsReadCall {
     );
   }
 }
+
 class GetwalletCall {
   static Future<ApiCallResponse> call({
     int? userId,
@@ -2754,8 +2768,7 @@ class GetwalletCall {
       apiUrl: '$_baseUrl/api/wallets/user/$userId',
       callType: ApiCallType.GET,
       headers: {
-        if (token != null && token.isNotEmpty)
-          'Authorization': 'Bearer $token',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       },
       params: {},
       returnBody: true,
@@ -2865,7 +2878,9 @@ class GetWalletTransactionsMeCall {
     if (from != null && from.isNotEmpty) qp['from'] = from;
     if (to != null && to.isNotEmpty) qp['to'] = to;
     if (q != null && q.isNotEmpty) qp['q'] = q;
-    final qs = qp.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
+    final qs = qp.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join('&');
     return ApiManager.instance.makeApiCall(
       callName: 'getWalletTransactionsMe',
       apiUrl: '$_baseUrl/api/wallets/me/transactions?$qs',
@@ -2950,7 +2965,8 @@ class GetUserTransactionsCall {
   }
 
   static String? itemDate(dynamic item) {
-    final d = getJsonField(item, r'$.created_at') ?? getJsonField(item, r'$.date');
+    final d =
+        getJsonField(item, r'$.created_at') ?? getJsonField(item, r'$.date');
     return d?.toString();
   }
 }
@@ -3021,8 +3037,7 @@ class GetAllVouchersCall {
       apiUrl: '$_baseUrl/api/promo-codes/getall',
       callType: ApiCallType.GET,
       headers: {
-        if (token != null && token.isNotEmpty)
-          'Authorization': 'Bearer $token',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
       },
       params: {},
       returnBody: true,
@@ -3035,11 +3050,12 @@ class GetAllVouchersCall {
   }
 
   static List? data(dynamic response) => getJsonField(
-    response,
-    r'''$.data''',
-    true,
-  ) as List?;
+        response,
+        r'''$.data''',
+        true,
+      ) as List?;
 }
+
 /// ---------------------------------------------------------------------------
 /// UPDATE RIDE STATUS
 /// ---------------------------------------------------------------------------
@@ -3047,7 +3063,7 @@ class GetAllVouchersCall {
 class UpdateRideStatusCall {
   static Future<ApiCallResponse> call({
     required int? rideId,
-    required String? status, 
+    required String? status,
     // allowed: qr_scan | accepted | arrived | started | completed
     String? token = '',
     int retryCount = 0,
@@ -3150,7 +3166,8 @@ class EmergencySosCall {
     );
   }
 
-  static bool? success(dynamic response) => castToType<bool>(getJsonField(response, r'$.success'));
+  static bool? success(dynamic response) =>
+      castToType<bool>(getJsonField(response, r'$.success'));
 }
 
 /// ---------------------------------------------------------------------------
@@ -3193,8 +3210,10 @@ class CreateSupportTicketCall {
     );
   }
 
-  static bool? success(dynamic response) => castToType<bool>(getJsonField(response, r'$.success'));
-  static int? ticketId(dynamic response) => castToType<int>(getJsonField(response, r'$.data.id'));
+  static bool? success(dynamic response) =>
+      castToType<bool>(getJsonField(response, r'$.success'));
+  static int? ticketId(dynamic response) =>
+      castToType<int>(getJsonField(response, r'$.data.id'));
 }
 
 class GetSupportTicketCall {
@@ -3239,7 +3258,8 @@ class DeleteSupportTicketCall {
     );
   }
 
-  static bool? success(dynamic response) => castToType<bool>(getJsonField(response, r'$.success'));
+  static bool? success(dynamic response) =>
+      castToType<bool>(getJsonField(response, r'$.success'));
 }
 
 /// ---------------------------------------------------------------------------
@@ -3455,9 +3475,6 @@ class ApiPagingParams {
   String toString() =>
       'PagingParams(nextPageNumber: $nextPageNumber, numItems: $numItems, lastResponse: $lastResponse,)';
 }
-
-
-
 
 String? escapeStringForJson(String? input) {
   if (input == null) {

@@ -126,7 +126,7 @@ class _AccountSupportWidgetState extends State<AccountSupportWidget> {
                   ),
                 ),
               ),
-              
+
               // Dynamic List
               Expanded(
                 child: ListView.separated(
@@ -185,13 +185,14 @@ class _AccountSupportWidgetState extends State<AccountSupportWidget> {
                   },
                 ),
               ),
-              
+
               // Quick Contact Footer
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: Colors.grey[50],
-                  border: const Border(top: BorderSide(color: Color(0xFFEEEEEE))),
+                  border:
+                      const Border(top: BorderSide(color: Color(0xFFEEEEEE))),
                 ),
                 child: Row(
                   children: [
@@ -220,12 +221,17 @@ class _AccountSupportWidgetState extends State<AccountSupportWidget> {
                       onPressed: () {},
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
                       ),
                       child: Text(
                         'Contact Us',
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
                       ),
                     ),
                   ],

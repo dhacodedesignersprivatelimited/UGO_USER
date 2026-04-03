@@ -52,16 +52,17 @@ class _LoginWidgetState extends State<LoginWidget> {
         key: scaffoldKey,
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         appBar: AppBar(
-          backgroundColor: FlutterFlowTheme.of(context).primary, // Fixed: Solid Orange
+          backgroundColor:
+              FlutterFlowTheme.of(context).primary, // Fixed: Solid Orange
           automaticallyImplyLeading: false,
           title: Text(
             FFLocalizations.of(context).getText('mc86snxk' /* LOGIN */),
             style: FlutterFlowTheme.of(context).headlineMedium.override(
-              font: GoogleFonts.interTight(),
-              color: Colors.white,
-              fontSize: 22.0,
-              fontWeight: FontWeight.w600,
-            ),
+                  font: GoogleFonts.interTight(),
+                  color: Colors.white,
+                  fontSize: 22.0,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           centerTitle: true,
           elevation: 0.0,
@@ -77,36 +78,40 @@ class _LoginWidgetState extends State<LoginWidget> {
                 children: [
                   const SizedBox(height: 30.0),
                   Text(
-                    FFLocalizations.of(context).getText('0wqdgogt' /* Start your journey... */),
+                    FFLocalizations.of(context)
+                        .getText('0wqdgogt' /* Start your journey... */),
                     style: FlutterFlowTheme.of(context).headlineMedium.override(
-                      font: GoogleFonts.interTight(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      color: FlutterFlowTheme.of(context).primaryText,
-                      fontSize: 24.0,
-                      lineHeight: 1.5,
-                    ),
+                          font: GoogleFonts.interTight(
+                            fontWeight: FontWeight.w600,
+                          ),
+                          color: FlutterFlowTheme.of(context).primaryText,
+                          fontSize: 24.0,
+                          lineHeight: 1.5,
+                        ),
                   ),
                   Text(
-                    FFLocalizations.of(context).getText('lu0ku0g6' /* We'll send you a code... */),
+                    FFLocalizations.of(context)
+                        .getText('lu0ku0g6' /* We'll send you a code... */),
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
-                      font: GoogleFonts.inter(),
-                      color: Colors.grey[600],
-                      fontSize: 16.0,
-                      lineHeight: 1.5,
-                    ),
+                          font: GoogleFonts.inter(),
+                          color: Colors.grey[600],
+                          fontSize: 16.0,
+                          lineHeight: 1.5,
+                        ),
                   ),
                   const SizedBox(height: 30.0),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        FFLocalizations.of(context).getText('kd9srmop' /* Phone number */),
+                        FFLocalizations.of(context)
+                            .getText('kd9srmop' /* Phone number */),
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
-                          font: GoogleFonts.inter(fontWeight: FontWeight.w600),
-                          color: Colors.black,
-                          fontSize: 14.0,
-                        ),
+                              font: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600),
+                              color: Colors.black,
+                              fontSize: 14.0,
+                            ),
                       ),
                       const SizedBox(height: 8.0),
                       Container(
@@ -126,12 +131,15 @@ class _LoginWidgetState extends State<LoginWidget> {
                                 style: GoogleFonts.inter(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: FlutterFlowTheme.of(context).primaryText,
+                                  color:
+                                      FlutterFlowTheme.of(context).primaryText,
                                 ),
                               ),
                             ),
-                            prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                            hintText: FFLocalizations.of(context).getText('kd9srmop' /* Phone number */), // Localized hint
+                            prefixIconConstraints:
+                                const BoxConstraints(minWidth: 0, minHeight: 0),
+                            hintText: FFLocalizations.of(context).getText(
+                                'kd9srmop' /* Phone number */), // Localized hint
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
                                 color: FlutterFlowTheme.of(context).alternate,
@@ -161,24 +169,30 @@ class _LoginWidgetState extends State<LoginWidget> {
                               borderRadius: BorderRadius.circular(12.0),
                             ),
                             filled: true,
-                            fillColor: FlutterFlowTheme.of(context).primaryBackground,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+                            fillColor:
+                                FlutterFlowTheme.of(context).primaryBackground,
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 16.0, horizontal: 16.0),
                           ),
-                          style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            font: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600,
-                            ),
-                            color: FlutterFlowTheme.of(context).primaryText,
-                            fontSize: 18.0, // Larger text for phone number
-                            letterSpacing: 1.0,
-                          ),
+                          style: FlutterFlowTheme.of(context)
+                              .bodyMedium
+                              .override(
+                                font: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                color: FlutterFlowTheme.of(context).primaryText,
+                                fontSize: 18.0, // Larger text for phone number
+                                letterSpacing: 1.0,
+                              ),
                           keyboardType: TextInputType.phone,
                           // FIX: Cursor was invisible (0x00FF7B10)
                           cursorColor: FlutterFlowTheme.of(context).primary,
-                          validator: _model.textControllerValidator.asValidator(context),
+                          validator: _model.textControllerValidator
+                              .asValidator(context),
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp('[0-9]')),
-                            LengthLimitingTextInputFormatter(10), // Limit to 10 digits
+                            LengthLimitingTextInputFormatter(
+                                10), // Limit to 10 digits
                           ],
                         ),
                       ),
@@ -193,10 +207,12 @@ class _LoginWidgetState extends State<LoginWidget> {
                       if (phoneText.isEmpty || phoneText.length != 10) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(FFLocalizations.of(context).getText('login_val_phone')),
+                            content: Text(FFLocalizations.of(context)
+                                .getText('login_val_phone')),
                             backgroundColor: FlutterFlowTheme.of(context).error,
                             behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
                           ),
                         );
                         return;
@@ -222,18 +238,21 @@ class _LoginWidgetState extends State<LoginWidget> {
                         },
                       );
                     },
-                    text: FFLocalizations.of(context).getText('m21mv0lk' /* SEND OTP */),
+                    text: FFLocalizations.of(context)
+                        .getText('m21mv0lk' /* SEND OTP */),
                     options: FFButtonOptions(
                       width: double.infinity,
                       height: 56.0,
                       padding: const EdgeInsets.all(8.0),
                       color: FlutterFlowTheme.of(context).primary,
-                      textStyle: FlutterFlowTheme.of(context).titleMedium.override(
-                        font: GoogleFonts.interTight(),
-                        color: FlutterFlowTheme.of(context).secondaryBackground,
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      textStyle:
+                          FlutterFlowTheme.of(context).titleMedium.override(
+                                font: GoogleFonts.interTight(),
+                                color: FlutterFlowTheme.of(context)
+                                    .secondaryBackground,
+                                fontSize: 18.0,
+                                fontWeight: FontWeight.bold,
+                              ),
                       elevation: 2.0,
                       borderRadius: BorderRadius.circular(28.0),
                     ),
@@ -245,13 +264,18 @@ class _LoginWidgetState extends State<LoginWidget> {
                         children: [
                           Expanded(child: Divider(color: Colors.grey[300])),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16.0),
                             child: Text(
-                              FFLocalizations.of(context).getText('hczr77o0' /* or connect with */),
-                              style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                font: GoogleFonts.inter(),
-                                color: FlutterFlowTheme.of(context).secondaryText,
-                              ),
+                              FFLocalizations.of(context)
+                                  .getText('hczr77o0' /* or connect with */),
+                              style: FlutterFlowTheme.of(context)
+                                  .bodyMedium
+                                  .override(
+                                    font: GoogleFonts.inter(),
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryText,
+                                  ),
                             ),
                           ),
                           Expanded(child: Divider(color: Colors.grey[300])),
@@ -265,9 +289,11 @@ class _LoginWidgetState extends State<LoginWidget> {
                             icon: FontAwesomeIcons.google,
                             color: const Color(0xFF4285F4),
                             onTap: () async {
-                              final user = await authManager.signInWithGoogle(context);
+                              final user =
+                                  await authManager.signInWithGoogle(context);
                               if (user == null) return;
-                              context.goNamedAuth(HomeWidget.routeName, context.mounted);
+                              context.goNamedAuth(
+                                  HomeWidget.routeName, context.mounted);
                             },
                           ),
                           const SizedBox(width: 20.0),
@@ -275,9 +301,11 @@ class _LoginWidgetState extends State<LoginWidget> {
                             icon: Icons.apple,
                             color: Colors.black,
                             onTap: () async {
-                              final user = await authManager.signInWithApple(context);
+                              final user =
+                                  await authManager.signInWithApple(context);
                               if (user == null) return;
-                              context.goNamedAuth(HomeWidget.routeName, context.mounted);
+                              context.goNamedAuth(
+                                  HomeWidget.routeName, context.mounted);
                             },
                           ),
                         ],
@@ -294,7 +322,10 @@ class _LoginWidgetState extends State<LoginWidget> {
     );
   }
 
-  Widget _buildSocialButton({required IconData icon, required Color color, required VoidCallback onTap}) {
+  Widget _buildSocialButton(
+      {required IconData icon,
+      required Color color,
+      required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12.0),
@@ -304,10 +335,11 @@ class _LoginWidgetState extends State<LoginWidget> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.0),
-          border: Border.all(color: FlutterFlowTheme.of(context).alternate, width: 1.5),
+          border: Border.all(
+              color: FlutterFlowTheme.of(context).alternate, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha:0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             )

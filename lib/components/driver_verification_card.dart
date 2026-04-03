@@ -98,7 +98,8 @@ class DriverVerificationCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     RatingBarIndicator(
                       rating: rating,
-                      itemBuilder: (_, __) => const Icon(Icons.star_rounded, color: Colors.amber),
+                      itemBuilder: (_, __) =>
+                          const Icon(Icons.star_rounded, color: Colors.amber),
                       itemCount: 5,
                       itemSize: 18,
                       unratedColor: Colors.grey.shade300,
@@ -111,10 +112,15 @@ class DriverVerificationCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('Est. Fare', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
+                    Text('Est. Fare',
+                        style: GoogleFonts.inter(
+                            fontSize: 12, color: Colors.grey)),
                     Text(
                       '₹${fareEstimate.toStringAsFixed(0)}',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 20, color: primaryOrange),
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          color: primaryOrange),
                     ),
                   ],
                 ),
@@ -132,12 +138,16 @@ class DriverVerificationCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.verified_user, color: Colors.green.shade700, size: 20),
+                Icon(Icons.verified_user,
+                    color: Colors.green.shade700, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Verify bike number matches before starting',
-                    style: GoogleFonts.inter(fontSize: 13, color: Colors.green.shade800, fontWeight: FontWeight.w500),
+                    style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.green.shade800,
+                        fontWeight: FontWeight.w500),
                   ),
                 ),
               ],
@@ -152,12 +162,18 @@ class DriverVerificationCard extends StatelessWidget {
               child: FFButtonWidget(
                 onPressed: isLoading ? null : onConfirmTap,
                 text: isLoading ? 'Starting...' : 'Verify & Start Ride',
-                icon: isLoading ? null : const Icon(Icons.check_circle, color: Colors.white, size: 22),
+                icon: isLoading
+                    ? null
+                    : const Icon(Icons.check_circle,
+                        color: Colors.white, size: 22),
                 options: FFButtonOptions(
                   width: double.infinity,
                   height: 52,
                   color: Colors.green.shade600,
-                  textStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
+                  textStyle: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 16),
                   elevation: 2,
                   borderRadius: BorderRadius.circular(12),
                   disabledColor: Colors.grey.shade400,

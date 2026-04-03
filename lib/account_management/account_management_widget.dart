@@ -47,22 +47,18 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
         return;
       }
 
-      final res =
-          await GetUserDetailsCall.call(userId: userId, token: token);
+      final res = await GetUserDetailsCall.call(userId: userId, token: token);
 
       if (!mounted) return;
 
       if (res.succeeded) {
-        final first =
-            (GetUserDetailsCall.firstName(res.jsonBody) ?? '').trim();
-        final last =
-            (GetUserDetailsCall.lastName(res.jsonBody) ?? '').trim();
+        final first = (GetUserDetailsCall.firstName(res.jsonBody) ?? '').trim();
+        final last = (GetUserDetailsCall.lastName(res.jsonBody) ?? '').trim();
         final rawImg =
             (GetUserDetailsCall.profileImage(res.jsonBody) ?? '').trim();
 
         setState(() {
-          _userDisplayName =
-              [first, last].where((e) => e.isNotEmpty).join(' ');
+          _userDisplayName = [first, last].where((e) => e.isNotEmpty).join(' ');
           _profileImageUrl = rawImg.isNotEmpty
               ? (rawImg.startsWith('http')
                   ? rawImg
@@ -101,9 +97,8 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
             padding: const EdgeInsets.all(8),
             child: FlutterFlowIconButton(
               buttonSize: 44,
-              fillColor: Colors.white.withValues(alpha:0.2),
-              icon: const Icon(Icons.arrow_back_rounded,
-                  color: Colors.white),
+              fillColor: Colors.white.withValues(alpha: 0.2),
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               onPressed: () => context.pop(),
             ),
           ),
@@ -124,8 +119,7 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
               final padding = isNarrow ? 16.0 : 24.0;
 
               return SingleChildScrollView(
-                padding:
-                    EdgeInsets.fromLTRB(padding, 32, padding, 24),
+                padding: EdgeInsets.fromLTRB(padding, 32, padding, 24),
                 child: Column(
                   children: [
                     _buildProfileSection(isNarrow),
@@ -151,64 +145,62 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
     return Column(
       children: [
         GestureDetector(
-        onTap: () =>
-            context.pushNamed(ProfileSettingWidget.routeName),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Profile Image Circle
-            Container(
-              width: avatarSize,
-              height: avatarSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFFF7B10),
-                  width: 3,
-                ),
-              ),
-              child: ClipOval(
-                child: _isLoadingUser
-                    ? const Center(child: CircularProgressIndicator())
-                    : (_profileImageUrl.isNotEmpty
-                        ? Image.network(
-                            _profileImageUrl,
-                            fit: BoxFit.cover,
-                          )
-                        : Icon(
-                            Icons.person,
-                            color: const Color(0xFFFF7B10),
-                            size: avatarSize / 2,
-                          )),
-              ),
-            ),
-
-            // ✏️ Edit Pencil Icon (bottom-right)
-            Positioned(
-              bottom: 2,
-              right: 2,
-              child: InkWell(
-                onTap: () =>
-                    context.pushNamed(ProfileSettingWidget.routeName),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
+          onTap: () => context.pushNamed(ProfileSettingWidget.routeName),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Profile Image Circle
+              Container(
+                width: avatarSize,
+                height: avatarSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
                     color: const Color(0xFFFF7B10),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    width: 3,
                   ),
-                  child: const Icon(
-                    Icons.edit,
-                    size: 16,
-                    color: Colors.white,
+                ),
+                child: ClipOval(
+                  child: _isLoadingUser
+                      ? const Center(child: CircularProgressIndicator())
+                      : (_profileImageUrl.isNotEmpty
+                          ? Image.network(
+                              _profileImageUrl,
+                              fit: BoxFit.cover,
+                            )
+                          : Icon(
+                              Icons.person,
+                              color: const Color(0xFFFF7B10),
+                              size: avatarSize / 2,
+                            )),
+                ),
+              ),
+
+              // ✏️ Edit Pencil Icon (bottom-right)
+              Positioned(
+                bottom: 2,
+                right: 2,
+                child: InkWell(
+                  onTap: () =>
+                      context.pushNamed(ProfileSettingWidget.routeName),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF7B10),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.edit,
+                      size: 16,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-
         const SizedBox(height: 16),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 260),
@@ -268,8 +260,7 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
           icon: data['icon'] as IconData,
           label: data['label'] as String,
           color: data['color'] as Color,
-          onTap: () =>
-              context.pushNamed(data['route'] as String),
+          onTap: () => context.pushNamed(data['route'] as String),
         );
       },
     );
@@ -310,10 +301,22 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
   // ---------------- SETTINGS LIST ----------------
   Widget _buildSettingsList(bool isNarrow) {
     final items = [
-      {'icon': Icons.settings, 'label': 'Settings', 'route': SettingsPageWidget.routeName},
-      {'icon': Icons.language, 'label': 'Languages', 'route': LanguageWidget.routeName},
+      {
+        'icon': Icons.settings,
+        'label': 'Settings',
+        'route': SettingsPageWidget.routeName
+      },
+      {
+        'icon': Icons.language,
+        'label': 'Languages',
+        'route': LanguageWidget.routeName
+      },
       // {'icon': Icons.message, 'label': 'Messages', 'route': MessagesWidget.routeName},
-      {'icon': Icons.gavel, 'label': 'Privacy Policy', 'route': PrivacypolicyWidget.routeName},
+      {
+        'icon': Icons.gavel,
+        'label': 'Privacy Policy',
+        'route': PrivacypolicyWidget.routeName
+      },
     ];
 
     return Container(
@@ -324,8 +327,8 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
       child: Column(
         children: items.map((item) {
           return ListTile(
-            leading: Icon(item['icon'] as IconData,
-                color: const Color(0xFFFF7B10)),
+            leading:
+                Icon(item['icon'] as IconData, color: const Color(0xFFFF7B10)),
             title: Text(
               item['label'] as String,
               maxLines: 1,
@@ -335,8 +338,7 @@ class _AccountManagementWidgetState extends State<AccountManagementWidget> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            trailing:
-                const Icon(Icons.chevron_right, size: 20),
+            trailing: const Icon(Icons.chevron_right, size: 20),
             onTap: item['route'] != null
                 ? () => context.pushNamed(item['route'] as String)
                 : null,

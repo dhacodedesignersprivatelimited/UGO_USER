@@ -1,5 +1,6 @@
 import '../flutter_flow/flutter_flow_theme.dart';
-import '/flutter_flow/flutter_flow_google_map.dart' show GoogleMapStyle, googleMapStyleStrings;
+import '/flutter_flow/flutter_flow_google_map.dart'
+    show GoogleMapStyle, googleMapStyleStrings;
 import '/flutter_flow/flutter_flow_util.dart' hide LatLng;
 import '/backend/api_requests/api_calls.dart';
 import '/index.dart';
@@ -130,7 +131,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     super.initState();
     print('🚀 AutoBookWidget: initState - Ride ID: ${widget.rideId}');
     _model = createModel(context, () => AutoBookModel());
-    
+
     // Initialize with passed values if available
     _totalRoadDistanceKm = widget.totalDistanceKm;
     _liveEtaText = widget.totalDuration;
@@ -147,7 +148,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
     // 3. ✅ CRITICAL: Always fetch fresh status on load
     _fetchInitialRideStatus();
-    
+
     // 4. Ensure total road distance is fetched
     _ensureTotalRoadDistance();
 
@@ -159,18 +160,20 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   Future<void> _ensureTotalRoadDistance() async {
     if (_totalRoadDistanceKm != null) return;
     final appState = FFAppState();
-    
+
     double? pLat = appState.pickupLatitude;
     double? pLng = appState.pickupLongitude;
     double? dLat = appState.dropLatitude;
     double? dLng = appState.dropLongitude;
 
     if (pLat == null || pLng == null) return;
-    
+
     if (dLat == null || dLng == null) {
       if (ridesCache.isNotEmpty) {
-        dLat = double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '');
-        dLng = double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '');
+        dLat =
+            double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '');
+        dLng =
+            double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '');
       }
     }
 
@@ -237,8 +240,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
   void _animateCameraToBounds(List<LatLng> points, {double paddingPx = 100}) {
     if (points.isEmpty || _mapController == null) return;
-    final valid =
-        points.where((p) => p.latitude.abs() > 1e-6 || p.longitude.abs() > 1e-6).toList();
+    final valid = points
+        .where((p) => p.latitude.abs() > 1e-6 || p.longitude.abs() > 1e-6)
+        .toList();
     if (valid.isEmpty) return;
 
     if (valid.length == 1) {
@@ -312,8 +316,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       var dLat = appState.dropLatitude;
       var dLng = appState.dropLongitude;
       if ((dLat == null || dLng == null) && ridesCache.isNotEmpty) {
-        dLat = double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '');
-        dLng = double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '');
+        dLat =
+            double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '');
+        dLng =
+            double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '');
       }
       if (dLat != null && dLng != null) pts.add(LatLng(dLat, dLng));
     }
@@ -364,12 +370,14 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     final appState = FFAppState();
     final pickupLat = appState.pickupLatitude;
     final pickupLng = appState.pickupLongitude;
-    final dropLat = appState.dropLatitude ?? (ridesCache.isNotEmpty
-        ? double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '')
-        : null);
-    final dropLng = appState.dropLongitude ?? (ridesCache.isNotEmpty
-        ? double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '')
-        : null);
+    final dropLat = appState.dropLatitude ??
+        (ridesCache.isNotEmpty
+            ? double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '')
+            : null);
+    final dropLng = appState.dropLongitude ??
+        (ridesCache.isNotEmpty
+            ? double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '')
+            : null);
 
     final newMarkers = <Marker>{};
 
@@ -400,8 +408,14 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         await _loadVehicleIconsIfNeeded();
         final vtId = getJsonField(ride, r'''$.vehicle_type_id''');
         final vt = vtId is int ? vtId : int.tryParse(vtId?.toString() ?? '');
-        final orangeIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
-        final driverIcon = (vt == 1 ? _autoIcon : vt == 2 ? _bikeIcon : _carIcon) ?? orangeIcon;
+        final orangeIcon =
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
+        final driverIcon = (vt == 1
+                ? _autoIcon
+                : vt == 2
+                    ? _bikeIcon
+                    : _carIcon) ??
+            orangeIcon;
         newMarkers.add(Marker(
           markerId: const MarkerId('driver'),
           position: LatLng(dLat, dLng),
@@ -413,8 +427,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     if (mounted) {
       setState(() {
         // Preserve nearby_ markers (managed by _refreshNearbyDriverMarkers)
-        final nearbyMarkers =
-            _markers.where((m) => m.markerId.value.startsWith('nearby_')).toSet();
+        final nearbyMarkers = _markers
+            .where((m) => m.markerId.value.startsWith('nearby_'))
+            .toSet();
         _markers.clear();
         _markers.addAll(newMarkers);
         if (_rideStatus == STATUS_SEARCHING) {
@@ -486,11 +501,13 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       fromLng = appState.pickupLongitude;
       toLat = appState.dropLatitude ??
           (ridesCache.isNotEmpty
-              ? double.tryParse(ridesCache[0]['drop_latitude']?.toString() ?? '')
+              ? double.tryParse(
+                  ridesCache[0]['drop_latitude']?.toString() ?? '')
               : null);
       toLng = appState.dropLongitude ??
           (ridesCache.isNotEmpty
-              ? double.tryParse(ridesCache[0]['drop_longitude']?.toString() ?? '')
+              ? double.tryParse(
+                  ridesCache[0]['drop_longitude']?.toString() ?? '')
               : null);
     } else {
       return;
@@ -609,9 +626,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   int _rapidoSuggestedExtraRs() {
     var base = _estimatedFare;
     if (base <= 0 && ridesCache.isNotEmpty) {
-      base = double.tryParse(
-              ridesCache[0]['estimated_fare']?.toString() ?? '') ??
-          0;
+      base =
+          double.tryParse(ridesCache[0]['estimated_fare']?.toString() ?? '') ??
+              0;
     }
     final sug = _serverSuggestedExtra;
     if (sug != null && sug > 0) {
@@ -933,8 +950,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         token: FFAppState().accessToken,
       );
       if (r.succeeded && mounted) {
-        final rideData =
-            getJsonField(r.jsonBody, r'$.data') ?? r.jsonBody;
+        final rideData = getJsonField(r.jsonBody, r'$.data') ?? r.jsonBody;
         if (rideData is Map<String, dynamic>) {
           _processRideUpdate(rideData);
         }
@@ -1000,11 +1016,14 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       if (!response.succeeded || !mounted) return;
 
       final allDrivers =
-          (getJsonField(response.jsonBody, r'''$.data''') as List?)?.toList() ?? [];
+          (getJsonField(response.jsonBody, r'''$.data''') as List?)?.toList() ??
+              [];
       final category = appState.selectedRideCategory?.toLowerCase();
       int? targetVt;
-      if (category == 'bike') targetVt = 2;
-      else if (category == 'auto') targetVt = 1;
+      if (category == 'bike')
+        targetVt = 2;
+      else if (category == 'auto')
+        targetVt = 1;
       else if (category == 'car') targetVt = 3;
 
       final orangeIcon =
@@ -1021,12 +1040,17 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         final lat = getJsonField(d, r'''$.current_location_latitude''');
         final lng = getJsonField(d, r'''$.current_location_longitude''');
         if (lat == null || lng == null) continue;
-        final latVal = lat is num ? lat.toDouble() : double.tryParse(lat.toString());
-        final lngVal = lng is num ? lng.toDouble() : double.tryParse(lng.toString());
+        final latVal =
+            lat is num ? lat.toDouble() : double.tryParse(lat.toString());
+        final lngVal =
+            lng is num ? lng.toDouble() : double.tryParse(lng.toString());
         if (latVal == null || lngVal == null) continue;
-        final driverIcon =
-            (driverVt == 1 ? _autoIcon : driverVt == 2 ? _bikeIcon : _carIcon) ??
-                orangeIcon;
+        final driverIcon = (driverVt == 1
+                ? _autoIcon
+                : driverVt == 2
+                    ? _bikeIcon
+                    : _carIcon) ??
+            orangeIcon;
         driverMarkers.add(Marker(
           markerId: MarkerId('nearby_$idx'),
           position: LatLng(latVal, lngVal),
@@ -1039,8 +1063,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
       if (mounted) {
         setState(() {
-          _markers.removeWhere(
-              (m) => m.markerId.value.startsWith('nearby_'));
+          _markers.removeWhere((m) => m.markerId.value.startsWith('nearby_'));
           _markers.addAll(driverMarkers);
         });
       }
@@ -1188,11 +1211,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           final ff = m['final_fare'];
           final ef = m['estimated_fare'];
           if (ff != null) {
-            _estimatedFare =
-                double.tryParse(ff.toString()) ?? _estimatedFare;
+            _estimatedFare = double.tryParse(ff.toString()) ?? _estimatedFare;
           } else if (ef != null) {
-            _estimatedFare =
-                double.tryParse(ef.toString()) ?? _estimatedFare;
+            _estimatedFare = double.tryParse(ef.toString()) ?? _estimatedFare;
           }
         });
         _initializeMap();
@@ -1238,7 +1259,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
       socket!.on("ride_completed", (data) {
         if (data != null && mounted) {
-          final m = data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
+          final m = data is Map
+              ? Map<String, dynamic>.from(data)
+              : <String, dynamic>{};
           m['ride_status'] = 'completed';
           m['status'] = 'completed';
           _processRideUpdate(m);
@@ -1263,8 +1286,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         if (!mounted) return;
         setState(() {
           _noDriverNudgeMessage = bannerText;
-          _serverSuggestedExtra =
-              (extra != null && extra > 0) ? extra : null;
+          _serverSuggestedExtra = (extra != null && extra > 0) ? extra : null;
         });
         // Banner in SearchingRideComponent + optional 30s dialog; skip duplicate SnackBar.
       });
@@ -1310,9 +1332,12 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
         // 1b. Extract decline count and fare info
         final dc = updatedRide['decline_count'];
-        if (dc != null) _declineCount = int.tryParse(dc.toString()) ?? _declineCount;
+        if (dc != null)
+          _declineCount = int.tryParse(dc.toString()) ?? _declineCount;
         final tdn = updatedRide['total_drivers_notified'];
-        if (tdn != null) _totalDriversNotified = int.tryParse(tdn.toString()) ?? _totalDriversNotified;
+        if (tdn != null)
+          _totalDriversNotified =
+              int.tryParse(tdn.toString()) ?? _totalDriversNotified;
         final ff = updatedRide['final_fare'];
         final ef = updatedRide['estimated_fare'];
         if (ff != null) {
@@ -1321,7 +1346,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           _estimatedFare = double.tryParse(ef.toString()) ?? _estimatedFare;
         }
         final xf = updatedRide['extra_fare'];
-        if (xf != null) _extraFare = double.tryParse(xf.toString()) ?? _extraFare;
+        if (xf != null)
+          _extraFare = double.tryParse(xf.toString()) ?? _extraFare;
 
         // 2. OTP Extraction (sync to app state for Secure Ride Start UI)
         final incomingOtp = updatedRide['otp'] ??
@@ -1377,7 +1403,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             _startDistanceUpdateTimer();
             // PRD: In-trip RideCheck - show "Are you OK?" after 45s
             _rideCheckTimer?.cancel();
-            _rideCheckTimer = Timer(const Duration(seconds: 45), _showRideCheckDialog);
+            _rideCheckTimer =
+                Timer(const Duration(seconds: 45), _showRideCheckDialog);
           }
         } else if (status == 'completed' || status == 'complete') {
           if (_rideStatus != STATUS_COMPLETED) {
@@ -1397,7 +1424,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       if (_rideStatus == STATUS_PICKED_UP) {
         _updateRemainingDistance();
       }
-      
+
       _ensureTotalRoadDistance();
 
       // 5. Navigation Handling
@@ -1614,7 +1641,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       if (mounted) {
         if (response.succeeded) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(FFLocalizations.of(context).getText('ride_cancelled_success')),
+              content: Text(FFLocalizations.of(context)
+                  .getText('ride_cancelled_success')),
               backgroundColor: Colors.green));
           setState(() {
             _rideStatus = STATUS_CANCELLED;
@@ -1631,7 +1659,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(FFLocalizations.of(context).getText('ride_cancel_failed')),
+              content: Text(
+                  FFLocalizations.of(context).getText('ride_cancel_failed')),
               backgroundColor: Colors.red));
         }
       }
@@ -1653,11 +1682,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       if (response.succeeded) {
         final newRideId = RebookRideCall.newRideId(response.jsonBody);
         final newFare = RebookRideCall.estimatedFare(response.jsonBody);
-        final newExtra = RebookRideCall.extraFareResponse(response.jsonBody) ?? 0.0;
+        final newExtra =
+            RebookRideCall.extraFareResponse(response.jsonBody) ?? 0.0;
 
-        if (mounted &&
-            newRideId != null &&
-            newRideId != widget.rideId) {
+        if (mounted && newRideId != null && newRideId != widget.rideId) {
           FFAppState().currentRideId = newRideId;
           FFAppState().bookingInProgress = true;
           context.pushReplacementNamed(
@@ -1703,7 +1731,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Rebooking failed: ${RebookRideCall.message(response.jsonBody) ?? "Unknown error"}'),
+            content: Text(
+                'Rebooking failed: ${RebookRideCall.message(response.jsonBody) ?? "Unknown error"}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -1734,12 +1763,12 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
       if (response.succeeded) {
         final newRideId = RebookRideCall.newRideId(response.jsonBody);
-        final newFare = RebookRideCall.estimatedFare(response.jsonBody) ?? _estimatedFare;
-        final newExtra = RebookRideCall.extraFareResponse(response.jsonBody) ?? extraAmount.toDouble();
+        final newFare =
+            RebookRideCall.estimatedFare(response.jsonBody) ?? _estimatedFare;
+        final newExtra = RebookRideCall.extraFareResponse(response.jsonBody) ??
+            extraAmount.toDouble();
 
-        if (mounted &&
-            newRideId != null &&
-            newRideId != widget.rideId) {
+        if (mounted && newRideId != null && newRideId != widget.rideId) {
           FFAppState().currentRideId = newRideId;
           FFAppState().bookingInProgress = true;
           context.pushReplacementNamed(
@@ -1785,7 +1814,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Rebook failed: ${RebookRideCall.message(response.jsonBody) ?? "Unknown error"}'),
+            content: Text(
+                'Rebook failed: ${RebookRideCall.message(response.jsonBody) ?? "Unknown error"}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -1819,9 +1849,11 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text(FFLocalizations.of(context).getText('ride_cancel_dialog_title'),
+          title: Text(
+              FFLocalizations.of(context).getText('ride_cancel_dialog_title'),
               style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
-          content: Text(FFLocalizations.of(context).getText('ride_cancel_dialog_text')),
+          content: Text(
+              FFLocalizations.of(context).getText('ride_cancel_dialog_text')),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -1844,7 +1876,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     if (_rideStatus == STATUS_CANCELLED || _rideStatus == STATUS_COMPLETED)
       return true;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(FFLocalizations.of(context).getText('ride_back_restriction'))));
+        content: Text(
+            FFLocalizations.of(context).getText('ride_back_restriction'))));
     return false;
   }
 
@@ -1960,7 +1993,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                 return Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(28)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.12),
@@ -2005,7 +2039,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     }
   }
 
-  Future<void> _createSupportTicketForIncident(String title, String source) async {
+  Future<void> _createSupportTicketForIncident(
+      String title, String source) async {
     final userId = FFAppState().userid;
     if (userId == 0) return;
     final rideId = widget.rideId;
@@ -2033,7 +2068,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             Icon(Icons.check_circle_outline, color: primaryColor, size: 28),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(FFLocalizations.of(context).getText('ride_check_title'), style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+              child: Text(
+                  FFLocalizations.of(context).getText('ride_check_title'),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
             ),
           ],
         ),
@@ -2046,15 +2083,20 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             onPressed: () async {
               Navigator.pop(ctx);
               _callEmergencySosApi();
-              _createSupportTicketForIncident('RideCheck - I need help', 'RideCheck');
-              launchUrl(Uri(scheme: 'tel', path: _supportNumber), mode: LaunchMode.externalApplication);
+              _createSupportTicketForIncident(
+                  'RideCheck - I need help', 'RideCheck');
+              launchUrl(Uri(scheme: 'tel', path: _supportNumber),
+                  mode: LaunchMode.externalApplication);
             },
-            child: Text(FFLocalizations.of(context).getText('ride_check_help'), style: GoogleFonts.inter(color: Colors.red, fontWeight: FontWeight.w600)),
+            child: Text(FFLocalizations.of(context).getText('ride_check_help'),
+                style: GoogleFonts.inter(
+                    color: Colors.red, fontWeight: FontWeight.w600)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx),
             style: FilledButton.styleFrom(backgroundColor: primaryColor),
-            child: Text(FFLocalizations.of(context).getText('ride_check_fine'), style: GoogleFonts.inter(color: Colors.white)),
+            child: Text(FFLocalizations.of(context).getText('ride_check_fine'),
+                style: GoogleFonts.inter(color: Colors.white)),
           ),
         ],
       ),
@@ -2063,16 +2105,19 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
   void _handleShareTrip() {
     final ride = ridesCache.isNotEmpty ? ridesCache[0] : null;
-    final pickup = ride?['pickup_location_address'] ?? FFAppState().pickuplocation;
+    final pickup =
+        ride?['pickup_location_address'] ?? FFAppState().pickuplocation;
     final drop = ride?['drop_location_address'] ?? FFAppState().droplocation;
     final rideId = ride?['id'] ?? widget.rideId;
     final eta = _currentRemainingDistance != null
         ? '~${(_currentRemainingDistance! / 0.5).round() * 2} mins'
         : 'En route';
-    final shareText = 'My UGO ride: $pickup → $drop. Ride ID: $rideId. ETA: $eta. Track: https://ugotaxiservices.com';
+    final shareText =
+        'My UGO ride: $pickup → $drop. Ride ID: $rideId. ETA: $eta. Track: https://ugotaxiservices.com';
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -2080,30 +2125,44 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(FFLocalizations.of(context).getText('ride_share_trip'), style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700)),
+              Text(FFLocalizations.of(context).getText('ride_share_trip'),
+                  style: GoogleFonts.inter(
+                      fontSize: 18, fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: const Color(0xFF25D366).withValues(alpha: 0.2), shape: BoxShape.circle),
-                  child: const Icon(Icons.chat, color: Color(0xFF25D366), size: 24),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF25D366).withValues(alpha: 0.2),
+                      shape: BoxShape.circle),
+                  child: const Icon(Icons.chat,
+                      color: Color(0xFF25D366), size: 24),
                 ),
-                title: Text('WhatsApp', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                title: Text('WhatsApp',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(ctx);
-                  launchUrl(Uri.parse('https://wa.me/?text=${Uri.encodeComponent(shareText)}'), mode: LaunchMode.externalApplication);
+                  launchUrl(
+                      Uri.parse(
+                          'https://wa.me/?text=${Uri.encodeComponent(shareText)}'),
+                      mode: LaunchMode.externalApplication);
                 },
               ),
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.2), shape: BoxShape.circle),
+                  decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.2),
+                      shape: BoxShape.circle),
                   child: Icon(Icons.sms, color: Colors.blue[700], size: 24),
                 ),
-                title: Text('SMS', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                title: Text('SMS',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                 onTap: () {
                   Navigator.pop(ctx);
-                  launchUrl(Uri(scheme: 'sms', queryParameters: {'body': shareText}), mode: LaunchMode.externalApplication);
+                  launchUrl(
+                      Uri(scheme: 'sms', queryParameters: {'body': shareText}),
+                      mode: LaunchMode.externalApplication);
                 },
               ),
             ],
@@ -2146,7 +2205,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                     mode: LaunchMode.externalApplication);
               },
               icon: Icon(Icons.emergency, size: 16, color: Colors.red),
-              label: Text(FFLocalizations.of(context).getText('sos_call_112'), style: GoogleFonts.inter(color: Colors.red, fontWeight: FontWeight.w600)),
+              label: Text(FFLocalizations.of(context).getText('sos_call_112'),
+                  style: GoogleFonts.inter(
+                      color: Colors.red, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -2154,14 +2215,17 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(FFLocalizations.of(context).getText('no'), style: GoogleFonts.inter(color: FlutterFlowTheme.of(context).secondaryText)),
+            child: Text(FFLocalizations.of(context).getText('no'),
+                style: GoogleFonts.inter(
+                    color: FlutterFlowTheme.of(context).secondaryText)),
           ),
           const Spacer(),
           FilledButton.icon(
             onPressed: () async {
               Navigator.pop(context);
               _callEmergencySosApi();
-              _createSupportTicketForIncident('SOS - Emergency support requested', 'SOS');
+              _createSupportTicketForIncident(
+                  'SOS - Emergency support requested', 'SOS');
               launchUrl(Uri(scheme: 'tel', path: _supportNumber),
                   mode: LaunchMode.externalApplication);
               if (context.mounted) {
@@ -2171,7 +2235,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                       children: [
                         Icon(Icons.check_circle, color: Colors.white, size: 20),
                         SizedBox(width: 8),
-                        Expanded(child: Text(FFLocalizations.of(context).getText('sos_calling'))),
+                        Expanded(
+                            child: Text(FFLocalizations.of(context)
+                                .getText('sos_calling'))),
                       ],
                     ),
                     backgroundColor: Colors.green[700],
@@ -2181,7 +2247,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               }
             },
             icon: Icon(Icons.phone, size: 18, color: Colors.white),
-            label: Text(FFLocalizations.of(context).getText('sos_call_support')),
+            label:
+                Text(FFLocalizations.of(context).getText('sos_call_support')),
             style: FilledButton.styleFrom(
               backgroundColor: primaryColor,
               foregroundColor: Colors.white,
@@ -2204,7 +2271,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         color: FlutterFlowTheme.of(context).secondaryBackground,
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha:0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2))
         ],
@@ -2231,11 +2298,17 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             GestureDetector(
               onTap: _handleSosPressed,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
-                  color: FlutterFlowTheme.of(context).error.withValues(alpha: 0.1),
+                  color:
+                      FlutterFlowTheme.of(context).error.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: FlutterFlowTheme.of(context).error.withValues(alpha: 0.4), width: 1),
+                  border: Border.all(
+                      color: FlutterFlowTheme.of(context)
+                          .error
+                          .withValues(alpha: 0.4),
+                      width: 1),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -2301,7 +2374,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
 
   bool get _isChatAvailableForStatus {
     final s = _rideStatus.toLowerCase();
-    return s == STATUS_ACCEPTED || s == STATUS_ARRIVING || s == STATUS_PICKED_UP;
+    return s == STATUS_ACCEPTED ||
+        s == STATUS_ARRIVING ||
+        s == STATUS_PICKED_UP;
   }
 
   Widget _buildBottomComponent(ScrollController scrollController) {
@@ -2371,5 +2446,4 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       );
     }
   }
-
 }

@@ -95,7 +95,8 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
               Padding(
                 padding: EdgeInsetsDirectional.fromSTEB(0.0, 24.0, 0.0, 0.0),
                 child: RatingBar.builder(
-                  onRatingUpdate: (newValue) => setState(() => _model.ratingBarValue = newValue),
+                  onRatingUpdate: (newValue) =>
+                      setState(() => _model.ratingBarValue = newValue),
                   itemBuilder: (context, index) => Icon(
                     Icons.star_rounded,
                     color: Color(0xFFFFB300),
@@ -117,7 +118,8 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
                     ChipData('Smooth Ride'),
                     ChipData('Clean Vehicle')
                   ],
-                  onChanged: (val) => setState(() => _model.choiceChipsValue = val?.firstOrNull),
+                  onChanged: (val) => setState(
+                      () => _model.choiceChipsValue = val?.firstOrNull),
                   selectedChipStyle: ChipStyle(
                     backgroundColor: Color(0xFFE8F5E9),
                     textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -132,7 +134,8 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
                     borderWidth: 1.0,
                   ),
                   unselectedChipStyle: ChipStyle(
-                    backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+                    backgroundColor:
+                        FlutterFlowTheme.of(context).primaryBackground,
                     textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
                           font: GoogleFonts.inter(),
                           color: FlutterFlowTheme.of(context).secondaryText,
@@ -148,7 +151,8 @@ class _ReviewsWidgetState extends State<ReviewsWidget> {
                   rowSpacing: 12.0,
                   multiselect: false,
                   alignment: WrapAlignment.center,
-                  controller: _model.choiceChipsValueController ??= FormFieldController<List<String>>([]),
+                  controller: _model.choiceChipsValueController ??=
+                      FormFieldController<List<String>>([]),
                   wrapped: true,
                 ),
               ),

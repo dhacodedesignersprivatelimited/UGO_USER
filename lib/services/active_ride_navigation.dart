@@ -63,8 +63,7 @@ class ActiveRideNavigation {
       if (activeRide is! Map) return response;
 
       final rideId = activeRide['id'] ?? activeRide['ride_id'];
-      final statusRaw =
-          activeRide['ride_status'] ?? activeRide['status'];
+      final statusRaw = activeRide['ride_status'] ?? activeRide['status'];
       final status = statusRaw?.toString().toLowerCase();
 
       const terminal = {

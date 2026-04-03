@@ -72,7 +72,8 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     _slideAnim = Tween<Offset>(
       begin: const Offset(0, 0.06),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
+    ).animate(
+        CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic));
     _fetchUserData(showPageLoader: true);
   }
 
@@ -93,7 +94,8 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     if (showPageLoader && mounted) setState(() => _isLoading = true);
 
     try {
-      final userResponse = await GetUserByIdCall.call(userId: userId, token: token);
+      final userResponse =
+          await GetUserByIdCall.call(userId: userId, token: token);
       if (userResponse.statusCode >= 200 &&
           userResponse.statusCode < 300 &&
           mounted) {
@@ -132,8 +134,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
                 GetUserReferralStatsCall.totalEarned(body)?.toString() ?? '') ??
             0.0;
         final withPro = GetUserReferralStatsCall.referralsWithProReward(body) ??
-            int.tryParse(getJsonField(
-                        body, r'''$.data.referrals_activated''')
+            int.tryParse(getJsonField(body, r'''$.data.referrals_activated''')
                     ?.toString() ??
                 '') ??
             0;
@@ -181,16 +182,14 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     }
 
     try {
-      final ledgerRes =
-          await GetMyCoinLedgerCall.call(token: token, limit: 60);
+      final ledgerRes = await GetMyCoinLedgerCall.call(token: token, limit: 60);
       if (ledgerRes.statusCode >= 200 &&
           ledgerRes.statusCode < 300 &&
           mounted) {
         setState(() {
           _coinLedger = GetMyCoinLedgerCall.transactions(ledgerRes.jsonBody);
-          _ledgerTotal =
-              GetMyCoinLedgerCall.totalCount(ledgerRes.jsonBody) ??
-                  _coinLedger.length;
+          _ledgerTotal = GetMyCoinLedgerCall.totalCount(ledgerRes.jsonBody) ??
+              _coinLedger.length;
         });
       }
     } catch (e) {
@@ -205,14 +204,14 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     }
   }
 
-  String get _referralSharePlain =>
-      '🚖 *Join UGO Taxi!* 🚖\n\n'
+  String get _referralSharePlain => '🚖 *Join UGO Taxi!* 🚖\n\n'
       'Get premium rides at great prices. Use my Referral Code: *$_referralCode* 🎁\n\n'
       'Download now:\n'
       'https://play.google.com/store/apps/details?id=com.ugotaxi_rajkumar.user';
 
   Future<XFile> _getLogoXFile() async {
-    final byteData = await rootBundle.load('assets/images/app_launcher_icon.png');
+    final byteData =
+        await rootBundle.load('assets/images/app_launcher_icon.png');
     final tempDir = await getTemporaryDirectory();
     final file = File('${tempDir.path}/ugo_referral_logo.png');
     await file.writeAsBytes(byteData.buffer.asUint8List());
@@ -417,7 +416,8 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
                         right: -40,
                         top: 20,
                         child: Icon(Icons.auto_awesome_rounded,
-                            size: 120, color: Colors.white.withValues(alpha: 0.08)),
+                            size: 120,
+                            color: Colors.white.withValues(alpha: 0.08)),
                       ),
                       Positioned(
                         left: 20,
@@ -591,7 +591,8 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       ),
       child: Row(
         children: [
-          Icon(Icons.hourglass_top_rounded, color: _ReferPalette.accent, size: 28),
+          Icon(Icons.hourglass_top_rounded,
+              color: _ReferPalette.accent, size: 28),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -658,7 +659,8 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
@@ -743,9 +745,12 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _walletMini('Earned', '${_walletCoinsLedger!['total_earned_coins']}'),
-                      _walletMini('Used', '${_walletCoinsLedger!['total_used_coins']}'),
-                      _walletMini('Avail.', '${_walletCoinsLedger!['available_coins']}'),
+                      _walletMini('Earned',
+                          '${_walletCoinsLedger!['total_earned_coins']}'),
+                      _walletMini(
+                          'Used', '${_walletCoinsLedger!['total_used_coins']}'),
+                      _walletMini('Avail.',
+                          '${_walletCoinsLedger!['available_coins']}'),
                     ],
                   ),
                 ),
@@ -761,10 +766,13 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
+        Text(label,
+            style: GoogleFonts.inter(color: Colors.white54, fontSize: 11)),
         Text(val,
             style: GoogleFonts.poppins(
-                color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 15)),
       ],
     );
   }
@@ -774,13 +782,14 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       spacing: 10,
       runSpacing: 10,
       children: [
-        _pill(Icons.group_rounded, 'Friends', '$_totalReferrals', _ReferPalette.ocean),
-        _pill(Icons.verified_rounded, 'Paid friends',
-            '$_referralsActivated', _ReferPalette.mint),
+        _pill(Icons.group_rounded, 'Friends', '$_totalReferrals',
+            _ReferPalette.ocean),
+        _pill(Icons.verified_rounded, 'Paid friends', '$_referralsActivated',
+            _ReferPalette.mint),
         _pill(Icons.local_fire_department_rounded, 'Pro payouts',
             '$_proRidePayouts', _ReferPalette.accent),
-        _pill(Icons.stars_rounded, 'Ref. coins',
-            '$_referralRewardCoinsTotal', _ReferPalette.sun),
+        _pill(Icons.stars_rounded, 'Ref. coins', '$_referralRewardCoinsTotal',
+            _ReferPalette.sun),
         if (_totalEarned > 0)
           _pill(Icons.currency_rupee_rounded, 'Ref. value',
               '₹${_totalEarned.toStringAsFixed(0)}+', _ReferPalette.mint),
@@ -891,7 +900,8 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
               onPressed: _referralCode.isEmpty ? null : _copyCode,
               icon: const Icon(Icons.copy_rounded, size: 20),
               label: Text('Copy to clipboard',
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 15)),
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w700, fontSize: 15)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _ReferPalette.primary,
                 foregroundColor: Colors.white,
@@ -940,8 +950,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     );
   }
 
-  Widget _shareBtn(
-      String label, Color bg, IconData icon, VoidCallback? onTap) {
+  Widget _shareBtn(String label, Color bg, IconData icon, VoidCallback? onTap) {
     return Material(
       color: bg,
       borderRadius: BorderRadius.circular(14),
@@ -976,7 +985,8 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
           child: OutlinedButton.icon(
             onPressed: () => context.pushNamed('Wallet'),
             icon: const Icon(Icons.account_balance_wallet_outlined, size: 18),
-            label: Text('Wallet', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            label: Text('Wallet',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
           ),
         ),
         const SizedBox(width: 10),
@@ -984,14 +994,16 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
           child: OutlinedButton.icon(
             onPressed: () => context.pushNamed('voucher'),
             icon: const Icon(Icons.local_offer_outlined, size: 18),
-            label: Text('Vouchers', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            label: Text('Vouchers',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSectionTitle(String title, String subtitle, IconData icon, Color c) {
+  Widget _buildSectionTitle(
+      String title, String subtitle, IconData icon, Color c) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1042,8 +1054,7 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
         ),
         child: Column(
           children: [
-            Icon(Icons.savings_outlined,
-                size: 48, color: Colors.grey.shade400),
+            Icon(Icons.savings_outlined, size: 48, color: Colors.grey.shade400),
             const SizedBox(height: 12),
             Text(
               'No coin moves yet',
@@ -1090,8 +1101,8 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
     final isEarn = m['type']?.toString() == 'earn';
     final coins = int.tryParse(m['coins']?.toString() ?? '0') ?? 0;
     final absCoins = coins.abs();
-    final inr = double.tryParse(m['value_inr']?.toString() ?? '') ??
-        (absCoins / 10.0);
+    final inr =
+        double.tryParse(m['value_inr']?.toString() ?? '') ?? (absCoins / 10.0);
     final rideId = m['ride_id'];
     final c = isEarn ? _ReferPalette.mint : _ReferPalette.accent;
 
@@ -1177,7 +1188,8 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
               ),
               Text(
                 'coins',
-                style: GoogleFonts.inter(fontSize: 10, color: Colors.grey.shade600),
+                style: GoogleFonts.inter(
+                    fontSize: 10, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 4),
               Text(
@@ -1218,7 +1230,8 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
           }
           final st = _statusLabel(rm);
           final amt = rm['amount'];
-          final amtStr = amt != null && double.tryParse(amt.toString()) != null &&
+          final amtStr = amt != null &&
+                  double.tryParse(amt.toString()) != null &&
                   double.parse(amt.toString()) > 0
               ? ' · ₹${double.parse(amt.toString()).toStringAsFixed(0)} logged'
               : '';
@@ -1351,7 +1364,10 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
                           gradient: LinearGradient(
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
-                            colors: [col.withValues(alpha: 0.5), Colors.grey.shade200],
+                            colors: [
+                              col.withValues(alpha: 0.5),
+                              Colors.grey.shade200
+                            ],
                           ),
                         ),
                       ),
@@ -1398,11 +1414,13 @@ class _ReferAndEarnWidgetState extends State<ReferAndEarnWidget>
       decoration: BoxDecoration(
         color: _ReferPalette.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _ReferPalette.primaryLight.withValues(alpha: 0.2)),
+        border: Border.all(
+            color: _ReferPalette.primaryLight.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
-          Icon(Icons.lightbulb_rounded, color: _ReferPalette.primaryLight, size: 26),
+          Icon(Icons.lightbulb_rounded,
+              color: _ReferPalette.primaryLight, size: 26),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

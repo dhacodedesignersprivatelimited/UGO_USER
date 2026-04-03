@@ -88,16 +88,16 @@ class _HistoryWidgetState extends State<HistoryWidget> {
       context: context,
       firstDate: DateTime(now.year - 2),
       lastDate: DateTime(now.year + 1, 12, 31),
-      initialDateRange: _model.customRangeStart != null &&
-              _model.customRangeEnd != null
-          ? DateTimeRange(
-              start: _model.customRangeStart!,
-              end: _model.customRangeEnd!,
-            )
-          : DateTimeRange(
-              start: now.subtract(const Duration(days: 7)),
-              end: now,
-            ),
+      initialDateRange:
+          _model.customRangeStart != null && _model.customRangeEnd != null
+              ? DateTimeRange(
+                  start: _model.customRangeStart!,
+                  end: _model.customRangeEnd!,
+                )
+              : DateTimeRange(
+                  start: now.subtract(const Duration(days: 7)),
+                  end: now,
+                ),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -110,7 +110,8 @@ class _HistoryWidgetState extends State<HistoryWidget> {
     if (!mounted) return;
     if (range == null) return;
 
-    final start = DateTime(range.start.year, range.start.month, range.start.day);
+    final start =
+        DateTime(range.start.year, range.start.month, range.start.day);
     final end = DateTime(range.end.year, range.end.month, range.end.day);
     if (start.isAfter(end)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -133,8 +134,9 @@ class _HistoryWidgetState extends State<HistoryWidget> {
 
   Future<void> _rebookRide(dynamic rideItem) async {
     final rawRideId = getJsonField(rideItem, r'''$.ride_id''');
-    final rideId =
-        rawRideId is int ? rawRideId : int.tryParse(rawRideId?.toString() ?? '');
+    final rideId = rawRideId is int
+        ? rawRideId
+        : int.tryParse(rawRideId?.toString() ?? '');
     if (rideId == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -163,9 +165,10 @@ class _HistoryWidgetState extends State<HistoryWidget> {
       return;
     }
 
-    final message =
-        RebookRideCall.message(response.jsonBody) ?? 'Unable to rebook this trip';
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    final message = RebookRideCall.message(response.jsonBody) ??
+        'Unable to rebook this trip';
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -318,8 +321,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
                     label,
                     style: GoogleFonts.inter(
                       fontSize: 12.5,
-                      fontWeight:
-                          selected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                       color: selected ? Colors.white : const Color(0xFF334155),
                     ),
                   ),
@@ -371,8 +373,7 @@ class _HistoryWidgetState extends State<HistoryWidget> {
               child: _buildMessageState(
                 icon: Icons.event_busy_rounded,
                 title: _model.bookingEmptyMessage(),
-                subtitle:
-                    'Try another tab or date filter, or book a new ride.',
+                subtitle: 'Try another tab or date filter, or book a new ride.',
                 action: FFButtonWidget(
                   onPressed: () => context.goNamed(HomeWidget.routeName),
                   text: 'Book a ride',
@@ -534,8 +535,8 @@ class _HistoryWidgetState extends State<HistoryWidget> {
     final statusColor = bookingStatusColor(rawStatus);
     final bookingMode = getJsonField(rideItem, r'''$.booking_mode''');
     final tierAccent = rideTierCardAccent(bookingMode);
-    final vehicleLabel = formatVehicleRideType(
-        getJsonField(rideItem, r'''$.ride_type'''));
+    final vehicleLabel =
+        formatVehicleRideType(getJsonField(rideItem, r'''$.ride_type'''));
 
     const cardRadius = 16.0;
     return Padding(
@@ -642,7 +643,8 @@ class _HistoryWidgetState extends State<HistoryWidget> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: statusColor.withValues(alpha: 0.12),
+                                      color:
+                                          statusColor.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -787,8 +789,8 @@ class _HistoryWidgetState extends State<HistoryWidget> {
     final statusColor = bookingStatusColor(rawStatus);
     final bookingMode = getJsonField(rideItem, r'''$.booking_mode''');
     final tierDesc = rideTierDescription(bookingMode);
-    final vehicleLabel = formatVehicleRideType(
-        getJsonField(rideItem, r'''$.ride_type'''));
+    final vehicleLabel =
+        formatVehicleRideType(getJsonField(rideItem, r'''$.ride_type'''));
 
     showModalBottomSheet<void>(
       context: context,
@@ -869,7 +871,8 @@ class _HistoryWidgetState extends State<HistoryWidget> {
               ],
             ),
             const SizedBox(height: 20),
-            _detailRow(Icons.calendar_today_rounded, 'Date & time', '$date $time'),
+            _detailRow(
+                Icons.calendar_today_rounded, 'Date & time', '$date $time'),
             const SizedBox(height: 14),
             _detailRow(
               Icons.local_taxi_rounded,
@@ -996,8 +999,8 @@ class _HistoryWidgetState extends State<HistoryWidget> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('$label:',
-                  style: GoogleFonts.inter(
-                      fontSize: 14, color: Colors.grey[600])),
+                  style:
+                      GoogleFonts.inter(fontSize: 14, color: Colors.grey[600])),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

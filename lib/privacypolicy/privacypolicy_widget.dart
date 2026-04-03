@@ -91,19 +91,21 @@ class _PrivacypolicyWidgetState extends State<PrivacypolicyWidget> {
                 children: [
                   Checkbox(
                     value: _model.checkboxValue ??= false,
-                    onChanged: (val) => setState(() => _model.checkboxValue = val),
+                    onChanged: (val) =>
+                        setState(() => _model.checkboxValue = val),
                     activeColor: const Color(0xFFFF7B10),
                   ),
                   Expanded(
-                    child: _buildBodyText('I have read and agree to the Privacy Policy and Terms of Service.'),
+                    child: _buildBodyText(
+                        'I have read and agree to the Privacy Policy and Terms of Service.'),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               FFButtonWidget(
-                onPressed: (_model.checkboxValue ?? false) 
-                  ? () => context.pop() 
-                  : null,
+                onPressed: (_model.checkboxValue ?? false)
+                    ? () => context.pop()
+                    : null,
                 text: 'Accept & Continue',
                 options: FFButtonOptions(
                   width: double.infinity,

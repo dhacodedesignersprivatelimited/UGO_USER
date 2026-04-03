@@ -27,7 +27,8 @@ class DetailspageModel extends FlutterFlowModel<DetailspageWidget> {
   // Logic fields
   ApiCallResponse? apiResultRegister;
   bool isRegistering = false;
-  FFUploadedFile uploadedLocalFile = FFUploadedFile(bytes: Uint8List.fromList([]));
+  FFUploadedFile uploadedLocalFile =
+      FFUploadedFile(bytes: Uint8List.fromList([]));
 
   @override
   void initState(BuildContext context) {}

@@ -42,7 +42,7 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
     getCurrentUserLocation(defaultLocation: LatLng(0.0, 0.0), cached: true)
         .then((loc) {
       safeSetState(() => currentUserLocationValue = loc);
-      
+
       // Only update current location if no location is selected
       if (pickupAddress.isEmpty && dropAddress.isEmpty) {
         _updateAddressFromLocation(loc);
@@ -75,7 +75,7 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
           place.locality,
           place.administrativeArea,
         ].where((e) => e != null && e.isNotEmpty).join(', ');
-        
+
         setState(() {
           // Update based on which location is being set
           if (FFAppState().selectedlocation) {
@@ -89,7 +89,8 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
     } catch (e) {
       print('Error getting address: $e');
       setState(() {
-        String coords = 'Location: ${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}';
+        String coords =
+            'Location: ${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}';
         if (FFAppState().selectedlocation) {
           pickupAddress = coords;
         } else {
@@ -105,7 +106,8 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
       context: context,
       builder: (BuildContext dialogContext) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
           child: Padding(
             padding: EdgeInsets.all(16.0),
             child: Column(
@@ -115,7 +117,9 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      isPickup ? 'Search Pickup Location' : 'Search Drop Location',
+                      isPickup
+                          ? 'Search Pickup Location'
+                          : 'Search Drop Location',
                       style: FlutterFlowTheme.of(context).headlineSmall,
                     ),
                     IconButton(
@@ -126,21 +130,24 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                 ),
                 SizedBox(height: 16.0),
                 FlutterFlowPlacePicker(
-                  iOSGoogleMapsApiKey: 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y',
-                  androidGoogleMapsApiKey: 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y',
-                  webGoogleMapsApiKey: 'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y',
+                  iOSGoogleMapsApiKey:
+                      'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y',
+                  androidGoogleMapsApiKey:
+                      'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y',
+                  webGoogleMapsApiKey:
+                      'AIzaSyDO0iVw0vItsg45hIDHV3oAu8RB-zcra2Y',
                   onSelect: (place) async {
                     Navigator.pop(dialogContext);
-                    
+
                     final selectedLatLng = place.latLng;
-                    
+
                     // Move map to selected location
                     _model.googleMapsController.future.then((controller) {
                       controller.animateCamera(
                         CameraUpdate.newLatLng(selectedLatLng.toGoogleMaps()),
                       );
                     });
-                    
+
                     setState(() {
                       _model.googleMapsCenter = selectedLatLng;
                       if (isPickup) {
@@ -161,9 +168,9 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                     height: 50.0,
                     color: FlutterFlowTheme.of(context).secondaryBackground,
                     textStyle: FlutterFlowTheme.of(context).bodyMedium.override(
-                      font: GoogleFonts.inter(),
-                      letterSpacing: 0.0,
-                    ),
+                          font: GoogleFonts.inter(),
+                          letterSpacing: 0.0,
+                        ),
                     elevation: 0.0,
                     borderSide: BorderSide(
                       color: FlutterFlowTheme.of(context).alternate,
@@ -198,13 +205,13 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
     if (_model.googleMapsCenter == null) return;
 
     final selectedLocation = _model.googleMapsCenter!;
-    
+
     if (FFAppState().selectedlocation) {
       // Save pickup location
       FFAppState().pickuplocation = pickupAddress;
       FFAppState().pickupLatitude = selectedLocation.latitude;
       FFAppState().pickupLongitude = selectedLocation.longitude;
-      
+
       print('✅ Pickup confirmed: $pickupAddress');
       _showSnackBar('Pickup location confirmed!');
     } else {
@@ -212,17 +219,16 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
       FFAppState().droplocation = dropAddress;
       FFAppState().dropLatitude = selectedLocation.latitude;
       FFAppState().dropLongitude = selectedLocation.longitude;
-      
+
       print('✅ Drop confirmed: $dropAddress');
       _showSnackBar('Drop location confirmed!');
     }
 
     // Check if both locations are now filled
-    if (FFAppState().pickuplocation.isNotEmpty && 
+    if (FFAppState().pickuplocation.isNotEmpty &&
         FFAppState().droplocation.isNotEmpty) {
-      
       print('🚀 Both locations filled - Auto navigating to Available Options');
-      
+
       // Navigate to Available Options screen
       Future.delayed(Duration(milliseconds: 800), () {
         context.pushNamed(AvaliableOptionsWidget.routeName);
@@ -279,7 +285,8 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
               children: [
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                    padding:
+                        EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
                     child: Container(
                       width: double.infinity,
                       height: 400.0,
@@ -294,7 +301,8 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                               _model.googleMapsCenter = latLng;
                               _updateAddressFromLocation(latLng);
                             },
-                            initialLocation: _model.googleMapsCenter ?? currentUserLocationValue!,
+                            initialLocation: _model.googleMapsCenter ??
+                                currentUserLocationValue!,
                             markerColor: GoogleMarkerColor.orange,
                             mapType: MapType.normal,
                             style: GoogleMapStyle.uber,
@@ -308,21 +316,24 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                             showTraffic: false,
                             centerMapOnMarkerTap: true,
                           ),
-                          
+
                           // Back Button
                           Align(
                             alignment: AlignmentDirectional(-1.0, -1.0),
                             child: PointerInterceptor(
                               intercepting: isWeb,
                               child: Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 0.0),
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                    16.0, 16.0, 16.0, 0.0),
                                 child: FlutterFlowIconButton(
                                   borderRadius: 20.0,
                                   buttonSize: 40.0,
-                                  fillColor: FlutterFlowTheme.of(context).secondaryBackground,
+                                  fillColor: FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
                                   icon: Icon(
                                     Icons.arrow_back,
-                                    color: FlutterFlowTheme.of(context).primaryText,
+                                    color: FlutterFlowTheme.of(context)
+                                        .primaryText,
                                     size: 24.0,
                                   ),
                                   onPressed: () {
@@ -332,7 +343,7 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                               ),
                             ),
                           ),
-                          
+
                           // Center Pin
                           Align(
                             alignment: AlignmentDirectional(0.0, 0.0),
@@ -342,8 +353,8 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                                 width: 40.0,
                                 height: 40.0,
                                 decoration: BoxDecoration(
-                                  color: FFAppState().selectedlocation 
-                                      ? Colors.green 
+                                  color: FFAppState().selectedlocation
+                                      ? Colors.green
                                       : Colors.red,
                                   shape: BoxShape.circle,
                                 ),
@@ -355,33 +366,39 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                               ),
                             ),
                           ),
-                          
+
                           // Current Location Button
                           Align(
                             alignment: AlignmentDirectional(1.0, 1.0),
                             child: PointerInterceptor(
                               intercepting: isWeb,
                               child: Padding(
-                                padding: EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 0.0),
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                    16.0, 16.0, 16.0, 0.0),
                                 child: FlutterFlowIconButton(
                                   borderRadius: 20.0,
                                   buttonSize: 40.0,
-                                  fillColor: FlutterFlowTheme.of(context).secondaryBackground,
+                                  fillColor: FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
                                   icon: Icon(
                                     Icons.my_location,
-                                    color: FlutterFlowTheme.of(context).primaryText,
+                                    color: FlutterFlowTheme.of(context)
+                                        .primaryText,
                                     size: 24.0,
                                   ),
                                   onPressed: () async {
-                                    final location = await getCurrentUserLocation(
+                                    final location =
+                                        await getCurrentUserLocation(
                                       defaultLocation: LatLng(0.0, 0.0),
                                     );
                                     setState(() {
                                       currentUserLocationValue = location;
                                     });
-                                    _model.googleMapsController.future.then((controller) {
+                                    _model.googleMapsController.future
+                                        .then((controller) {
                                       controller.animateCamera(
-                                        CameraUpdate.newLatLng(location.toGoogleMaps()),
+                                        CameraUpdate.newLatLng(
+                                            location.toGoogleMaps()),
                                       );
                                     });
                                     _updateAddressFromLocation(location);
@@ -395,7 +412,6 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                     ),
                   ),
                 ),
-                
                 Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
                   child: SingleChildScrollView(
@@ -408,26 +424,33 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text(
-                              FFAppState().selectedlocation 
-                                  ? 'Set your pickup spot' 
+                              FFAppState().selectedlocation
+                                  ? 'Set your pickup spot'
                                   : 'Set your drop spot',
-                              style: FlutterFlowTheme.of(context).headlineSmall.override(
-                                font: GoogleFonts.interTight(fontWeight: FontWeight.w600),
-                                letterSpacing: 0.0,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: FlutterFlowTheme.of(context)
+                                  .headlineSmall
+                                  .override(
+                                    font: GoogleFonts.interTight(
+                                        fontWeight: FontWeight.w600),
+                                    letterSpacing: 0.0,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                             ),
                             Text(
-                              FFLocalizations.of(context).getText('oyq430f9' /* Drag map to move pin */),
-                              style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                font: GoogleFonts.inter(),
-                                color: FlutterFlowTheme.of(context).secondaryText,
-                                letterSpacing: 0.0,
-                              ),
+                              FFLocalizations.of(context).getText(
+                                  'oyq430f9' /* Drag map to move pin */),
+                              style: FlutterFlowTheme.of(context)
+                                  .bodyMedium
+                                  .override(
+                                    font: GoogleFonts.inter(),
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryText,
+                                    letterSpacing: 0.0,
+                                  ),
                             ),
                           ].divide(SizedBox(height: 8.0)),
                         ),
-                        
+
                         // Pickup Location Field (Clickable)
                         InkWell(
                           onTap: () {
@@ -438,48 +461,58 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                             width: double.infinity,
                             height: 50.0,
                             decoration: BoxDecoration(
-                              color: FFAppState().selectedlocation 
-                                  ? FlutterFlowTheme.of(context).primaryBackground
-                                  : FlutterFlowTheme.of(context).secondaryBackground,
+                              color: FFAppState().selectedlocation
+                                  ? FlutterFlowTheme.of(context)
+                                      .primaryBackground
+                                  : FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
                               border: Border.all(
-                                color: FFAppState().selectedlocation 
+                                color: FFAppState().selectedlocation
                                     ? FlutterFlowTheme.of(context).primary
                                     : FlutterFlowTheme.of(context).alternate,
-                                width: FFAppState().selectedlocation ? 2.0 : 1.0,
+                                width:
+                                    FFAppState().selectedlocation ? 2.0 : 1.0,
                               ),
                               borderRadius: BorderRadius.circular(8.0),
                             ),
                             child: Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(12.0, 0.0, 12.0, 0.0),
+                              padding: EdgeInsetsDirectional.fromSTEB(
+                                  12.0, 0.0, 12.0, 0.0),
                               child: Row(
                                 mainAxisSize: MainAxisSize.max,
                                 children: [
                                   Icon(
                                     Icons.location_on,
-                                    color: FFAppState().selectedlocation 
-                                        ? Colors.green 
-                                        : FlutterFlowTheme.of(context).secondaryText,
+                                    color: FFAppState().selectedlocation
+                                        ? Colors.green
+                                        : FlutterFlowTheme.of(context)
+                                            .secondaryText,
                                     size: 20.0,
                                   ),
                                   Expanded(
                                     child: Text(
-                                      pickupAddress.isEmpty 
-                                          ? 'Pickup Location' 
+                                      pickupAddress.isEmpty
+                                          ? 'Pickup Location'
                                           : pickupAddress,
-                                      style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                        font: GoogleFonts.inter(),
-                                        color: pickupAddress.isEmpty
-                                            ? FlutterFlowTheme.of(context).secondaryText
-                                            : FlutterFlowTheme.of(context).primaryText,
-                                        letterSpacing: 0.0,
-                                      ),
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            font: GoogleFonts.inter(),
+                                            color: pickupAddress.isEmpty
+                                                ? FlutterFlowTheme.of(context)
+                                                    .secondaryText
+                                                : FlutterFlowTheme.of(context)
+                                                    .primaryText,
+                                            letterSpacing: 0.0,
+                                          ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   Icon(
                                     Icons.search,
-                                    color: FlutterFlowTheme.of(context).secondaryText,
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryText,
                                     size: 20.0,
                                   ),
                                 ].divide(SizedBox(width: 12.0)),
@@ -487,7 +520,7 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                             ),
                           ),
                         ),
-                        
+
                         // Drop Location Field (Clickable)
                         InkWell(
                           onTap: () {
@@ -498,48 +531,58 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                             width: double.infinity,
                             height: 50.0,
                             decoration: BoxDecoration(
-                              color: !FFAppState().selectedlocation 
-                                  ? FlutterFlowTheme.of(context).primaryBackground
-                                  : FlutterFlowTheme.of(context).secondaryBackground,
+                              color: !FFAppState().selectedlocation
+                                  ? FlutterFlowTheme.of(context)
+                                      .primaryBackground
+                                  : FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
                               border: Border.all(
-                                color: !FFAppState().selectedlocation 
+                                color: !FFAppState().selectedlocation
                                     ? FlutterFlowTheme.of(context).error
                                     : FlutterFlowTheme.of(context).alternate,
-                                width: !FFAppState().selectedlocation ? 2.0 : 1.0,
+                                width:
+                                    !FFAppState().selectedlocation ? 2.0 : 1.0,
                               ),
                               borderRadius: BorderRadius.circular(8.0),
                             ),
                             child: Padding(
-                              padding: EdgeInsetsDirectional.fromSTEB(12.0, 0.0, 12.0, 0.0),
+                              padding: EdgeInsetsDirectional.fromSTEB(
+                                  12.0, 0.0, 12.0, 0.0),
                               child: Row(
                                 mainAxisSize: MainAxisSize.max,
                                 children: [
                                   Icon(
                                     Icons.location_on,
-                                    color: !FFAppState().selectedlocation 
-                                        ? Colors.red 
-                                        : FlutterFlowTheme.of(context).secondaryText,
+                                    color: !FFAppState().selectedlocation
+                                        ? Colors.red
+                                        : FlutterFlowTheme.of(context)
+                                            .secondaryText,
                                     size: 20.0,
                                   ),
                                   Expanded(
                                     child: Text(
-                                      dropAddress.isEmpty 
-                                          ? 'Drop Location' 
+                                      dropAddress.isEmpty
+                                          ? 'Drop Location'
                                           : dropAddress,
-                                      style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                        font: GoogleFonts.inter(),
-                                        color: dropAddress.isEmpty
-                                            ? FlutterFlowTheme.of(context).secondaryText
-                                            : FlutterFlowTheme.of(context).primaryText,
-                                        letterSpacing: 0.0,
-                                      ),
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            font: GoogleFonts.inter(),
+                                            color: dropAddress.isEmpty
+                                                ? FlutterFlowTheme.of(context)
+                                                    .secondaryText
+                                                : FlutterFlowTheme.of(context)
+                                                    .primaryText,
+                                            letterSpacing: 0.0,
+                                          ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   Icon(
                                     Icons.search,
-                                    color: FlutterFlowTheme.of(context).secondaryText,
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryText,
                                     size: 20.0,
                                   ),
                                 ].divide(SizedBox(width: 12.0)),
@@ -547,25 +590,28 @@ class _SetLocationWidgetState extends State<SetLocationWidget> {
                             ),
                           ),
                         ),
-                        
+
                         FFButtonWidget(
                           onPressed: _confirmLocation,
-                          text: FFAppState().selectedlocation 
-                              ? 'Confirm Pickup' 
+                          text: FFAppState().selectedlocation
+                              ? 'Confirm Pickup'
                               : 'Confirm Drop',
                           options: FFButtonOptions(
                             width: double.infinity,
                             height: 50.0,
                             padding: EdgeInsets.all(8.0),
-                            iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                            color: FFAppState().selectedlocation 
-                                ? Colors.green 
+                            iconPadding: EdgeInsetsDirectional.fromSTEB(
+                                0.0, 0.0, 0.0, 0.0),
+                            color: FFAppState().selectedlocation
+                                ? Colors.green
                                 : Colors.red,
-                            textStyle: FlutterFlowTheme.of(context).titleMedium.override(
-                              font: GoogleFonts.interTight(),
-                              color: Colors.white,
-                              letterSpacing: 0.0,
-                            ),
+                            textStyle: FlutterFlowTheme.of(context)
+                                .titleMedium
+                                .override(
+                                  font: GoogleFonts.interTight(),
+                                  color: Colors.white,
+                                  letterSpacing: 0.0,
+                                ),
                             elevation: 0.0,
                           ),
                         ),

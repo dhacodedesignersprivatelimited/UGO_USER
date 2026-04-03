@@ -3115,8 +3115,10 @@ final kTranslationsMap = <Map<String, Map<String, String>>>[
   {
     'k9faeq99': {
       'en': 'To add a new payment method create a password for you Ugo account',
-      'hi': 'नया भुगतान तरीका जोड़ने के लिए अपने Ugo खाते के लिए एक पासवर्ड बनाएं',
-      'te': 'కొత్త చెల్లింపు పద్ధతిని జోడించడానికి మీ Ugo ఖాతా కోసం పాస్‌వర్డ్‌ని సృష్టించండి',
+      'hi':
+          'नया भुगतान तरीका जोड़ने के लिए अपने Ugo खाते के लिए एक पासवर्ड बनाएं',
+      'te':
+          'కొత్త చెల్లింపు పద్ధతిని జోడించడానికి మీ Ugo ఖాతా కోసం పాస్‌వర్డ్‌ని సృష్టించండి',
     },
     '2cht2a5x': {
       'en': 'Minimum 8 characters',
@@ -3328,7 +3330,8 @@ final kTranslationsMap = <Map<String, Map<String, String>>>[
     },
     'byt66rmt': {
       'en': 'Thanks for riding with us! · Safety is our priority',
-      'hi': 'हमारे साथ सवारी करने के लिए धन्यवाद! · सुरक्षा हमारी प्राथमिकता है',
+      'hi':
+          'हमारे साथ सवारी करने के लिए धन्यवाद! · सुरक्षा हमारी प्राथमिकता है',
       'te': 'మాతో ప్రయాణించినందుకు ధన్యవాదాలు! · భద్రత మా ప్రాధాన్యత',
     },
   },
@@ -3662,8 +3665,10 @@ final kTranslationsMap = <Map<String, Map<String, String>>>[
     },
     'privacy_agree': {
       'en': 'I have read and agree to the Privacy Policy and Terms of Service.',
-      'hi': 'मैंने गोपनीयता नीति और सेवा की शर्तों को पढ़ लिया है और उनसे सहमत हूँ।',
-      'te': 'నేను గోప్యతా విధానం మరియు సేవా నిబంధనలను చదివాను మరియు అంగీకరిస్తున్నాను.',
+      'hi':
+          'मैंने गोपनीयता नीति और सेवा की शर्तों को पढ़ लिया है और उनसे सहमत हूँ।',
+      'te':
+          'నేను గోప్యతా విధానం మరియు సేవా నిబంధనలను చదివాను మరియు అంగీకరిస్తున్నాను.',
     },
     'cannot_book': {
       'en': 'Cannot Book',
@@ -3687,8 +3692,10 @@ final kTranslationsMap = <Map<String, Map<String, String>>>[
     },
     'wallet_fetch_error': {
       'en': 'Could not fetch wallet. You can top up to pay for the ride.',
-      'hi': 'वॉलेट प्राप्त नहीं किया जा सका। आप सवारी के लिए भुगतान करने हेतु टॉप अप कर सकते हैं।',
-      'te': 'వాలెట్‌ని పొందలేకపోయాము. రైడ్ కోసం చెల్లించడానికి మీరు టాప్ అప్ చేయవచ్చు.',
+      'hi':
+          'वॉलेट प्राप्त नहीं किया जा सका। आप सवारी के लिए भुगतान करने हेतु टॉप अप कर सकते हैं।',
+      'te':
+          'వాలెట్‌ని పొందలేకపోయాము. రైడ్ కోసం చెల్లించడానికి మీరు టాప్ అప్ చేయవచ్చు.',
     },
     'payment_success_wallet': {
       'en': '✅ Payment successful! Wallet updated.',
@@ -3906,9 +3913,12 @@ final kTranslationsMap = <Map<String, Map<String, String>>>[
       'te': 'అత్యవసర SOS',
     },
     'sos_text': {
-      'en': 'This will call UGO Support immediately. You can also call emergency services (112) if needed.',
-      'hi': 'यह तुरंत UGO सहायता को कॉल करेगा। आवश्यकता पड़ने पर आप आपातकालीन सेवाओं (112) को भी कॉल कर सकते हैं।',
-      'te': 'ఇది వెంటనే UGO సపోర్ట్‌కు కాల్ చేస్తుంది. అవసరమైతే మీరు అత్యవసర సేవలకు (112) కూడా కాల్ చేయవచ్చు.',
+      'en':
+          'This will call UGO Support immediately. You can also call emergency services (112) if needed.',
+      'hi':
+          'यह तुरंत UGO सहायता को कॉल करेगा। आवश्यकता पड़ने पर आप आपातकालीन सेवाओं (112) को भी कॉल कर सकते हैं।',
+      'te':
+          'ఇది వెంటనే UGO సపోర్ట్‌కు కాల్ చేస్తుంది. అవసరమైతే మీరు అత్యవసర సేవలకు (112) కూడా కాల్ చేయవచ్చు.',
     },
     'sos_call_112': {
       'en': 'Call 112 (Emergency)',
@@ -3937,13 +3947,17 @@ final kTranslationsMap = <Map<String, Map<String, String>>>[
     },
     'wallet_not_setup': {
       'en': 'Wallet not set up yet. Top up to pay for your ride.',
-      'hi': 'वॉलेट अभी तक सेट नहीं किया गया है। अपनी सवारी के भुगतान के लिए टॉप अप करें।',
-      'te': 'వాలెట్ ఇంకా సెటప్ కాలేదు. మీ రైడ్ కోసం చెల్లించడానికి టాప్ అప్ చేయండి.',
+      'hi':
+          'वॉलेट अभी तक सेट नहीं किया गया है। अपनी सवारी के भुगतान के लिए टॉप अप करें।',
+      'te':
+          'వాలెట్ ఇంకా సెటప్ కాలేదు. మీ రైడ్ కోసం చెల్లించడానికి టాప్ అప్ చేయండి.',
     },
     'wallet_fetch_error': {
       'en': 'Could not fetch wallet. You can top up to pay for the ride.',
-      'hi': 'वॉलेट प्राप्त नहीं किया जा सका। आप सवारी के भुगतान के लिए टॉप अप कर सकते हैं।',
-      'te': 'వాలెట్‌ని పొందడం సాధ్యపడలేదు. రైడ్ కోసం చెల్లించడానికి మీరు టాప్ అప్ చేయవచ్చు.',
+      'hi':
+          'वॉलेट प्राप्त नहीं किया जा सका। आप सवारी के भुगतान के लिए टॉप अप कर सकते हैं।',
+      'te':
+          'వాలెట్‌ని పొందడం సాధ్యపడలేదు. రైడ్ కోసం చెల్లించడానికి మీరు టాప్ అప్ చేయవచ్చు.',
     },
     'payment_success_wallet': {
       'en': 'Payment successful! Wallet updated.',
@@ -3988,7 +4002,8 @@ final kTranslationsMap = <Map<String, Map<String, String>>>[
     'wallet_cached_balance': {
       'en': 'Using cached balance. You can top up if needed.',
       'hi': 'कैश किए गए बैलेंस का उपयोग। यदि आवश्यक हो तो टॉप अप करें।',
-      'te': 'కాష్ చేసిన బ్యాలెన్స్‌ని ఉపయోగిస్తోంది. అవసరమైతే టాప్ అప్ చేయవచ్చు.',
+      'te':
+          'కాష్ చేసిన బ్యాలెన్స్‌ని ఉపయోగిస్తోంది. అవసరమైతే టాప్ అప్ చేయవచ్చు.',
     },
     'sub_vehicles': {
       'en': 'sub-vehicles',

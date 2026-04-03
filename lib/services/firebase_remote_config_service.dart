@@ -37,7 +37,8 @@ class FirebaseRemoteConfigService {
         'razorpay_key_id': '',
         'razorpay_enabled': true,
         'google_maps_api_key': '',
-        'play_store_url': 'https://play.google.com/store/apps/details?id=com.ugotaxi_rajkumar.user',
+        'play_store_url':
+            'https://play.google.com/store/apps/details?id=com.ugotaxi_rajkumar.user',
         'is_update_mandatory': false,
         'latest_app_version': '1.0.0',
         'min_required_version': '1.0.0',

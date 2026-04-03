@@ -13,6 +13,7 @@ import 'wallet_model.dart';
 export 'wallet_model.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:ugouser/config/payment_config.dart';
+
 /// Wallet Management Interface
 class WalletWidget extends StatefulWidget {
   const WalletWidget({super.key});
@@ -28,21 +29,20 @@ class _WalletWidgetState extends State<WalletWidget> {
   late WalletModel _model;
   final TextEditingController _amountController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   /// From GET /wallets/me/summary when available; else null (UI uses [CoinWalletInr]).
   double? _coinsValueInrFromApi;
   List<Map<String, dynamic>> _recentWalletTx = [];
   final ScrollController _scrollController = ScrollController();
 
-
   final scaffoldKey = GlobalKey<ScaffoldState>();
-late Razorpay _razorpay;
-
+  late Razorpay _razorpay;
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => WalletModel());
-      _razorpay = Razorpay();
+    _razorpay = Razorpay();
 
     _razorpay.on(
       Razorpay.EVENT_PAYMENT_SUCCESS,
@@ -86,8 +86,7 @@ late Razorpay _razorpay;
 
     if (response.succeeded) {
       final balanceString = GetwalletCall.walletBalance(response.jsonBody);
-      final double balance =
-          double.tryParse(balanceString ?? "0") ?? 0.0;
+      final double balance = double.tryParse(balanceString ?? "0") ?? 0.0;
       app.walletBalance = balance;
     }
 
@@ -242,7 +241,8 @@ late Razorpay _razorpay;
               contentPadding: EdgeInsets.zero,
               title: Text(
                 '${m['transaction_type'] ?? '—'}',
-                style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                style: GoogleFonts.inter(
+                    fontSize: 13, fontWeight: FontWeight.w600),
               ),
               subtitle: Text(
                 '${m['description'] ?? ''}',
@@ -284,8 +284,12 @@ late Razorpay _razorpay;
         children: [
           Icon(icon, size: 18, color: theme.accent1),
           const SizedBox(height: 6),
-          Text(label, style: GoogleFonts.inter(fontSize: 11, color: theme.secondaryText)),
-          Text(value, style: GoogleFonts.interTight(fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(label,
+              style:
+                  GoogleFonts.inter(fontSize: 11, color: theme.secondaryText)),
+          Text(value,
+              style: GoogleFonts.interTight(
+                  fontSize: 15, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -479,7 +483,7 @@ late Razorpay _razorpay;
     );
   }
 
-Future<void> _openRazorpay(double amount) async {
+  Future<void> _openRazorpay(double amount) async {
     try {
       String? orderId;
       try {
@@ -512,7 +516,8 @@ Future<void> _openRazorpay(double amount) async {
       debugPrint("Razorpay Error: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('${FFLocalizations.of(context).getText('val_payment_start_fail')}: $e'),
+          content: Text(
+              '${FFLocalizations.of(context).getText('val_payment_start_fail')}: $e'),
           backgroundColor: FlutterFlowTheme.of(context).error,
         ));
       }
@@ -535,14 +540,14 @@ Future<void> _openRazorpay(double amount) async {
       if (AddMoneyToWalletCall.success(apiResponse.jsonBody) == true) {
         final balanceString =
             AddMoneyToWalletCall.walletBalance(apiResponse.jsonBody);
-        final balance =
-            double.tryParse(balanceString ?? "0") ?? 0.0;
+        final balance = double.tryParse(balanceString ?? "0") ?? 0.0;
 
         if (mounted) {
           await _loadWalletData();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text("${FFLocalizations.of(context).getText('wallet_updated_success')}: ₹${balance.toStringAsFixed(2)}"),
+              content: Text(
+                  "${FFLocalizations.of(context).getText('wallet_updated_success')}: ₹${balance.toStringAsFixed(2)}"),
               backgroundColor: FlutterFlowTheme.of(context).success,
             ),
           );
@@ -552,7 +557,8 @@ Future<void> _openRazorpay(double amount) async {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(msg ?? FFLocalizations.of(context).getText('wallet_update_failed')),
+              content: Text(msg ??
+                  FFLocalizations.of(context).getText('wallet_update_failed')),
               backgroundColor: FlutterFlowTheme.of(context).error,
             ),
           );
@@ -572,13 +578,15 @@ Future<void> _openRazorpay(double amount) async {
 
   void _handlePaymentError(PaymentFailureResponse response) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(FFLocalizations.of(context).getText('payment_failed'))),
+      SnackBar(
+          content: Text(FFLocalizations.of(context).getText('payment_failed'))),
     );
   }
+
   @override
   void dispose() {
-      _razorpay.clear();
-      _amountController.dispose();
+    _razorpay.clear();
+    _amountController.dispose();
     _scrollController.dispose();
     _model.dispose();
 
@@ -715,8 +723,9 @@ Future<void> _openRazorpay(double amount) async {
                                                 font: GoogleFonts.interTight(
                                                   fontWeight: FontWeight.w500,
                                                 ),
-                                                color: FlutterFlowTheme.of(context)
-                                                    .accent1,
+                                                color:
+                                                    FlutterFlowTheme.of(context)
+                                                        .accent1,
                                                 fontSize: 20.0,
                                               ),
                                         ),
@@ -726,8 +735,9 @@ Future<void> _openRazorpay(double amount) async {
                                               .bodySmall
                                               .override(
                                                 font: GoogleFonts.inter(),
-                                                color: FlutterFlowTheme.of(context)
-                                                    .secondaryText,
+                                                color:
+                                                    FlutterFlowTheme.of(context)
+                                                        .secondaryText,
                                                 fontSize: 11,
                                               ),
                                         ),
@@ -756,67 +766,77 @@ Future<void> _openRazorpay(double amount) async {
                             ),
                             Text(
                               'Use with Wallet at checkout. This balance is separate from referral coins (rides only, not cash out).',
-                              style: FlutterFlowTheme.of(context).bodySmall.override(
+                              style: FlutterFlowTheme.of(context)
+                                  .bodySmall
+                                  .override(
                                     font: GoogleFonts.inter(),
-                                    color: FlutterFlowTheme.of(context).secondaryText,
+                                    color: FlutterFlowTheme.of(context)
+                                        .secondaryText,
                                     fontSize: 12.0,
                                   ),
                             ),
                             Form(
-                            key: _formKey,
-                            child: Column(
-                              children: [
-                                TextFormField(
-                                  controller: _amountController,
-                                  keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                    hintText: FFLocalizations.of(context).getText('val_enter_amount'),
-                                    prefixIcon: Icon(Icons.currency_rupee),
-                                    filled: true,
-                                    fillColor: FlutterFlowTheme.of(context).primaryBackground,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                              key: _formKey,
+                              child: Column(
+                                children: [
+                                  TextFormField(
+                                    controller: _amountController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      hintText: FFLocalizations.of(context)
+                                          .getText('val_enter_amount'),
+                                      prefixIcon: Icon(Icons.currency_rupee),
+                                      filled: true,
+                                      fillColor: FlutterFlowTheme.of(context)
+                                          .primaryBackground,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return FFLocalizations.of(context)
+                                            .getText('val_amount_required');
+                                      }
+                                      final amount = double.tryParse(value);
+                                      if (amount == null || amount <= 0) {
+                                        return FFLocalizations.of(context)
+                                            .getText('val_amount_invalid');
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                  SizedBox(height: 12),
+
+                                  /// ADD AMOUNT BUTTON
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          FlutterFlowTheme.of(context).primary,
+                                      minimumSize: Size(double.infinity, 48),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    onPressed: () async {
+                                      if (_formKey.currentState!.validate()) {
+                                        double amount = double.parse(
+                                            _amountController.text.trim());
+
+                                        _openRazorpay(amount);
+                                      }
+                                    },
+                                    child: Text(
+                                      FFLocalizations.of(context)
+                                          .getText('add_amount_button'),
+                                      style: TextStyle(
+                                          color: FlutterFlowTheme.of(context)
+                                              .secondaryBackground),
                                     ),
                                   ),
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return FFLocalizations.of(context).getText('val_amount_required');
-                                    }
-                                    final amount = double.tryParse(value);
-                                    if (amount == null || amount <= 0) {
-                                      return FFLocalizations.of(context).getText('val_amount_invalid');
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                SizedBox(height: 12),
-
-                                /// ADD AMOUNT BUTTON
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: FlutterFlowTheme.of(context).primary,
-                                    minimumSize: Size(double.infinity, 48),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  onPressed: () async {
-                                    if (_formKey.currentState!.validate()) {
-                                      double amount =
-                                          double.parse(_amountController.text.trim());
-
-                                      _openRazorpay(amount);
-                                    }
-                                  },
-                                  child: Text(
-                                      FFLocalizations.of(context).getText('add_amount_button'),
-                                      style: TextStyle(color: FlutterFlowTheme.of(context).secondaryBackground),
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-
                           ].divide(SizedBox(height: 16.0)),
                         ),
                       ),

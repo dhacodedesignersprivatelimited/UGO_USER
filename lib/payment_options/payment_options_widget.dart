@@ -1,4 +1,3 @@
-
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -58,17 +57,18 @@ class _PaymentOptionsWidgetState extends State<PaymentOptionsWidget> {
           borderRadius: 30,
           borderWidth: 1,
           buttonSize: 60,
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.black, size: 30),
+          icon: const Icon(Icons.arrow_back_rounded,
+              color: Colors.black, size: 30),
           onPressed: () => context.pop(),
         ),
         title: Text(
           'Select Payment',
           style: FlutterFlowTheme.of(context).headlineMedium.override(
-            font: GoogleFonts.interTight(),
-            color: Colors.black,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
+                font: GoogleFonts.interTight(),
+                color: Colors.black,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
         ),
         centerTitle: true,
         elevation: 0,
@@ -82,10 +82,10 @@ class _PaymentOptionsWidgetState extends State<PaymentOptionsWidget> {
               child: Text(
                 'Choose how you want to pay for your ride',
                 style: FlutterFlowTheme.of(context).bodyMedium.override(
-                  font: GoogleFonts.inter(),
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
+                      font: GoogleFonts.inter(),
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
               ),
             ),
             const SizedBox(height: 24),
@@ -123,7 +123,11 @@ class _PaymentOptionsWidgetState extends State<PaymentOptionsWidget> {
     );
   }
 
-  Widget _buildOption(BuildContext context, {required String name, required IconData icon, required Color color, required String subtitle}) {
+  Widget _buildOption(BuildContext context,
+      {required String name,
+      required IconData icon,
+      required Color color,
+      required String subtitle}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
@@ -135,13 +139,20 @@ class _PaymentOptionsWidgetState extends State<PaymentOptionsWidget> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey[200]!),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 4, offset: const Offset(0, 2))],
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2))
+            ],
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(color: color.withValues(alpha:0.1), shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    shape: BoxShape.circle),
                 child: Icon(icon, color: color, size: 24),
               ),
               const SizedBox(width: 16),
@@ -149,8 +160,14 @@ class _PaymentOptionsWidgetState extends State<PaymentOptionsWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black)),
-                    Text(subtitle, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[500])),
+                    Text(name,
+                        style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black)),
+                    Text(subtitle,
+                        style: GoogleFonts.inter(
+                            fontSize: 12, color: Colors.grey[500])),
                   ],
                 ),
               ),

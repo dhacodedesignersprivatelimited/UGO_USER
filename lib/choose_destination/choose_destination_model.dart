@@ -10,11 +10,12 @@ class ChooseDestinationModel extends FlutterFlowModel<ChooseDestinationWidget> {
   FocusNode? pickupLocationFocusNode;
   TextEditingController? pickupLocationController;
   String? Function(BuildContext, String?)? pickupLocationControllerValidator;
-  
+
   // State field(s) for destinationLocation widget.
   FocusNode? destinationLocationFocusNode;
   TextEditingController? destinationLocationController;
-  String? Function(BuildContext, String?)? destinationLocationControllerValidator;
+  String? Function(BuildContext, String?)?
+      destinationLocationControllerValidator;
 
   // Stores the ride history for recent places.
   List<dynamic>? recentRides;
@@ -40,7 +41,7 @@ class ChooseDestinationModel extends FlutterFlowModel<ChooseDestinationWidget> {
       userId: userId,
       token: token,
     );
-    
+
     if (response.succeeded) {
       recentRides = GetRideHistoryCall.rides(response.jsonBody);
     }

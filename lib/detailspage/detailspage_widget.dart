@@ -110,20 +110,23 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
     // 1. Validate
     if (_model.textController1!.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(FFLocalizations.of(context).getText('first_name_required')),
+          content:
+              Text(FFLocalizations.of(context).getText('first_name_required')),
           backgroundColor: FlutterFlowTheme.of(context).error));
       return;
     }
     if (_model.textController3!.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(FFLocalizations.of(context).getText('email_required')), backgroundColor: FlutterFlowTheme.of(context).error));
+          content: Text(FFLocalizations.of(context).getText('email_required')),
+          backgroundColor: FlutterFlowTheme.of(context).error));
       return;
     }
 
     // 2. Check Token
     if (_currentFcmToken == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(FFLocalizations.of(context).getText('initializing_wait')),
+          content:
+              Text(FFLocalizations.of(context).getText('initializing_wait')),
           backgroundColor: FlutterFlowTheme.of(context).warning));
       await _initFCMToken();
       return;
@@ -151,10 +154,12 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
       if (_model.apiResultRegister?.succeeded ?? false) {
         // 5. Success - Save Session
         print('✅ Registration Successful. Saving session...');
-        final token = CreateUserCall.accessToken(_model.apiResultRegister?.jsonBody);
+        final token =
+            CreateUserCall.accessToken(_model.apiResultRegister?.jsonBody);
         final refreshToken =
             CreateUserCall.refreshToken(_model.apiResultRegister?.jsonBody);
-        final userId = CreateUserCall.userid(_model.apiResultRegister?.jsonBody);
+        final userId =
+            CreateUserCall.userid(_model.apiResultRegister?.jsonBody);
 
         if (token != null) FFAppState().accessToken = token;
         if (refreshToken != null && refreshToken.isNotEmpty) {
@@ -177,7 +182,8 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
         final starterCode = _model.textController4!.text.trim();
         if (starterCode.isNotEmpty) {
           try {
-            print('🔗 Applying referral code: $starterCode for user $userId...');
+            print(
+                '🔗 Applying referral code: $starterCode for user $userId...');
             await ApplyReferralCodeCall.call(
               userId: userId!,
               referralCode: starterCode,
@@ -191,7 +197,9 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
         // ----------------------------------------
 
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(FFLocalizations.of(context).getText('welcome_to_ugo')), backgroundColor: FlutterFlowTheme.of(context).success));
+            content:
+                Text(FFLocalizations.of(context).getText('welcome_to_ugo')),
+            backgroundColor: FlutterFlowTheme.of(context).success));
 
         // 6. Navigate to Home
         print('🚀 Navigating to Home...');
@@ -222,7 +230,8 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
             if (userId != null) FFAppState().userid = userId;
             syncRideChatFcmRegistration();
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(FFLocalizations.of(context).getText('login_welcome_back')),
+                content: Text(
+                    FFLocalizations.of(context).getText('login_welcome_back')),
                 backgroundColor: FlutterFlowTheme.of(context).success));
             context.goNamedAuth('home', mounted);
             return;
@@ -233,12 +242,14 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
                 _model.apiResultRegister?.jsonBody, r'''$.message''') ??
             'Registration failed';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(displayMsg.toString()), backgroundColor: FlutterFlowTheme.of(context).error));
+            content: Text(displayMsg.toString()),
+            backgroundColor: FlutterFlowTheme.of(context).error));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e'), backgroundColor: FlutterFlowTheme.of(context).error));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: FlutterFlowTheme.of(context).error));
       }
     } finally {
       if (mounted) setState(() => _model.isRegistering = false);
@@ -256,7 +267,8 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
           backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios, color: FlutterFlowTheme.of(context).secondaryText),
+            icon: Icon(Icons.arrow_back_ios,
+                color: FlutterFlowTheme.of(context).secondaryText),
             onPressed: () {
               if (Navigator.of(context).canPop()) {
                 context.pop();
@@ -286,13 +298,16 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
                       children: [
                         CircleAvatar(
                           radius: 65,
-                          backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+                          backgroundColor:
+                              FlutterFlowTheme.of(context).primaryBackground,
                           backgroundImage: _imageBytes != null
                               ? MemoryImage(_imageBytes!)
                               : null,
                           child: _imageBytes == null
                               ? Icon(Icons.person_add,
-                                  size: 50, color: FlutterFlowTheme.of(context).secondaryText)
+                                  size: 50,
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryText)
                               : null,
                         ),
                         Positioned(
@@ -304,35 +319,47 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
                                 color: FlutterFlowTheme.of(context).primary,
                                 shape: BoxShape.circle),
                             child: Icon(Icons.camera_alt,
-                                color: FlutterFlowTheme.of(context).secondaryBackground, size: 20),
+                                color: FlutterFlowTheme.of(context)
+                                    .secondaryBackground,
+                                size: 20),
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 12),
-                    Text(
-                      _imageBytes != null 
-                        ? FFLocalizations.of(context).getText('photo_selected') 
-                        : FFLocalizations.of(context).getText('tap_to_add_photo'),
-                      style: TextStyle(
-                          color: _imageBytes != null
-                              ? FlutterFlowTheme.of(context).success
-                              : FlutterFlowTheme.of(context).secondaryText,
-                          fontWeight: FontWeight.w500),
-                    ),
+                  Text(
+                    _imageBytes != null
+                        ? FFLocalizations.of(context).getText('photo_selected')
+                        : FFLocalizations.of(context)
+                            .getText('tap_to_add_photo'),
+                    style: TextStyle(
+                        color: _imageBytes != null
+                            ? FlutterFlowTheme.of(context).success
+                            : FlutterFlowTheme.of(context).secondaryText,
+                        fontWeight: FontWeight.w500),
+                  ),
                   const SizedBox(height: 40),
-                  _buildTextField(FFLocalizations.of(context).getText('first_name_label'), _model.textController1,
+                  _buildTextField(
+                      FFLocalizations.of(context).getText('first_name_label'),
+                      _model.textController1,
                       _model.textFieldFocusNode1),
                   const SizedBox(height: 20),
-                  _buildTextField(FFLocalizations.of(context).getText('last_name_label'), _model.textController2,
+                  _buildTextField(
+                      FFLocalizations.of(context).getText('last_name_label'),
+                      _model.textController2,
                       _model.textFieldFocusNode2),
                   const SizedBox(height: 20),
-                  _buildTextField(FFLocalizations.of(context).getText('email_label'), _model.textController3,
+                  _buildTextField(
+                      FFLocalizations.of(context).getText('email_label'),
+                      _model.textController3,
                       _model.textFieldFocusNode3,
                       isEmail: true),
                   const SizedBox(height: 20),
-                  _buildTextField(FFLocalizations.of(context).getText('referral_code_optional'), _model.textController4,
+                  _buildTextField(
+                      FFLocalizations.of(context)
+                          .getText('referral_code_optional'),
+                      _model.textController4,
                       _model.textFieldFocusNode4),
                   const SizedBox(height: 40),
                   FFButtonWidget(
@@ -341,19 +368,24 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
                             ? null
                             : _handleRegistration,
                     text: _model.isRegistering
-                        ? FFLocalizations.of(context).getText('creating_account')
-                        : FFLocalizations.of(context).getText('complete_registration'),
+                        ? FFLocalizations.of(context)
+                            .getText('creating_account')
+                        : FFLocalizations.of(context)
+                            .getText('complete_registration'),
                     options: FFButtonOptions(
                       width: double.infinity,
                       height: 56,
                       color: FlutterFlowTheme.of(context).primary,
                       textStyle: GoogleFonts.interTight(
-                          color: FlutterFlowTheme.of(context).secondaryBackground,
+                          color:
+                              FlutterFlowTheme.of(context).secondaryBackground,
                           fontSize: 18,
                           fontWeight: FontWeight.bold),
                       elevation: 2,
                       borderRadius: BorderRadius.circular(12),
-                      disabledColor: FlutterFlowTheme.of(context).primary.withValues(alpha:0.5),
+                      disabledColor: FlutterFlowTheme.of(context)
+                          .primary
+                          .withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -384,11 +416,12 @@ class _DetailspageWidgetState extends State<DetailspageWidget> {
               isEmail ? TextInputType.emailAddress : TextInputType.name,
           decoration: InputDecoration(
             enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: FlutterFlowTheme.of(context).alternate, width: 1),
+                borderSide: BorderSide(
+                    color: FlutterFlowTheme.of(context).alternate, width: 1),
                 borderRadius: BorderRadius.circular(12)),
             focusedBorder: OutlineInputBorder(
-                borderSide:
-                    BorderSide(color: FlutterFlowTheme.of(context).primary, width: 2),
+                borderSide: BorderSide(
+                    color: FlutterFlowTheme.of(context).primary, width: 2),
                 borderRadius: BorderRadius.circular(12)),
             filled: true,
             fillColor: FlutterFlowTheme.of(context).secondaryBackground,

@@ -47,7 +47,8 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadRide();
-      _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) => _loadRide(silent: true));
+      _pollTimer = Timer.periodic(
+          const Duration(seconds: 15), (_) => _loadRide(silent: true));
     });
   }
 
@@ -108,7 +109,9 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
         });
       } else if (!silent) {
         setState(() {
-          _error = response.bodyText.isNotEmpty ? response.bodyText : 'Could not load ride';
+          _error = response.bodyText.isNotEmpty
+              ? response.bodyText
+              : 'Could not load ride';
           _loading = false;
         });
       } else if (mounted) {
@@ -232,8 +235,11 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
   bool _isCarRide() {
     final v = _ride?['vehicle'];
     if (v is Map) {
-      final name = '${v['vehicle_name'] ?? ''} ${v['vehicle_model'] ?? ''}'.toLowerCase();
-      if (name.contains('car') || name.contains('sedan') || name.contains('suv')) return true;
+      final name = '${v['vehicle_name'] ?? ''} ${v['vehicle_model'] ?? ''}'
+          .toLowerCase();
+      if (name.contains('car') ||
+          name.contains('sedan') ||
+          name.contains('suv')) return true;
     }
     final rt = _ride?['ride_type']?.toString().toLowerCase() ?? '';
     return rt.contains('car') || rt.contains('auto');
@@ -243,7 +249,8 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
   Widget build(BuildContext context) {
     final ride = _ride;
     final status = ride?['ride_status']?.toString();
-    final mapCenter = _model.googleMapsCenter ?? const LatLng(13.106061, -59.613158);
+    final mapCenter =
+        _model.googleMapsCenter ?? const LatLng(13.106061, -59.613158);
 
     return GestureDetector(
       onTap: () {
@@ -279,7 +286,6 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
                   mapTakesGesturePreference: false,
                 ),
               ),
-
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Container(
@@ -322,7 +328,8 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: Text(
                               _error!,
-                              style: GoogleFonts.inter(color: Colors.red, fontSize: 13),
+                              style: GoogleFonts.inter(
+                                  color: Colors.red, fontSize: 13),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -331,7 +338,8 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: Text(
                               'No active ride. Book a ride to see live details.',
-                              style: GoogleFonts.inter(color: Colors.grey[700], fontSize: 14),
+                              style: GoogleFonts.inter(
+                                  color: Colors.grey[700], fontSize: 14),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -366,7 +374,9 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
-                                _isCarRide() ? Icons.directions_car : Icons.two_wheeler,
+                                _isCarRide()
+                                    ? Icons.directions_car
+                                    : Icons.two_wheeler,
                                 color: Colors.black,
                                 size: 28,
                               ),
@@ -391,7 +401,8 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
                                         width: 56,
                                         height: 56,
                                         fit: BoxFit.cover,
-                                        errorWidget: (_, __, ___) => Image.asset(
+                                        errorWidget: (_, __, ___) =>
+                                            Image.asset(
                                           'assets/images/dhsch3.png',
                                           width: 56,
                                           height: 56,
@@ -437,7 +448,9 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
                                       const SizedBox(height: 2),
                                       Row(
                                         children: [
-                                          const Icon(Icons.star_rounded, color: Color(0xFFFFB800), size: 14),
+                                          const Icon(Icons.star_rounded,
+                                              color: Color(0xFFFFB800),
+                                              size: 14),
                                           const SizedBox(width: 3),
                                           Text(
                                             _ratingLine(),
@@ -460,7 +473,8 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
                                     color: Colors.black,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.phone, color: Colors.white, size: 20),
+                                  child: const Icon(Icons.phone,
+                                      color: Colors.white, size: 20),
                                 ),
                               ),
                             ],
@@ -491,7 +505,8 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
                           width: double.infinity,
                           height: 56,
                           child: ElevatedButton(
-                            onPressed: () => context.pushNamed(CancelRideWidget.routeName),
+                            onPressed: () =>
+                                context.pushNamed(CancelRideWidget.routeName),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.grey[100],
                               foregroundColor: Colors.black,
@@ -514,7 +529,6 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
                   ),
                 ),
               ),
-
               Positioned(
                 top: MediaQuery.of(context).padding.top + 16,
                 left: 16,
@@ -524,9 +538,12 @@ class _BookSucessfullWidgetState extends State<BookSucessfullWidget> {
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
+                      boxShadow: [
+                        BoxShadow(color: Colors.black12, blurRadius: 10)
+                      ],
                     ),
-                    child: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+                    child: const Icon(Icons.arrow_back_ios_new,
+                        color: Colors.black, size: 20),
                   ),
                   onPressed: () => context.pop(),
                 ),

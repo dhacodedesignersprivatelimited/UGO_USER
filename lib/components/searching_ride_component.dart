@@ -31,8 +31,7 @@ class SearchingRideComponent extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<SearchingRideComponent> createState() =>
-      _SearchingRideComponentState();
+  State<SearchingRideComponent> createState() => _SearchingRideComponentState();
 }
 
 class _SearchingRideComponentState extends State<SearchingRideComponent>
@@ -100,11 +99,10 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
   @override
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
-    final remainingSec =
-        (_searchWindowSeconds - widget.searchSeconds).clamp(0, _searchWindowSeconds);
-    final progress = _searchWindowSeconds > 0
-        ? remainingSec / _searchWindowSeconds
-        : 0.0;
+    final remainingSec = (_searchWindowSeconds - widget.searchSeconds)
+        .clamp(0, _searchWindowSeconds);
+    final progress =
+        _searchWindowSeconds > 0 ? remainingSec / _searchWindowSeconds : 0.0;
     final total = widget.totalDriversNotified > 0
         ? widget.totalDriversNotified
         : widget.declineCount;
@@ -128,31 +126,24 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
           children: [
             _dragHandle(),
             const SizedBox(height: 14),
-
             if (widget.declineCount > 0) ...[
               _declineBanner(total, theme),
               const SizedBox(height: 12),
             ],
-
             _progressBar(progress),
             const SizedBox(height: 16),
-
             _rideInfoRow(theme),
             const SizedBox(height: 16),
-
             if (widget.serverNudgeMessage != null &&
                 widget.serverNudgeMessage!.trim().isNotEmpty) ...[
               _serverNudgeBanner(theme),
               const SizedBox(height: 16),
             ],
-
             _extraFareCard(theme),
-
             if (_selectedExtra != null && widget.onRebookWithExtra != null) ...[
               const SizedBox(height: 14),
               _rebookCta(theme),
             ],
-
             const SizedBox(height: 12),
             _cancelButton(theme),
           ],

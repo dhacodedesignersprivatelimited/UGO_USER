@@ -23,8 +23,9 @@ Future<bool> getPermissionStatus(Permission setting) async {
 Future<void> requestPermission(Permission setting) async {
   if (setting == Permission.photos && isAndroid) {
     final androidInfo = await DeviceInfoPlugin().androidInfo;
-    final p =
-        androidInfo.version.sdkInt <= 32 ? Permission.storage : Permission.photos;
+    final p = androidInfo.version.sdkInt <= 32
+        ? Permission.storage
+        : Permission.photos;
     final st = await p.status;
     if (st.isGranted || st.isLimited) return;
     if (st.isPermanentlyDenied) return;

@@ -114,14 +114,16 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
         ].where((e) => e != null && e.isNotEmpty).join(', ');
         if (mounted) {
           setState(() {
-            _addressTextController.text = address.isNotEmpty ? address : 'Lat: $lat, Lng: $lng';
+            _addressTextController.text =
+                address.isNotEmpty ? address : 'Lat: $lat, Lng: $lng';
             _isGeocoding = false;
           });
         }
       } else {
         if (mounted) {
           setState(() {
-            _addressTextController.text = 'Lat: ${lat.toStringAsFixed(4)}, Lng: ${lng.toStringAsFixed(4)}';
+            _addressTextController.text =
+                'Lat: ${lat.toStringAsFixed(4)}, Lng: ${lng.toStringAsFixed(4)}';
             _isGeocoding = false;
           });
         }
@@ -129,7 +131,8 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _addressTextController.text = 'Lat: ${lat.toStringAsFixed(4)}, Lng: ${lng.toStringAsFixed(4)}';
+          _addressTextController.text =
+              'Lat: ${lat.toStringAsFixed(4)}, Lng: ${lng.toStringAsFixed(4)}';
           _isGeocoding = false;
         });
       }
@@ -165,7 +168,8 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
                   Navigator.pop(ctx);
                   final loc = place.latLng;
                   _model.googleMapsController.future.then((ctrl) {
-                    ctrl.animateCamera(CameraUpdate.newLatLng(loc.toGoogleMaps()));
+                    ctrl.animateCamera(
+                        CameraUpdate.newLatLng(loc.toGoogleMaps()));
                   });
                   setState(() {
                     _model.googleMapsCenter = loc;
@@ -195,13 +199,20 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
   }
 
   Future<void> _saveAddress() async {
-    setState(() { _isLoading = true; _errorMessage = null; _successMessage = null; });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _successMessage = null;
+    });
 
     try {
       final appState = FFAppState();
-      if (_addressLabelController.text.trim().isEmpty) throw Exception('Enter label');
-      if (_addressTextController.text.trim().isEmpty) throw Exception('Enter address');
-      if (_latitude == null || _longitude == null) throw Exception('Select location on map');
+      if (_addressLabelController.text.trim().isEmpty)
+        throw Exception('Enter label');
+      if (_addressTextController.text.trim().isEmpty)
+        throw Exception('Enter address');
+      if (_latitude == null || _longitude == null)
+        throw Exception('Select location on map');
 
       final response = await SaveAddressCall.call(
         userId: appState.userid,
@@ -221,15 +232,18 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
           _longitude = _currentUserLocation?.longitude;
           if (_currentUserLocation != null) {
             _model.googleMapsCenter = _currentUserLocation;
-            _reverseGeocode(_currentUserLocation!.latitude, _currentUserLocation!.longitude);
+            _reverseGeocode(_currentUserLocation!.latitude,
+                _currentUserLocation!.longitude);
           }
         });
         _fetchSavedAddresses();
       } else {
-        throw Exception(getJsonField(response.jsonBody, r'$.message') ?? 'Failed');
+        throw Exception(
+            getJsonField(response.jsonBody, r'$.message') ?? 'Failed');
       }
     } catch (e) {
-      setState(() => _errorMessage = e.toString().replaceAll('Exception: ', ''));
+      setState(
+          () => _errorMessage = e.toString().replaceAll('Exception: ', ''));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -240,7 +254,8 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
     if (_currentUserLocation == null) {
       return Scaffold(
         backgroundColor: FlutterFlowTheme.of(context).secondaryBackground,
-        body: Center(child: CircularProgressIndicator(color: const Color(0xFFFF7B10))),
+        body: Center(
+            child: CircularProgressIndicator(color: const Color(0xFFFF7B10))),
       );
     }
 
@@ -257,10 +272,15 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
             borderColor: Colors.transparent,
             borderRadius: 30,
             buttonSize: 60,
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 28),
+            icon: const Icon(Icons.arrow_back_rounded,
+                color: Colors.white, size: 28),
             onPressed: () => context.pop(),
           ),
-          title: Text('Saved Places', style: GoogleFonts.interTight(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 18)),
+          title: Text('Saved Places',
+              style: GoogleFonts.interTight(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  fontSize: 18)),
           centerTitle: true,
           elevation: 0,
         ),
@@ -302,15 +322,19 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
                           prefixIcon: Icon(Icons.search, color: Colors.grey),
                           filled: true,
                           fillColor: Colors.white,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                         ),
                       ),
                     ),
                   ),
                   Center(
                     child: IgnorePointer(
-                      child: Icon(Icons.location_on, size: 48, color: const Color(0xFFFF7B10)),
+                      child: Icon(Icons.location_on,
+                          size: 48, color: const Color(0xFFFF7B10)),
                     ),
                   ),
                 ],
@@ -323,32 +347,45 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (_successMessage != null) _buildBanner(_successMessage!, Colors.green),
-                    if (_errorMessage != null) _buildBanner(_errorMessage!, Colors.red),
+                    if (_successMessage != null)
+                      _buildBanner(_successMessage!, Colors.green),
+                    if (_errorMessage != null)
+                      _buildBanner(_errorMessage!, Colors.red),
                     const SizedBox(height: 12),
                     Text('Add New Place', style: _headerStyle()),
                     const SizedBox(height: 12),
-                    _buildTextField(_addressLabelController, 'Label (e.g., Home)', Icons.label_outline),
+                    _buildTextField(_addressLabelController,
+                        'Label (e.g., Home)', Icons.label_outline),
                     const SizedBox(height: 12),
                     _buildTextField(
                       _addressTextController,
                       'Address',
                       Icons.place,
                       suffix: _isGeocoding
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : (_latitude != null ? const Icon(Icons.check_circle, color: Colors.green, size: 22) : null),
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : (_latitude != null
+                              ? const Icon(Icons.check_circle,
+                                  color: Colors.green, size: 22)
+                              : null),
                     ),
                     const SizedBox(height: 8),
-                    Text('Tap and drag the map to pick a location', style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
+                    Text('Tap and drag the map to pick a location',
+                        style: GoogleFonts.inter(
+                            fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 20),
                     FFButtonWidget(
-                      onPressed: (_isLoading || _isGeocoding) ? null : _saveAddress,
+                      onPressed:
+                          (_isLoading || _isGeocoding) ? null : _saveAddress,
                       text: _isLoading ? 'Saving...' : 'Save Address',
                       options: FFButtonOptions(
                         width: double.infinity,
                         height: 50,
                         color: const Color(0xFFFF7B10),
-                        textStyle: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+                        textStyle: GoogleFonts.inter(
+                            color: Colors.white, fontWeight: FontWeight.bold),
                         borderRadius: BorderRadius.circular(8),
                         disabledColor: Colors.orange.shade200,
                       ),
@@ -359,26 +396,38 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
                     Text('Your Saved Places', style: _headerStyle()),
                     const SizedBox(height: 12),
                     _isLoadingAddresses
-                        ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF7B10)))
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                                color: Color(0xFFFF7B10)))
                         : _savedAddresses.isEmpty
-                            ? const Padding(padding: EdgeInsets.all(20), child: Center(child: Text('No saved places yet.')))
+                            ? const Padding(
+                                padding: EdgeInsets.all(20),
+                                child:
+                                    Center(child: Text('No saved places yet.')))
                             : ListView.separated(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: _savedAddresses.length,
-                                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 12),
                                 itemBuilder: (context, i) {
                                   final place = _savedAddresses[i];
-                                  final label = (place['address_name'] ?? place['address_label'] ?? place['address_type'] ?? 'other').toString();
+                                  final label = (place['address_name'] ??
+                                          place['address_label'] ??
+                                          place['address_type'] ??
+                                          'other')
+                                      .toString();
                                   final type = label.toLowerCase();
-                                  final address = place['address_text']?.toString() ?? '';
+                                  final address =
+                                      place['address_text']?.toString() ?? '';
 
                                   IconData icon;
                                   Color color;
                                   if (type.contains('home')) {
                                     icon = Icons.home_rounded;
                                     color = Colors.blue;
-                                  } else if (type.contains('work') || type.contains('office')) {
+                                  } else if (type.contains('work') ||
+                                      type.contains('office')) {
                                     icon = Icons.work_rounded;
                                     color = Colors.orange;
                                   } else {
@@ -391,24 +440,52 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Colors.grey.shade200),
-                                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 2))],
+                                      border: Border.all(
+                                          color: Colors.grey.shade200),
+                                      boxShadow: [
+                                        BoxShadow(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.03),
+                                            blurRadius: 4,
+                                            offset: const Offset(0, 2))
+                                      ],
                                     ),
                                     child: Row(
                                       children: [
                                         Container(
                                           padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-                                          child: Icon(icon, color: color, size: 24),
+                                          decoration: BoxDecoration(
+                                              color:
+                                                  color.withValues(alpha: 0.1),
+                                              shape: BoxShape.circle),
+                                          child: Icon(icon,
+                                              color: color, size: 24),
                                         ),
                                         const SizedBox(width: 16),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Text(label.isEmpty ? 'Other' : label[0].toUpperCase() + label.substring(1).toLowerCase(),
-                                                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
-                                              Text(address, style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                              Text(
+                                                  label.isEmpty
+                                                      ? 'Other'
+                                                      : label[0].toUpperCase() +
+                                                          label
+                                                              .substring(1)
+                                                              .toLowerCase(),
+                                                  style: GoogleFonts.inter(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 16)),
+                                              Text(address,
+                                                  style: GoogleFonts.inter(
+                                                      color:
+                                                          Colors.grey.shade600,
+                                                      fontSize: 13),
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis),
                                             ],
                                           ),
                                         ),
@@ -427,17 +504,25 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
     );
   }
 
-  TextStyle _headerStyle() => GoogleFonts.interTight(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87);
+  TextStyle _headerStyle() => GoogleFonts.interTight(
+      fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87);
 
-  Widget _buildTextField(TextEditingController ctrl, String hint, IconData icon, {Widget? suffix}) => TextField(
+  Widget _buildTextField(TextEditingController ctrl, String hint, IconData icon,
+          {Widget? suffix}) =>
+      TextField(
         controller: ctrl,
         decoration: InputDecoration(
           hintText: hint,
           prefixIcon: Icon(icon, color: Colors.grey),
           suffixIcon: suffix,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFFF7B10), width: 1.5)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: Colors.grey.shade300)),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide:
+                  const BorderSide(color: Color(0xFFFF7B10), width: 1.5)),
           filled: true,
           fillColor: Colors.white,
         ),
@@ -445,7 +530,11 @@ class _AddHomeWidgetState extends State<AddHomeWidget> {
 
   Widget _buildBanner(String msg, Color color) => Container(
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: color)),
-        child: Text(msg, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+        decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color)),
+        child: Text(msg,
+            style: TextStyle(color: color, fontWeight: FontWeight.w600)),
       );
 }

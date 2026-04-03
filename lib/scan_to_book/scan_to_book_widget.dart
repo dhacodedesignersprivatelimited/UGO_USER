@@ -48,8 +48,8 @@ class _ScanToBookWidgetState extends State<ScanToBookWidget> {
       // Calls the native camera scanner
       String scanResult = await FlutterBarcodeScanner.scanBarcode(
         '#FF7B10', // Scanning line color (Orange)
-        'Cancel',  // Cancel button text
-        true,      // Show flash icon
+        'Cancel', // Cancel button text
+        true, // Show flash icon
         ScanMode.QR,
       );
 
@@ -60,7 +60,8 @@ class _ScanToBookWidgetState extends State<ScanToBookWidget> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Scanner Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Scanner Error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -89,26 +90,32 @@ class _ScanToBookWidgetState extends State<ScanToBookWidget> {
         if (data['pricing'] != null) {
           final pricing = data['pricing'];
           baseFare = double.tryParse(pricing['base_fare']?.toString() ?? '0');
-          pricePerKm = double.tryParse(pricing['price_per_km']?.toString() ?? '0');
-          baseKmStart = double.tryParse(pricing['base_km_start']?.toString() ?? '1');
-          baseKmEnd = double.tryParse(pricing['base_km_end']?.toString() ?? '5');
+          pricePerKm =
+              double.tryParse(pricing['price_per_km']?.toString() ?? '0');
+          baseKmStart =
+              double.tryParse(pricing['base_km_start']?.toString() ?? '1');
+          baseKmEnd =
+              double.tryParse(pricing['base_km_end']?.toString() ?? '5');
         }
       }
       // 2. Fallback: Assume raw string is just the Vehicle ID (Instant Booking Feature)
       else {
         final vehicleId = rawData;
-        final success = await InstantScanService().processInstantScan(vehicleId);
-        
+        final success =
+            await InstantScanService().processInstantScan(vehicleId);
+
         if (success) {
-           // Provide UI confirmation & redirect without visual changes to scanner logic itself
+          // Provide UI confirmation & redirect without visual changes to scanner logic itself
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Instant Ride Started!'), backgroundColor: Colors.green),
+            const SnackBar(
+                content: Text('Instant Ride Started!'),
+                backgroundColor: Colors.green),
           );
           // Standard back flow allows the global state's updated RideId to take over map
           context.safePop();
           return; // Stop early
         } else {
-           driverId = int.tryParse(rawData);
+          driverId = int.tryParse(rawData);
         }
       }
 
@@ -153,17 +160,18 @@ class _ScanToBookWidgetState extends State<ScanToBookWidget> {
             child: FlutterFlowIconButton(
               borderRadius: 30.0,
               buttonSize: 40.0,
-              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24.0),
+              icon:
+                  const Icon(Icons.arrow_back, color: Colors.white, size: 24.0),
               onPressed: () => context.safePop(),
             ),
           ),
           title: Text(
             'Scan to Ride',
             style: FlutterFlowTheme.of(context).titleMedium.override(
-              font: GoogleFonts.interTight(fontWeight: FontWeight.w600),
-              color: Colors.white,
-              fontSize: 18.0,
-            ),
+                  font: GoogleFonts.interTight(fontWeight: FontWeight.w600),
+                  color: Colors.white,
+                  fontSize: 18.0,
+                ),
           ),
           centerTitle: true,
           elevation: 0.0,
@@ -183,7 +191,9 @@ class _ScanToBookWidgetState extends State<ScanToBookWidget> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF3E0),
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFFF7B10).withValues(alpha:0.3), width: 2),
+                    border: Border.all(
+                        color: const Color(0xFFFF7B10).withValues(alpha: 0.3),
+                        width: 2),
                   ),
                   child: const Center(
                     child: Icon(
@@ -200,9 +210,10 @@ class _ScanToBookWidgetState extends State<ScanToBookWidget> {
                   'Scan Driver QR',
                   textAlign: TextAlign.center,
                   style: FlutterFlowTheme.of(context).headlineMedium.override(
-                    font: GoogleFonts.interTight(fontWeight: FontWeight.bold),
-                    color: Colors.black87,
-                  ),
+                        font:
+                            GoogleFonts.interTight(fontWeight: FontWeight.bold),
+                        color: Colors.black87,
+                      ),
                 ),
 
                 const SizedBox(height: 12),
@@ -211,10 +222,10 @@ class _ScanToBookWidgetState extends State<ScanToBookWidget> {
                   'Point your camera at the QR code in the vehicle to book your ride instantly.',
                   textAlign: TextAlign.center,
                   style: FlutterFlowTheme.of(context).bodyMedium.override(
-                    font: GoogleFonts.inter(),
-                    color: Colors.grey[600],
-                    fontSize: 16.0,
-                  ),
+                        font: GoogleFonts.inter(),
+                        color: Colors.grey[600],
+                        fontSize: 16.0,
+                      ),
                 ),
 
                 const SizedBox(height: 40),
@@ -228,11 +239,13 @@ class _ScanToBookWidgetState extends State<ScanToBookWidget> {
                     width: double.infinity,
                     height: 56.0,
                     color: const Color(0xFFFF7B10),
-                    textStyle: FlutterFlowTheme.of(context).titleMedium.override(
-                      font: GoogleFonts.inter(fontWeight: FontWeight.bold),
-                      color: Colors.white,
-                      fontSize: 18.0,
-                    ),
+                    textStyle: FlutterFlowTheme.of(context)
+                        .titleMedium
+                        .override(
+                          font: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                          color: Colors.white,
+                          fontSize: 18.0,
+                        ),
                     elevation: 3.0,
                     borderRadius: BorderRadius.circular(12.0),
                   ),

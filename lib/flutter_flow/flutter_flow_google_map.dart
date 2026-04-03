@@ -20,6 +20,7 @@ enum GoogleMapStyle {
   dark,
   night,
   aubergine,
+
   /// Uber-like style: orange roads, light land, clean locations
   uber,
 }
@@ -220,24 +221,24 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
         markers: widget.markers
             .map(
               (m) => Marker(
-            markerId: MarkerId(m.markerId),
-            position: m.location.toGoogleMaps(),
-            // FIX: If you are creating _markerDescriptor from bytes elsewhere,
-            // use BitmapDescriptor.bytes(yourBytes) instead of fromBytes.
-            icon: _markerDescriptor ?? BitmapDescriptor.defaultMarker,
-            onTap: () async {
-              if (widget.centerMapOnMarkerTap) {
-                final controller = await _controller.future;
-                await controller.animateCamera(
-                  CameraUpdate.newLatLng(m.location.toGoogleMaps()),
-                );
-                currentMapCenter = m.location.toGoogleMaps();
-                onCameraIdle();
-              }
-              await m.onTap?.call();
-            },
-          ),
-        )
+                markerId: MarkerId(m.markerId),
+                position: m.location.toGoogleMaps(),
+                // FIX: If you are creating _markerDescriptor from bytes elsewhere,
+                // use BitmapDescriptor.bytes(yourBytes) instead of fromBytes.
+                icon: _markerDescriptor ?? BitmapDescriptor.defaultMarker,
+                onTap: () async {
+                  if (widget.centerMapOnMarkerTap) {
+                    final controller = await _controller.future;
+                    await controller.animateCamera(
+                      CameraUpdate.newLatLng(m.location.toGoogleMaps()),
+                    );
+                    currentMapCenter = m.location.toGoogleMaps();
+                    onCameraIdle();
+                  }
+                  await m.onTap?.call();
+                },
+              ),
+            )
             .toSet(),
         gestureRecognizers: {
           if (mapHasGesturePreference)
@@ -246,7 +247,7 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
             ),
         },
         webGestureHandling:
-        mapHasGesturePreference ? WebGestureHandling.cooperative : null,
+            mapHasGesturePreference ? WebGestureHandling.cooperative : null,
       ),
     );
 

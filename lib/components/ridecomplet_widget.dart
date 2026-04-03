@@ -82,7 +82,8 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onRazorpaySuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _onRazorpayError);
     print('initState called with rideId: ${widget.rideId}');
-    WidgetsBinding.instance.addPostFrameCallback((_) => _processPaymentOnComplete());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _processPaymentOnComplete());
   }
 
   @override
@@ -181,7 +182,8 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
           );
           if (res.succeeded && mounted) {
             setState(() => _paymentProcessed = true);
-            appState.walletBalance = (appState.walletBalance - amount).clamp(0.0, double.infinity);
+            appState.walletBalance =
+                (appState.walletBalance - amount).clamp(0.0, double.infinity);
             print('✅ Wallet payment processed');
           } else {
             final fallback = await CreatePaymentCall.call(
@@ -192,7 +194,8 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
               paymentStatus: 'success',
               token: appState.accessToken,
             );
-            if (fallback.succeeded && mounted) setState(() => _paymentProcessed = true);
+            if (fallback.succeeded && mounted)
+              setState(() => _paymentProcessed = true);
           }
         } catch (e) {
           print('❌ Wallet payment error: $e');
@@ -205,7 +208,8 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
               paymentStatus: 'success',
               token: appState.accessToken,
             );
-            if (fallback.succeeded && mounted) setState(() => _paymentProcessed = true);
+            if (fallback.succeeded && mounted)
+              setState(() => _paymentProcessed = true);
           } catch (_) {}
         }
         break;
@@ -223,7 +227,8 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
             paymentStatus: 'success',
             token: appState.accessToken,
           );
-          if (res.succeeded && mounted) setState(() => _paymentProcessed = true);
+          if (res.succeeded && mounted)
+            setState(() => _paymentProcessed = true);
         } catch (_) {}
     }
   }
@@ -339,8 +344,7 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
 
       if (rawRideData != null) {
         final dataField = rawRideData['data'];
-        if (dataField != null && dataField is Map) {
-        }
+        if (dataField != null && dataField is Map) {}
       }
 
       final rideId = widget.rideId ?? appState.currentRideId;
@@ -356,7 +360,8 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Could not submit rating. Missing required ride information.'),
+              content: Text(
+                  'Could not submit rating. Missing required ride information.'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
@@ -371,7 +376,7 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
 
       // Prepare rating comment
       String ratingComment =
-      _selectedComments.isEmpty ? '' : _selectedComments.join(', ');
+          _selectedComments.isEmpty ? '' : _selectedComments.join(', ');
 
       if (kDebugMode) {
         debugPrint('🎯 Submitting Rating:');
@@ -393,12 +398,11 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
         ratingComment: ratingComment,
       );
 
-     final isSuccess =
-    response.succeeded ||
-    SubmitRideRatingCall.success(response.jsonBody) == true ||
-    SubmitRideRatingCall.statusCode(response.jsonBody) == 201;
+      final isSuccess = response.succeeded ||
+          SubmitRideRatingCall.success(response.jsonBody) == true ||
+          SubmitRideRatingCall.statusCode(response.jsonBody) == 201;
 
-if (isSuccess) {
+      if (isSuccess) {
         print('✅ Rating submitted successfully');
         print('   Response: ${response.jsonBody}');
 
@@ -431,12 +435,11 @@ if (isSuccess) {
           if (!mounted) return;
 
 // Clear ride session if needed
-            FFAppState().bookingInProgress = false;
-            FFAppState().currentRideId = null;
-            RideSession().clear();
+          FFAppState().bookingInProgress = false;
+          FFAppState().currentRideId = null;
+          RideSession().clear();
 
-            context.goNamed(HomeWidget.routeName);
-
+          context.goNamed(HomeWidget.routeName);
         }
       } else {
         if (kDebugMode) {
@@ -445,7 +448,8 @@ if (isSuccess) {
           debugPrint('   Response: ${response.jsonBody}');
         }
 
-        final msg = getJsonField(response.jsonBody, r'''$.message''')?.toString();
+        final msg =
+            getJsonField(response.jsonBody, r'''$.message''')?.toString();
         final isRateLimited = response.statusCode == 429;
         final userMsg = isRateLimited
             ? (msg?.isNotEmpty == true
@@ -525,7 +529,7 @@ if (isSuccess) {
 
     final driverName = (driverData != null)
         ? '${driverData['first_name'] ?? ''} ${driverData['last_name'] ?? ''}'
-        .trim()
+            .trim()
         : 'Driver';
 
     final vehicleType = driverData?['vehicle_type'] ??
@@ -747,7 +751,8 @@ if (isSuccess) {
                             Row(
                               children: [
                                 Text(
-                                  widget.fare ?? '₹${appState.selectedBaseFare.toStringAsFixed(2)}',
+                                  widget.fare ??
+                                      '₹${appState.selectedBaseFare.toStringAsFixed(2)}',
                                   style: GoogleFonts.inter(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w800,
@@ -789,13 +794,16 @@ if (isSuccess) {
                           children: [
                             _buildFareRow(
                               'Total Fare',
-                              widget.fare ?? '₹${appState.selectedBaseFare.toStringAsFixed(2)}',
+                              widget.fare ??
+                                  '₹${appState.selectedBaseFare.toStringAsFixed(2)}',
                             ),
                             const SizedBox(height: 12),
                             Divider(color: Color(0xFFE0E0E0), thickness: 1),
                             const SizedBox(height: 12),
-                            _buildFareRow('Payment Method',
-                              _formatPaymentLabel(widget.paymentMethod ?? appState.selectedPaymentMethod),
+                            _buildFareRow(
+                                'Payment Method',
+                                _formatPaymentLabel(widget.paymentMethod ??
+                                    appState.selectedPaymentMethod),
                                 isLast: true),
                           ],
                         ),
@@ -815,7 +823,8 @@ if (isSuccess) {
                           onPressed: _paymentProcessing ? null : _payWithUpi,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryOrange,
-                            disabledBackgroundColor: primaryOrange.withValues(alpha: 0.6),
+                            disabledBackgroundColor:
+                                primaryOrange.withValues(alpha: 0.6),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -855,7 +864,7 @@ if (isSuccess) {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha:0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -2),
                 ),
@@ -866,12 +875,14 @@ if (isSuccess) {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: (_isSubmitting || (_upiPaymentPending && !_paymentProcessed))
+                  onPressed: (_isSubmitting ||
+                          (_upiPaymentPending && !_paymentProcessed))
                       ? null
                       : _submitRating,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryOrange,
-                    disabledBackgroundColor: primaryOrange.withValues(alpha:0.6),
+                    disabledBackgroundColor:
+                        primaryOrange.withValues(alpha: 0.6),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -879,21 +890,21 @@ if (isSuccess) {
                   ),
                   child: _isSubmitting
                       ? SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2.5,
-                    ),
-                  )
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
                       : Text(
-                    'Submit',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
+                          'Submit',
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -919,8 +930,9 @@ if (isSuccess) {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         decoration: BoxDecoration(
-          color:
-          isSelected ? primaryOrange.withValues(alpha:0.1) : Color(0xFFF5F5F5),
+          color: isSelected
+              ? primaryOrange.withValues(alpha: 0.1)
+              : Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: isSelected ? primaryOrange : Color(0xFFE0E0E0),

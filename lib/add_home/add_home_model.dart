@@ -14,7 +14,7 @@ class AddHomeModel extends FlutterFlowModel<AddHomeWidget> {
   // Map state
   LatLng? googleMapsCenter;
   final googleMapsController = Completer<GoogleMapController>();
-  
+
   // Loading and error states
   bool isLoading = false;
   String? errorMessage;

@@ -147,9 +147,8 @@ class HistoryModel extends FlutterFlowModel<HistoryWidget> {
       limit: 50,
     );
     if (paymentHistoryResponse?.succeeded != true) {
-      paymentErrorMessage =
-          paymentHistoryResponse?.userFriendlyMessage ??
-              'Could not load payments';
+      paymentErrorMessage = paymentHistoryResponse?.userFriendlyMessage ??
+          'Could not load payments';
     }
   }
 }

@@ -41,7 +41,8 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
         final list = GetVehicleTypesCall.vehicles(res.jsonBody);
         setState(() {
           _vehicleTypes = (list ?? [])
-              .map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{})
+              .map((e) =>
+                  e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{})
               .toList();
           _vehicleTypesLoading = false;
         });
@@ -133,7 +134,8 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
                           width: double.infinity,
                           child: FlutterFlowGoogleMap(
                             controller: _model.googleMapsController,
-                            onCameraIdle: (latLng) => _model.googleMapsCenter = latLng,
+                            onCameraIdle: (latLng) =>
+                                _model.googleMapsCenter = latLng,
                             initialLocation: _model.googleMapsCenter ??
                                 const LatLng(17.3850, 78.4867),
                             markers: const [],
@@ -172,6 +174,7 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
       ),
     );
   }
+
   Widget _buildHeroHeader(bool isNarrow) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,8 +371,7 @@ class _ServiceoptionsWidgetState extends State<ServiceoptionsWidget> {
                                 color: Color(0xFFFF7B10)),
                           ),
                         )
-                      : Image.asset(
-                          'assets/images/$name.png',
+                      : Image.asset('assets/images/$name.png',
                           fit: BoxFit.contain,
                           errorBuilder: (_, __, ___) => const Icon(
                               Icons.directions_car,

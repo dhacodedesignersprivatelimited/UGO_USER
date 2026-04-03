@@ -19,11 +19,10 @@ class PushnotificationsWidget extends StatefulWidget {
       _PushnotificationsWidgetState();
 }
 
-class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with TickerProviderStateMixin {
+class _PushnotificationsWidgetState extends State<PushnotificationsWidget>
+    with TickerProviderStateMixin {
   late PushnotificationsModel _model;
   final scaffoldKey = GlobalKey<ScaffoldState>();
-
-
 
   @override
   void initState() {
@@ -52,12 +51,6 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
     _model.dispose();
     super.dispose();
   }
-
-  
-
-  
-
-  
 
   @override
   Widget build(BuildContext context) {
@@ -150,18 +143,23 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
                 color: Colors.grey[100],
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.notifications_none_rounded, size: 48, color: Colors.grey),
+              child: const Icon(Icons.notifications_none_rounded,
+                  size: 48, color: Colors.grey),
             ),
             const SizedBox(height: 24),
             Text(
               'No notifications',
-              style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.black),
+              style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black),
             ),
             const SizedBox(height: 12),
             Text(
               'You\'re all caught up! Updates will appear here.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 15, color: Colors.grey[600], height: 1.5),
+              style: GoogleFonts.inter(
+                  fontSize: 15, color: Colors.grey[600], height: 1.5),
             ),
           ],
         ),
@@ -221,29 +219,31 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
     for (final item in sorted) {
       final createdAt =
           getJsonField(item, r'''$.created_at''')?.toString() ?? '';
-      final date =
-          DateTime.tryParse(createdAt) ?? DateTime.now();
+      final date = DateTime.tryParse(createdAt) ?? DateTime.now();
       final bucket = _dayBucket(date);
       if (bucket != lastBucket) {
         out.add(_buildSectionHeader(bucket));
         lastBucket = bucket;
       }
       out.add(_buildNotificationItem(item));
-      out.add(
-          const Divider(height: 1, indent: 72, color: Color(0xFFEEEEEE)));
+      out.add(const Divider(height: 1, indent: 72, color: Color(0xFFEEEEEE)));
     }
     return out;
   }
 
   Widget _buildNotificationItem(dynamic item) {
     // Extract data based on Postman response
-    final title = getJsonField(item, r'''$.notification_title''')?.toString() ?? 
-                  getJsonField(item, r'''$.title''')?.toString() ?? 'Notification';
-    final message = getJsonField(item, r'''$.notification_body''')?.toString() ?? 
-                    getJsonField(item, r'''$.message''')?.toString() ?? '';
+    final title = getJsonField(item, r'''$.notification_title''')?.toString() ??
+        getJsonField(item, r'''$.title''')?.toString() ??
+        'Notification';
+    final message =
+        getJsonField(item, r'''$.notification_body''')?.toString() ??
+            getJsonField(item, r'''$.message''')?.toString() ??
+            '';
     final createdAt = getJsonField(item, r'''$.created_at''')?.toString();
     final isRead = getJsonField(item, r'''$.is_read''') == true;
-    final type = getJsonField(item, r'''$.type''')?.toString().toLowerCase() ?? 'info';
+    final type =
+        getJsonField(item, r'''$.type''')?.toString().toLowerCase() ?? 'info';
 
     IconData iconData = Icons.notifications_rounded;
     Color iconColor = const Color(0xFFFF7B10);
@@ -269,10 +269,12 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
     return InkWell(
       onTap: () async {
         final idRaw = getJsonField(item, r'''$.id''');
-        final nid = idRaw is int ? idRaw : int.tryParse(idRaw?.toString() ?? '');
+        final nid =
+            idRaw is int ? idRaw : int.tryParse(idRaw?.toString() ?? '');
         final token = FFAppState().accessToken;
         if (!isRead && nid != null && token.isNotEmpty) {
-          await MarkNotificationReadCall.call(notificationId: nid, token: token);
+          await MarkNotificationReadCall.call(
+              notificationId: nid, token: token);
           if (mounted) await _loadNotifications();
         }
       },
@@ -287,7 +289,7 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: iconColor.withValues(alpha:0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(iconData, color: iconColor, size: 22),
@@ -306,7 +308,8 @@ class _PushnotificationsWidgetState extends State<PushnotificationsWidget> with 
                           title,
                           style: GoogleFonts.inter(
                             fontSize: 15,
-                            fontWeight: isRead ? FontWeight.w600 : FontWeight.w800,
+                            fontWeight:
+                                isRead ? FontWeight.w600 : FontWeight.w800,
                             color: Colors.black,
                           ),
                           maxLines: 1,

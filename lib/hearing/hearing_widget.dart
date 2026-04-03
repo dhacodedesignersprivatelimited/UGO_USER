@@ -66,13 +66,13 @@ class _HearingWidgetState extends State<HearingWidget> {
               '0vz47ig4' /* Hearing */,
             ),
             style: FlutterFlowTheme.of(context).titleMedium.override(
-              font: GoogleFonts.interTight(
-                fontWeight: FontWeight.w500,
-              ),
-              color: FlutterFlowTheme.of(context).secondaryBackground,
-              fontSize: 16.0,
-              letterSpacing: 0.0,
-            ),
+                  font: GoogleFonts.interTight(
+                    fontWeight: FontWeight.w500,
+                  ),
+                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                  fontSize: 16.0,
+                  letterSpacing: 0.0,
+                ),
           ),
           actions: const [],
           centerTitle: true,
@@ -115,14 +115,14 @@ class _HearingWidgetState extends State<HearingWidget> {
                     'q7ai65o0' /* Let drivers and couriers know ... */,
                   ),
                   style: FlutterFlowTheme.of(context).titleLarge.override(
-                    font: GoogleFonts.interTight(
-                      fontWeight: FontWeight.normal,
-                    ),
-                    color: FlutterFlowTheme.of(context).accent1,
-                    fontSize: 16.0,
-                    letterSpacing: 0.0,
-                    lineHeight: 1.5,
-                  ),
+                        font: GoogleFonts.interTight(
+                          fontWeight: FontWeight.normal,
+                        ),
+                        color: FlutterFlowTheme.of(context).accent1,
+                        fontSize: 16.0,
+                        letterSpacing: 0.0,
+                        lineHeight: 1.5,
+                      ),
                 ),
                 Column(
                   mainAxisSize: MainAxisSize.max,
@@ -136,7 +136,8 @@ class _HearingWidgetState extends State<HearingWidget> {
                           width: 24.0,
                           height: 24.0,
                           decoration: BoxDecoration(
-                            color: FlutterFlowTheme.of(context).secondaryBackground,
+                            color: FlutterFlowTheme.of(context)
+                                .secondaryBackground,
                             borderRadius: BorderRadius.circular(4.0),
                             border: Border.all(
                               color: const Color(0xFF3B3B3B),
@@ -147,17 +148,20 @@ class _HearingWidgetState extends State<HearingWidget> {
                             data: ThemeData(
                               checkboxTheme: CheckboxThemeData(
                                 visualDensity: VisualDensity.compact,
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(4.0),
                                 ),
                               ),
-                              unselectedWidgetColor: FlutterFlowTheme.of(context).alternate,
+                              unselectedWidgetColor:
+                                  FlutterFlowTheme.of(context).alternate,
                             ),
                             child: Checkbox(
                               value: _model.checkboxValue1 ??= true,
                               onChanged: (newValue) async {
-                                safeSetState(() => _model.checkboxValue1 = newValue!);
+                                safeSetState(
+                                    () => _model.checkboxValue1 = newValue!);
                               },
                               side: BorderSide(
                                 width: 2,
@@ -172,14 +176,15 @@ class _HearingWidgetState extends State<HearingWidget> {
                           FFLocalizations.of(context).getText(
                             '2bir0a8h' /* I'm deaf */,
                           ),
-                          style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            font: GoogleFonts.inter(
-                              fontWeight: FontWeight.normal,
-                            ),
-                            color: const Color(0xFF3B3B3B),
-                            fontSize: 14.0,
-                            letterSpacing: 0.0,
-                          ),
+                          style:
+                              FlutterFlowTheme.of(context).bodyMedium.override(
+                                    font: GoogleFonts.inter(
+                                      fontWeight: FontWeight.normal,
+                                    ),
+                                    color: const Color(0xFF3B3B3B),
+                                    fontSize: 14.0,
+                                    letterSpacing: 0.0,
+                                  ),
                         ),
                       ].divide(const SizedBox(width: 12.0)),
                     ),
@@ -191,7 +196,8 @@ class _HearingWidgetState extends State<HearingWidget> {
                           width: 24.0,
                           height: 24.0,
                           decoration: BoxDecoration(
-                            color: FlutterFlowTheme.of(context).secondaryBackground,
+                            color: FlutterFlowTheme.of(context)
+                                .secondaryBackground,
                             borderRadius: BorderRadius.circular(4.0),
                             border: Border.all(
                               color: const Color(0xFF3B3B3B),
@@ -202,17 +208,20 @@ class _HearingWidgetState extends State<HearingWidget> {
                             data: ThemeData(
                               checkboxTheme: CheckboxThemeData(
                                 visualDensity: VisualDensity.compact,
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(4.0),
                                 ),
                               ),
-                              unselectedWidgetColor: FlutterFlowTheme.of(context).alternate,
+                              unselectedWidgetColor:
+                                  FlutterFlowTheme.of(context).alternate,
                             ),
                             child: Checkbox(
                               value: _model.checkboxValue2 ??= true,
                               onChanged: (newValue) async {
-                                safeSetState(() => _model.checkboxValue2 = newValue!);
+                                safeSetState(
+                                    () => _model.checkboxValue2 = newValue!);
                               },
                               side: BorderSide(
                                 width: 2,
@@ -227,14 +236,15 @@ class _HearingWidgetState extends State<HearingWidget> {
                           FFLocalizations.of(context).getText(
                             'j0nd9ppv' /* I'm hard of hearing */,
                           ),
-                          style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            font: GoogleFonts.inter(
-                              fontWeight: FontWeight.normal,
-                            ),
-                            color: const Color(0xFF3B3B3B),
-                            fontSize: 14.0,
-                            letterSpacing: 0.0,
-                          ),
+                          style:
+                              FlutterFlowTheme.of(context).bodyMedium.override(
+                                    font: GoogleFonts.inter(
+                                      fontWeight: FontWeight.normal,
+                                    ),
+                                    color: const Color(0xFF3B3B3B),
+                                    fontSize: 14.0,
+                                    letterSpacing: 0.0,
+                                  ),
                         ),
                       ].divide(const SizedBox(width: 12.0)),
                     ),
@@ -252,17 +262,20 @@ class _HearingWidgetState extends State<HearingWidget> {
                             data: ThemeData(
                               checkboxTheme: CheckboxThemeData(
                                 visualDensity: VisualDensity.compact,
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(4.0),
                                 ),
                               ),
-                              unselectedWidgetColor: FlutterFlowTheme.of(context).alternate,
+                              unselectedWidgetColor:
+                                  FlutterFlowTheme.of(context).alternate,
                             ),
                             child: Checkbox(
                               value: _model.checkboxValue3 ??= true,
                               onChanged: (newValue) async {
-                                safeSetState(() => _model.checkboxValue3 = newValue!);
+                                safeSetState(
+                                    () => _model.checkboxValue3 = newValue!);
                               },
                               side: BorderSide(
                                 width: 2,
@@ -277,20 +290,23 @@ class _HearingWidgetState extends State<HearingWidget> {
                           FFLocalizations.of(context).getText(
                             '19pk9vwp' /* I'm not deaf or hard of hearing... */,
                           ),
-                          style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            font: GoogleFonts.inter(
-                              fontWeight: FontWeight.normal,
-                            ),
-                            color: const Color(0xFF3B3B3B),
-                            fontSize: 14.0,
-                            letterSpacing: 0.0,
-                          ),
+                          style:
+                              FlutterFlowTheme.of(context).bodyMedium.override(
+                                    font: GoogleFonts.inter(
+                                      fontWeight: FontWeight.normal,
+                                    ),
+                                    color: const Color(0xFF3B3B3B),
+                                    fontSize: 14.0,
+                                    letterSpacing: 0.0,
+                                  ),
                         ),
                       ].divide(const SizedBox(width: 12.0)),
                     ),
                   ].divide(const SizedBox(height: 16.0)),
                 ),
-              ].divide(const SizedBox(height: 24.0)).addToStart(const SizedBox(height: 24.0)),
+              ]
+                  .divide(const SizedBox(height: 24.0))
+                  .addToStart(const SizedBox(height: 24.0)),
             ),
           ),
         ),

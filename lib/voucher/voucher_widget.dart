@@ -149,8 +149,7 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                 ],
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: primaryOrange.withValues(alpha: 0.25),
                   borderRadius: BorderRadius.circular(20),
@@ -342,11 +341,13 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                 child: SwitchListTile(
                   title: Text(
                     'Auto-apply best voucher when booking',
-                    style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   subtitle: Text(
                     'We pick the highest discount for your fare (you can turn this off).',
-                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600]),
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: Colors.grey[600]),
                   ),
                   value: context.watch<FFAppState>().autoApplyBestVoucher,
                   activeThumbColor: Colors.orange,
@@ -395,9 +396,8 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                         const SizedBox(width: 12),
                         ElevatedButton(
                           onPressed: () {
-                            final code = _model.textController?.text
-                                    .toUpperCase() ??
-                                '';
+                            final code =
+                                _model.textController?.text.toUpperCase() ?? '';
                             final coupon = _vouchers.firstWhere(
                               (c) =>
                                   c['code_name'].toString().toUpperCase() ==
@@ -464,7 +464,8 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                               ),
                               ..._myWalletVouchers
                                   .where((v) =>
-                                      '${v['status']}'.toLowerCase() == 'active')
+                                      '${v['status']}'.toLowerCase() ==
+                                      'active')
                                   .map((v) => _walletVoucherTile(v)),
                               const SizedBox(height: 12),
                               Text(
@@ -474,7 +475,8 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                               ),
                               ..._myWalletVouchers
                                   .where((v) =>
-                                      '${v['status']}'.toLowerCase() != 'active')
+                                      '${v['status']}'.toLowerCase() !=
+                                      'active')
                                   .map((v) => _walletVoucherTile(v)),
                             ],
                           ),
@@ -617,8 +619,7 @@ class _VoucherWidgetState extends State<VoucherWidget> {
                       Text(title,
                           style: GoogleFonts.inter(
                               fontSize: 15, fontWeight: FontWeight.bold)),
-                      Text(
-                          'Get a discount on your ride using this promo code.',
+                      Text('Get a discount on your ride using this promo code.',
                           style: GoogleFonts.inter(
                               fontSize: 13, color: Colors.grey[600])),
                       const SizedBox(height: 4),
@@ -637,8 +638,8 @@ class _VoucherWidgetState extends State<VoucherWidget> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
                 color: Colors.grey[50],
-                borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.circular(12))),
+                borderRadius:
+                    const BorderRadius.vertical(bottom: Radius.circular(12))),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

@@ -121,7 +121,8 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
       if (p.street != null && p.street!.trim().isNotEmpty) p.street!.trim(),
       if (p.subLocality != null && p.subLocality!.trim().isNotEmpty)
         p.subLocality!.trim(),
-      if (p.locality != null && p.locality!.trim().isNotEmpty) p.locality!.trim(),
+      if (p.locality != null && p.locality!.trim().isNotEmpty)
+        p.locality!.trim(),
       if (p.administrativeArea != null &&
           p.administrativeArea!.trim().isNotEmpty)
         p.administrativeArea!.trim(),
@@ -150,7 +151,8 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Location permission needed to use My location'),
+              content:
+                  const Text('Location permission needed to use My location'),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
@@ -172,8 +174,8 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
           SnackBar(
             content: const Text('Could not get current location'),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -186,7 +188,8 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
         SnackBar(
           content: const Text('Still resolving map location…'),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
       return;
@@ -196,7 +199,8 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
         SnackBar(
           content: const Text('Choose a place first'),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
       return;
@@ -236,7 +240,8 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
             content: Text(msg),
             backgroundColor: FlutterFlowTheme.of(context).error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -248,7 +253,8 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
             content: Text('Error: $e'),
             backgroundColor: FlutterFlowTheme.of(context).error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -258,8 +264,7 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = FlutterFlowTheme.of(context);
-    final title =
-        widget.editPickup ? 'Change pickup' : 'Change drop-off';
+    final title = widget.editPickup ? 'Change pickup' : 'Change drop-off';
     final hasSelection = _address.trim().length >= 3;
 
     return Material(
@@ -414,7 +419,8 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
+                        padding:
+                            const EdgeInsets.only(top: 8, left: 4, right: 4),
                         child: Text(
                           'Search suggestions are powered by Google.',
                           textAlign: TextAlign.center,
@@ -583,8 +589,8 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
   }
 
   Widget _buildPinMap(FlutterFlowTheme theme) {
-    final initial = _lastCameraTarget ??
-        gm.LatLng(widget.initialLat, widget.initialLng);
+    final initial =
+        _lastCameraTarget ?? gm.LatLng(widget.initialLat, widget.initialLng);
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
@@ -732,7 +738,9 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              hasSelection ? Icons.place_rounded : Icons.edit_location_alt_outlined,
+              hasSelection
+                  ? Icons.place_rounded
+                  : Icons.edit_location_alt_outlined,
               color: hasSelection ? theme.success : theme.secondaryText,
               size: 22,
             ),
@@ -760,7 +768,8 @@ class _RideLocationPatchSheetState extends State<RideLocationPatchSheet> {
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     height: 1.35,
-                    color: hasSelection ? theme.primaryText : theme.secondaryText,
+                    color:
+                        hasSelection ? theme.primaryText : theme.secondaryText,
                   ),
                 ),
               ],

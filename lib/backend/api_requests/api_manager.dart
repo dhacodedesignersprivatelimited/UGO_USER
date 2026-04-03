@@ -243,7 +243,8 @@ class ApiCallResponse {
 
   static String? _extractServerMessage(dynamic body) {
     if (body is Map) {
-      final dynamic message = body['message'] ?? body['error'] ?? body['detail'];
+      final dynamic message =
+          body['message'] ?? body['error'] ?? body['detail'];
       if (message != null) return message.toString();
     }
     if (body is String && body.isNotEmpty) return body;
@@ -279,7 +280,8 @@ class ApiManager {
   static String _platformLabel() =>
       kIsWeb ? 'web' : defaultTargetPlatform.name.toLowerCase();
 
-  static Map<String, dynamic> _injectDeviceHeaders(Map<String, dynamic> headers) {
+  static Map<String, dynamic> _injectDeviceHeaders(
+      Map<String, dynamic> headers) {
     final withHeaders = Map<String, dynamic>.from(headers);
     final appState = FFAppState();
     if (appState.deviceId.isNotEmpty &&
@@ -425,8 +427,7 @@ class ApiManager {
       ..files.addAll(files);
     nonFileParams.forEach((key, value) => request.fields[key] = value);
 
-    final streamedResponse =
-        await TimeoutHttpClient.instance.send(request);
+    final streamedResponse = await TimeoutHttpClient.instance.send(request);
     final response = await http.Response.fromStream(streamedResponse);
     return ApiCallResponse.fromHttpResponse(response, returnBody, decodeUtf8);
   }
@@ -821,7 +822,8 @@ class ApiManager {
       final body = response.jsonBody;
       String? reason;
       if (body is Map) {
-        reason = (body['code'] ?? (body['data'] is Map ? body['data']['code'] : null))
+        reason = (body['code'] ??
+                (body['data'] is Map ? body['data']['code'] : null))
             ?.toString();
       }
       onUnauthenticated?.call(reason);

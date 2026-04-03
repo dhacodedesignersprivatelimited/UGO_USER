@@ -83,14 +83,14 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
 
       if (response.succeeded) {
         final firstName =
-        (GetUserDetailsCall.firstName(response.jsonBody) ?? '').trim();
+            (GetUserDetailsCall.firstName(response.jsonBody) ?? '').trim();
         final lastName =
-        (GetUserDetailsCall.lastName(response.jsonBody) ?? '').trim();
+            (GetUserDetailsCall.lastName(response.jsonBody) ?? '').trim();
         final rawProfileImg =
-        (GetUserDetailsCall.profileImage(response.jsonBody) ?? '').trim();
+            (GetUserDetailsCall.profileImage(response.jsonBody) ?? '').trim();
 
         final fullName =
-        [firstName, lastName].where((x) => x.isNotEmpty).join(' ');
+            [firstName, lastName].where((x) => x.isNotEmpty).join(' ');
 
         // Efficiently build URL: AppConfig.baseApiUrl + / + rawProfileImg
         final imgUrl = rawProfileImg.isNotEmpty
@@ -99,8 +99,14 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                 : '${AppConfig.baseApiUrl}${rawProfileImg.startsWith('/') ? '' : '/'}$rawProfileImg')
             : '';
 
+        // Cache the successful profile data
+        FFAppState().cachedProfileData = response.bodyText;
+        FFAppState().offlineMode = false;
+
         setState(() {
-          _userDisplayName = fullName.isNotEmpty ? fullName : FFLocalizations.of(context).getText('user_label');
+          _userDisplayName = fullName.isNotEmpty
+              ? fullName
+              : FFLocalizations.of(context).getText('user_label');
           _profileImageUrl = imgUrl;
           _isLoadingUser = false;
         });
@@ -116,6 +122,38 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
           context.goNamedAuth(LoginWidget.routeName, context.mounted);
           return;
         }
+
+        // Handle network error using cached data if available
+        if (FFAppState().cachedProfileData.isNotEmpty) {
+          try {
+            final cachedJson = jsonDecode(FFAppState().cachedProfileData);
+            final firstName =
+                (GetUserDetailsCall.firstName(cachedJson) ?? '').trim();
+            final lastName =
+                (GetUserDetailsCall.lastName(cachedJson) ?? '').trim();
+            final rawProfileImg =
+                (GetUserDetailsCall.profileImage(cachedJson) ?? '').trim();
+
+            final fullName =
+                [firstName, lastName].where((x) => x.isNotEmpty).join(' ');
+            final imgUrl = rawProfileImg.isNotEmpty
+                ? (rawProfileImg.startsWith('http')
+                    ? rawProfileImg
+                    : '${AppConfig.baseApiUrl}${rawProfileImg.startsWith('/') ? '' : '/'}$rawProfileImg')
+                : '';
+
+            FFAppState().offlineMode = true;
+            setState(() {
+              _userDisplayName = fullName.isNotEmpty
+                  ? fullName
+                  : FFLocalizations.of(context).getText('user_label');
+              _profileImageUrl = imgUrl;
+              _isLoadingUser = false;
+            });
+            return;
+          } catch (_) {}
+        }
+
         setState(() {
           _userDisplayName = FFLocalizations.of(context).getText('user_label');
           _profileImageUrl = '';
@@ -124,6 +162,36 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
       }
     } catch (e) {
       if (!mounted) return;
+
+      // Fallback to cache on exception (e.g. network timeout)
+      if (FFAppState().cachedProfileData.isNotEmpty) {
+        try {
+          final cachedJson = jsonDecode(FFAppState().cachedProfileData);
+          final firstName =
+              (GetUserDetailsCall.firstName(cachedJson) ?? '').trim();
+          final lastName =
+              (GetUserDetailsCall.lastName(cachedJson) ?? '').trim();
+          final rawProfileImg =
+              (GetUserDetailsCall.profileImage(cachedJson) ?? '').trim();
+
+          final fullName =
+              [firstName, lastName].where((x) => x.isNotEmpty).join(' ');
+          final imgUrl = rawProfileImg.isNotEmpty
+              ? (rawProfileImg.startsWith('http')
+                  ? rawProfileImg
+                  : '${AppConfig.baseApiUrl}${rawProfileImg.startsWith('/') ? '' : '/'}$rawProfileImg')
+              : '';
+
+          FFAppState().offlineMode = true;
+          setState(() {
+            _userDisplayName = fullName.isNotEmpty ? fullName : 'User';
+            _profileImageUrl = imgUrl;
+            _isLoadingUser = false;
+          });
+          return;
+        } catch (_) {}
+      }
+
       setState(() {
         _userDisplayName = 'User';
         _profileImageUrl = '';
@@ -131,7 +199,6 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
       });
     }
   }
-
 
   @override
   void setState(VoidCallback callback) {
@@ -187,6 +254,38 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
               const SizedBox(height: 32),
               _buildHeader(isNarrow, isTablet),
               const SizedBox(height: 20),
+              if (FFAppState().offlineMode)
+                Padding(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: isNarrow ? 12.0 : 24.0),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade400),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.cloud_off,
+                            color: Colors.orange.shade800, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Offline Mode - Displaying cached data',
+                            style: TextStyle(
+                              color: Colors.orange.shade900,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               Expanded(
                 child: SlideTransition(
                   position: _slideAnimation,
@@ -290,22 +389,21 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
     final avatarSize = isNarrow
         ? 52.0
         : isTablet
-        ? 68.0
-        : 64.0;
+            ? 68.0
+            : 64.0;
 
     return InkWell(
       onTap: () {
         Navigator.of(context).pop(); // close drawer
         context.pushNamed(ProfileSettingWidget.routeName);
       },
-
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: [gradientStart, gradientEnd]),
           boxShadow: [
             BoxShadow(
-              color: gradientEnd.withValues(alpha:0.3),
+              color: gradientEnd.withValues(alpha: 0.3),
               blurRadius: 24,
               offset: const Offset(0, 12),
             ),
@@ -321,7 +419,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha:0.12),
+                    color: Colors.black.withValues(alpha: 0.12),
                     blurRadius: 12,
                   ),
                 ],
@@ -330,28 +428,29 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(50),
                 child: _isLoadingUser
                     ? Icon(Icons.person,
-                    color: gradientStart.withValues(alpha:0.75),
-                    size: isNarrow ? 26 : 30)
+                        color: gradientStart.withValues(alpha: 0.75),
+                        size: isNarrow ? 26 : 30)
                     : (_profileImageUrl.isNotEmpty
-                    ? Image.network(
-                  _profileImageUrl,
-                  fit: BoxFit.cover,
-                  // Shows a fallback while bytes load
-                  loadingBuilder: (context, child, progress) =>
-                  progress == null
-                      ? child
-                      : Icon(Icons.person,
-                      color: gradientStart.withValues(alpha:0.75),
-                      size: isNarrow ? 26 : 30),
-                  // Shows a fallback on error
-                  errorBuilder: (context, error, stackTrace) => Icon(
-                    Icons.person,
-                    color: gradientStart,
-                    size: isNarrow ? 26 : 30,
-                  ),
-                )
-                    : Icon(Icons.person,
-                    color: gradientStart, size: isNarrow ? 26 : 30)),
+                        ? Image.network(
+                            _profileImageUrl,
+                            fit: BoxFit.cover,
+                            // Shows a fallback while bytes load
+                            loadingBuilder: (context, child, progress) =>
+                                progress == null
+                                    ? child
+                                    : Icon(Icons.person,
+                                        color: gradientStart.withValues(
+                                            alpha: 0.75),
+                                        size: isNarrow ? 26 : 30),
+                            // Shows a fallback on error
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.person,
+                              color: gradientStart,
+                              size: isNarrow ? 26 : 30,
+                            ),
+                          )
+                        : Icon(Icons.person,
+                            color: gradientStart, size: isNarrow ? 26 : 30)),
               ),
             ),
             SizedBox(width: isNarrow ? 14 : 20),
@@ -364,31 +463,32 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                     style: GoogleFonts.poppins(
                       fontSize: isNarrow ? 16 : 19,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white.withValues(alpha:0.95),
+                      color: Colors.white.withValues(alpha: 0.95),
                     ),
                   ),
                   const SizedBox(height: 4),
                   _isLoadingUser
                       ? SizedBox(
-                    width: 120,
-                    height: 14,
-                    child: LinearProgressIndicator(
-                      backgroundColor: Colors.white.withValues(alpha:0.3),
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        Colors.white,
-                      ),
-                    ),
-                  )
+                          width: 120,
+                          height: 14,
+                          child: LinearProgressIndicator(
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.3),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
                       : Text(
-                    _userDisplayName,
-                    style: GoogleFonts.poppins(
-                      fontSize: isNarrow ? 16 : 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                          _userDisplayName,
+                          style: GoogleFonts.poppins(
+                            fontSize: isNarrow ? 16 : 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                 ],
               ),
             ),
@@ -415,24 +515,25 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
         child: InkWell(
           onTap: () {
             Navigator.of(context).pop();
-           context.pushNamed(route);
-
+            context.pushNamed(route);
           },
           borderRadius: BorderRadius.circular(20),
-          splashColor: iconColor.withValues(alpha:0.15),
+          splashColor: iconColor.withValues(alpha: 0.15),
           child: Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color:
-                  isActive ? iconColor.withValues(alpha:0.12) : Colors.transparent,
+              color: isActive
+                  ? iconColor.withValues(alpha: 0.12)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(20),
               border: isActive
-                  ? Border.all(color: iconColor.withValues(alpha:0.4), width: 2)
+                  ? Border.all(
+                      color: iconColor.withValues(alpha: 0.4), width: 2)
                   : null,
               boxShadow: isActive
                   ? [
                       BoxShadow(
-                        color: iconColor.withValues(alpha:0.2),
+                        color: iconColor.withValues(alpha: 0.2),
                         blurRadius: 16,
                         offset: const Offset(0, 6),
                       )
@@ -447,8 +548,8 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        iconColor.withValues(alpha:0.2),
-                        iconColor.withValues(alpha:0.08)
+                        iconColor.withValues(alpha: 0.2),
+                        iconColor.withValues(alpha: 0.08)
                       ],
                     ),
                     borderRadius: BorderRadius.circular(18),
@@ -470,7 +571,7 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
                 ),
                 Icon(
                   Icons.chevron_right_rounded,
-                  color: iconColor.withValues(alpha:isActive ? 1.0 : 0.5),
+                  color: iconColor.withValues(alpha: isActive ? 1.0 : 0.5),
                   size: iconSize * 0.65,
                 ),
               ],
@@ -520,11 +621,12 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
           color: FlutterFlowTheme.of(context).secondaryBackground,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-              color: FlutterFlowTheme.of(context).alternate.withValues(alpha: 0.5),
+              color:
+                  FlutterFlowTheme.of(context).alternate.withValues(alpha: 0.5),
               width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha:0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, 4),
             )

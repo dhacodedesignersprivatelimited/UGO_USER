@@ -51,7 +51,6 @@ const _kCompletedTypes = {'completed', 'complete'};
 bool _isRideChatData(Map<String, dynamic> data) =>
     _getEventType(data) == 'ride_chat';
 
-
 /// Extracts ride ID from FCM data payload.
 int? _getRideId(Map<String, dynamic> data) {
   final raw = data[_kRideId] ?? data[_kRideIdAlt] ?? data[_kRideIdAlt2];
@@ -139,11 +138,13 @@ void setupFirebaseMessaging(GoRouter router) {
 
   // 1. Request permission (iOS, Android 13+)
   if (!kIsWeb) {
-    messaging.requestPermission(
+    messaging
+        .requestPermission(
       alert: true,
       badge: true,
       sound: true,
-    ).then((s) {
+    )
+        .then((s) {
       if (kDebugMode) {
         print('🔔 FCM Permission: $s');
       }
@@ -153,7 +154,8 @@ void setupFirebaseMessaging(GoRouter router) {
   // 2. Foreground messages - show in-app or rely on existing socket
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     if (kDebugMode) {
-      print('🔔 [FCM Foreground] ${message.notification?.title ?? message.messageId}');
+      print(
+          '🔔 [FCM Foreground] ${message.notification?.title ?? message.messageId}');
     }
     final raw = message.data;
     if (raw.isEmpty) return;

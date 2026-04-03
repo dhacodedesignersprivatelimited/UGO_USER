@@ -107,8 +107,10 @@ ThemeData _buildLightTheme() {
       bodyLarge: GoogleFonts.inter(color: const Color(0xFF1A1A1A)),
       bodyMedium: GoogleFonts.inter(color: const Color(0xFF1A1A1A)),
       bodySmall: GoogleFonts.inter(color: const Color(0xFF666666)),
-      titleMedium: GoogleFonts.inter(color: const Color(0xFF1A1A1A), fontWeight: FontWeight.w600),
-      titleLarge: GoogleFonts.inter(color: const Color(0xFF1A1A1A), fontWeight: FontWeight.w600),
+      titleMedium: GoogleFonts.inter(
+          color: const Color(0xFF1A1A1A), fontWeight: FontWeight.w600),
+      titleLarge: GoogleFonts.inter(
+          color: const Color(0xFF1A1A1A), fontWeight: FontWeight.w600),
     ),
   );
 }
@@ -193,8 +195,10 @@ ThemeData _buildDarkTheme() {
       bodyLarge: GoogleFonts.inter(color: Colors.white),
       bodyMedium: GoogleFonts.inter(color: Colors.white),
       bodySmall: GoogleFonts.inter(color: const Color(0xFFB0B0B0)),
-      titleMedium: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
-      titleLarge: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
+      titleMedium:
+          GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
+      titleLarge:
+          GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600),
     ),
   );
 }

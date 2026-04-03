@@ -68,8 +68,7 @@ class FFAppState extends ChangeNotifier {
           prefs.getBool('ff_bookingInProgress') ?? _bookingInProgress;
     });
     _safeInit(() {
-      _pickupLatitude =
-          prefs.getDouble('ff_pickupLatitude') ?? _pickupLatitude;
+      _pickupLatitude = prefs.getDouble('ff_pickupLatitude') ?? _pickupLatitude;
     });
     _safeInit(() {
       _pickupLongitude =
@@ -113,7 +112,8 @@ class FFAppState extends ChangeNotifier {
           prefs.getBool('ff_autoApplyBestVoucher') ?? _autoApplyBestVoucher;
     });
     _safeInit(() {
-      _recentSearches = prefs.getStringList('ff_recentSearches') ?? _recentSearches;
+      _recentSearches =
+          prefs.getStringList('ff_recentSearches') ?? _recentSearches;
     });
     _safeInit(() {
       _selectedBaseKmStart =
@@ -125,6 +125,10 @@ class FFAppState extends ChangeNotifier {
     });
     _safeInit(() {
       _firebaseUid = prefs.getString('ff_firebaseUid') ?? _firebaseUid;
+    });
+    _safeInit(() {
+      _cachedProfileData =
+          prefs.getString('ff_cachedProfileData') ?? _cachedProfileData;
     });
   }
 
@@ -306,6 +310,21 @@ class FFAppState extends ChangeNotifier {
     prefs.setString('ff_firebaseUid', value);
   }
 
+  String _cachedProfileData = '';
+  String get cachedProfileData => _cachedProfileData;
+  set cachedProfileData(String value) {
+    _cachedProfileData = value;
+    prefs.setString('ff_cachedProfileData', value);
+    notifyListeners();
+  }
+
+  bool _offlineMode = false;
+  bool get offlineMode => _offlineMode;
+  set offlineMode(bool value) {
+    _offlineMode = value;
+    notifyListeners();
+  }
+
   double _selectedBaseFare = 0.0;
   double get selectedBaseFare => _selectedBaseFare;
   set selectedBaseFare(double value) {
@@ -358,9 +377,9 @@ class FFAppState extends ChangeNotifier {
   /// Referral reward coins from backend (10 coins = ₹1 off rides).
   int _coinsBalance = 0;
   int get coinsBalance => _coinsBalance;
+
   /// Rupee value of coins for display only (not withdrawable cash).
-  double get referralCoinsValueRs =>
-      CoinWalletInr.toInr(_coinsBalance);
+  double get referralCoinsValueRs => CoinWalletInr.toInr(_coinsBalance);
   set coinsBalance(int value) {
     _coinsBalance = value < 0 ? 0 : value;
     prefs.setInt('ff_coinsBalance', _coinsBalance);
@@ -393,7 +412,7 @@ class FFAppState extends ChangeNotifier {
       'lng': (location['lng'] as num?)?.toDouble() ?? 0.0,
       'icon_name': location['icon_name'] ?? 'history',
     });
-    
+
     _recentSearches.removeWhere((item) {
       try {
         final decoded = jsonDecode(item);
@@ -402,13 +421,13 @@ class FFAppState extends ChangeNotifier {
         return false;
       }
     });
-    
+
     _recentSearches.insert(0, encoded);
-    
+
     if (_recentSearches.length > 10) {
       _recentSearches = _recentSearches.sublist(0, 10);
     }
-    
+
     prefs.setStringList('ff_recentSearches', _recentSearches);
     notifyListeners();
   }
@@ -457,6 +476,8 @@ class FFAppState extends ChangeNotifier {
     prefs.remove('ff_refreshToken');
     prefs.remove('ff_userid');
     prefs.remove('ff_coinsBalance');
+    prefs.remove('ff_cachedProfileData');
+    _cachedProfileData = '';
     notifyListeners();
   }
 }

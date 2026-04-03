@@ -36,7 +36,8 @@ class PaymentConfig {
       // Fetch and activate remote config
       await _remoteConfig.fetchAndActivate();
     } catch (e) {
-      if (kDebugMode) debugPrint('PaymentConfig: Error fetching remote config: $e');
+      if (kDebugMode)
+        debugPrint('PaymentConfig: Error fetching remote config: $e');
     }
 
     _initialized = true;
@@ -47,7 +48,8 @@ class PaymentConfig {
     try {
       return _remoteConfig.getString('razorpay_key');
     } catch (e) {
-      if (kDebugMode) debugPrint('PaymentConfig: Error getting Razorpay key: $e');
+      if (kDebugMode)
+        debugPrint('PaymentConfig: Error getting Razorpay key: $e');
       return 'rzp_test_SAvHgTPEoPnNo7'; // Fallback for dev only - set live key in Firebase Remote Config for prod
     }
   }

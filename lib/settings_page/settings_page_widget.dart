@@ -76,21 +76,21 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _section(
-                    title: FFLocalizations.of(context).getText('general_section'),
+                    title:
+                        FFLocalizations.of(context).getText('general_section'),
                     children: [
                       _tile(
                         icon: Icons.home_outlined,
                         title: FFLocalizations.of(context).getText('add_home'),
-                        onTap: () =>
-                            context.pushNamed(AddHomeWidget.routeName),
+                        onTap: () => context.pushNamed(AddHomeWidget.routeName),
                       ),
-                       _tile(
-                        icon: Icons.work_outlined,
-                        title: FFLocalizations.of(context).getText('add_work'),
-                        onTap: () =>
-                            // context.pushNamed(AddHomeWidget.routeName),
-                            {}
-                      ),
+                      _tile(
+                          icon: Icons.work_outlined,
+                          title:
+                              FFLocalizations.of(context).getText('add_work'),
+                          onTap: () =>
+                              // context.pushNamed(AddHomeWidget.routeName),
+                              {}),
                       SwitchListTile(
                         title: Text(
                           FFLocalizations.of(context).getText('dark_mode'),
@@ -100,10 +100,11 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: theme.primary.withValues(alpha:0.12),
+                            color: theme.primary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Icon(Icons.dark_mode_outlined, color: theme.primary),
+                          child: Icon(Icons.dark_mode_outlined,
+                              color: theme.primary),
                         ),
                         value: Theme.of(context).brightness == Brightness.dark,
                         activeColor: theme.primary,
@@ -233,7 +234,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: theme.primary.withValues(alpha:0.12),
+                color: theme.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: theme.primary),
@@ -263,8 +264,7 @@ class _SettingsPageWidgetState extends State<SettingsPageWidget> {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right,
-                color: theme.secondaryText, size: 20),
+            Icon(Icons.chevron_right, color: theme.secondaryText, size: 20),
           ],
         ),
       ),

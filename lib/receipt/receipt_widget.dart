@@ -19,7 +19,8 @@ class ReceiptWidget extends StatelessWidget {
     final pickup = rideData['pickup_location_address'] ?? 'Pickup';
     final drop = rideData['drop_location_address'] ?? 'Drop';
     final fareStr = rideData['estimated_fare']?.toString() ?? '0';
-    final totalAmount = double.tryParse(fareStr.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+    final totalAmount =
+        double.tryParse(fareStr.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
     final payment =
         (rideData['payment_method'] ?? rideData['payment_type'] ?? 'cash')
             .toString();
@@ -53,7 +54,8 @@ class ReceiptWidget extends StatelessWidget {
               child: Divider(height: 1),
             ),
             _row('Fare (before GST)', '₹${baseFare.toStringAsFixed(2)}'),
-            _row('GST (${(_gstRate * 100).toInt()}%)', '₹${gstAmount.toStringAsFixed(2)}'),
+            _row('GST (${(_gstRate * 100).toInt()}%)',
+                '₹${gstAmount.toStringAsFixed(2)}'),
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: _row('Total', '₹${totalAmount.toStringAsFixed(2)}'),

@@ -64,7 +64,8 @@ class _WalletHistoryWidgetState extends State<WalletHistoryWidget> {
     final q = _search.text.trim().toLowerCase();
     return _all.where((m) {
       if (q.isEmpty) return true;
-      final d = '${m['description'] ?? ''} ${m['transaction_type'] ?? ''}'.toLowerCase();
+      final d = '${m['description'] ?? ''} ${m['transaction_type'] ?? ''}'
+          .toLowerCase();
       return d.contains(q);
     }).toList();
   }
@@ -100,7 +101,8 @@ class _WalletHistoryWidgetState extends State<WalletHistoryWidget> {
           borderColor: Colors.transparent,
           borderRadius: 30,
           buttonSize: 60,
-          icon: Icon(Icons.arrow_back_rounded, color: theme.secondaryBackground, size: 28),
+          icon: Icon(Icons.arrow_back_rounded,
+              color: theme.secondaryBackground, size: 28),
           onPressed: () => context.pop(),
         ),
         title: Text(
@@ -132,7 +134,8 @@ class _WalletHistoryWidgetState extends State<WalletHistoryWidget> {
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: theme.primaryBackground,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ),
@@ -147,10 +150,12 @@ class _WalletHistoryWidgetState extends State<WalletHistoryWidget> {
                       labelText: 'Type',
                       filled: true,
                       fillColor: theme.primaryBackground,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10)),
                     ),
                     items: [
-                      const DropdownMenuItem(value: null, child: Text('All types')),
+                      const DropdownMenuItem(
+                          value: null, child: Text('All types')),
                       ...{
                         for (final m in _all) '${m['transaction_type'] ?? ''}'
                       }.where((t) => t.isNotEmpty).map(
@@ -177,7 +182,8 @@ class _WalletHistoryWidgetState extends State<WalletHistoryWidget> {
             child: _loading
                 ? Center(child: CircularProgressIndicator(color: theme.accent1))
                 : _filtered.isEmpty
-                    ? Center(child: Text('No transactions', style: theme.bodyLarge))
+                    ? Center(
+                        child: Text('No transactions', style: theme.bodyLarge))
                     : ListView.separated(
                         padding: const EdgeInsets.all(12),
                         itemCount: _filtered.length,
@@ -188,7 +194,10 @@ class _WalletHistoryWidgetState extends State<WalletHistoryWidget> {
                           final coinsRaw = m['coins'];
                           final coins = int.tryParse('$coinsRaw');
                           final rupeeEq = m['rupee_equivalent'];
-                          final sign = amt != null && (num.tryParse('$amt') ?? 0) >= 0 ? '+' : '';
+                          final sign =
+                              amt != null && (num.tryParse('$amt') ?? 0) >= 0
+                                  ? '+'
+                                  : '';
                           final String trailingText;
                           if (coins != null && coins != 0) {
                             final coinSign = coins > 0 ? '+' : '';
@@ -200,7 +209,8 @@ class _WalletHistoryWidgetState extends State<WalletHistoryWidget> {
                           return ListTile(
                             title: Text(
                               '${m['transaction_type'] ?? '—'}',
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600),
                             ),
                             subtitle: Text(
                               '${m['description'] ?? ''}\n${m['created_at'] ?? ''}',

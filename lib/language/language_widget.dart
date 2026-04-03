@@ -61,9 +61,9 @@ class _LanguageWidgetState extends State<LanguageWidget> {
               Text(
                 FFLocalizations.of(context).getText(localeKey),
                 style: FlutterFlowTheme.of(context).bodyMedium.override(
-                  font: GoogleFonts.inter(fontWeight: FontWeight.w500),
-                  fontSize: 16.0,
-                ),
+                      font: GoogleFonts.inter(fontWeight: FontWeight.w500),
+                      fontSize: 16.0,
+                    ),
               ),
               Theme(
                 data: ThemeData(
@@ -85,7 +85,9 @@ class _LanguageWidgetState extends State<LanguageWidget> {
                   activeColor: const Color(0xFFFF7A00),
                   checkColor: Colors.white,
                   side: BorderSide(
-                    color: isSelected ? const Color(0xFFFF7A00) : const Color(0xFF9E9E9E),
+                    color: isSelected
+                        ? const Color(0xFFFF7A00)
+                        : const Color(0xFF9E9E9E),
                     width: 2.0,
                   ),
                 ),
@@ -113,15 +115,16 @@ class _LanguageWidgetState extends State<LanguageWidget> {
           leading: FlutterFlowIconButton(
             borderColor: Colors.transparent,
             borderRadius: 30.0,
-            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 30.0),
+            icon: const Icon(Icons.arrow_back_rounded,
+                color: Colors.white, size: 30.0),
             onPressed: () => context.pop(),
           ),
           title: Text(
             FFLocalizations.of(context).getText('fmwribbv' /* Languages */),
             style: FlutterFlowTheme.of(context).titleMedium.override(
-              font: GoogleFonts.interTight(fontWeight: FontWeight.w600),
-              color: Colors.white,
-            ),
+                  font: GoogleFonts.interTight(fontWeight: FontWeight.w600),
+                  color: Colors.white,
+                ),
           ),
           centerTitle: true,
           elevation: 0.0,

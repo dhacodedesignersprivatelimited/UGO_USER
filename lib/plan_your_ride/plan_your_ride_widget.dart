@@ -1,5 +1,6 @@
 import '/backend/api_requests/api_calls.dart';
-import '/flutter_flow/flutter_flow_google_map.dart' show GoogleMapStyle, googleMapStyleStrings;
+import '/flutter_flow/flutter_flow_google_map.dart'
+    show GoogleMapStyle, googleMapStyleStrings;
 import '/flutter_flow/flutter_flow_util.dart' hide LatLng;
 import '/index.dart';
 import 'package:flutter/material.dart';
@@ -66,7 +67,7 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     FFAppState().droplocation = '';
     FFAppState().dropLatitude = null;
     FFAppState().dropLongitude = null;
-    
+
     currentLocation = _defaultCenter;
     _model = createModel(context, () => PlanYourRideModel());
     _initializeLocation();
@@ -75,9 +76,9 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
 
   Future<void> _fetchDynamicRecentData() async {
     setState(() => isLoadingSavedAddresses = true);
-    
+
     List<Map<String, dynamic>> combined = [];
-    
+
     // 1. Fetch Saved Addresses (Home/Work)
     try {
       final response = await GetSavedAddressesCall.call(
@@ -85,14 +86,21 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
         token: FFAppState().accessToken,
       );
       if (response.succeeded) {
-        final List<dynamic> data = getJsonField(response.jsonBody, r'''$.data''', true) as List<dynamic>;
+        final List<dynamic> data =
+            getJsonField(response.jsonBody, r'''$.data''', true)
+                as List<dynamic>;
         for (var item in data) {
           combined.add({
-            'name': item['address_name'] ?? (item['address_type'] == 'home' ? 'Home' : 'Work'),
+            'name': item['address_name'] ??
+                (item['address_type'] == 'home' ? 'Home' : 'Work'),
             'address': item['address_text'],
             'lat': double.tryParse(item['latitude'].toString()) ?? 0.0,
             'lng': double.tryParse(item['longitude'].toString()) ?? 0.0,
-            'icon': item['address_type'] == 'home' ? Icons.home_outlined : (item['address_type'] == 'work' ? Icons.work_outline : Icons.bookmark_outline),
+            'icon': item['address_type'] == 'home'
+                ? Icons.home_outlined
+                : (item['address_type'] == 'work'
+                    ? Icons.work_outline
+                    : Icons.bookmark_outline),
             'isSaved': true,
           });
         }
@@ -141,7 +149,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
         permission = await Geolocator.requestPermission();
       }
 
-      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
         // FIXED: Using LocationSettings instead of desiredAccuracy
         const LocationSettings locationSettings = LocationSettings(
           accuracy: LocationAccuracy.high,
@@ -220,7 +229,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
         Marker(
           markerId: const MarkerId('pickup'),
           position: location,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          icon:
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           infoWindow: const InfoWindow(title: "Pickup Location"),
         ),
       );
@@ -255,7 +265,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
 
   Future<void> _reverseGeocode(LatLng location, bool isPickup) async {
     try {
-      final url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.latitude},${location.longitude}&key=${AppConfig.googleMapsApiKey}';
+      final url =
+          'https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.latitude},${location.longitude}&key=${AppConfig.googleMapsApiKey}';
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -305,47 +316,50 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
 
       if (mounted) setState(() => isSearching = true);
 
-    try {
-      final url = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=${AppConfig.googleMapsApiKey}&components=country:in&radius=50000';
-      final response = await http.get(Uri.parse(url));
+      try {
+        final url =
+            'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=${AppConfig.googleMapsApiKey}&components=country:in&radius=50000';
+        final response = await http.get(Uri.parse(url));
 
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
-        List<PlacePrediction> predictions = [];
+        if (response.statusCode == 200) {
+          final json = jsonDecode(response.body);
+          List<PlacePrediction> predictions = [];
 
-        if (json['predictions'] != null) {
-          for (var p in json['predictions']) {
-            predictions.add(PlacePrediction(
-              placeId: p['place_id'],
-              mainText: p['structured_formatting']['main_text'] ?? '',
-              secondaryText: p['structured_formatting']['secondary_text'] ?? '',
-              fullDescription: p['description'] ?? '',
-            ));
+          if (json['predictions'] != null) {
+            for (var p in json['predictions']) {
+              predictions.add(PlacePrediction(
+                placeId: p['place_id'],
+                mainText: p['structured_formatting']['main_text'] ?? '',
+                secondaryText:
+                    p['structured_formatting']['secondary_text'] ?? '',
+                fullDescription: p['description'] ?? '',
+              ));
+            }
+          }
+
+          if (mounted) {
+            setState(() {
+              if (isPickup) {
+                pickupPredictions = predictions;
+                showPickupDropdown = predictions.isNotEmpty;
+              } else {
+                dropPredictions = predictions;
+                showDropDropdown = predictions.isNotEmpty;
+              }
+              isSearching = false;
+            });
           }
         }
-
-        if (mounted) {
-          setState(() {
-            if (isPickup) {
-              pickupPredictions = predictions;
-              showPickupDropdown = predictions.isNotEmpty;
-            } else {
-              dropPredictions = predictions;
-              showDropDropdown = predictions.isNotEmpty;
-            }
-            isSearching = false;
-          });
-        }
+      } catch (e) {
+        if (mounted) setState(() => isSearching = false);
       }
-    } catch (e) {
-      if (mounted) setState(() => isSearching = false);
-    }
     });
   }
 
   Future<void> _selectPlace(PlacePrediction prediction, bool isPickup) async {
     try {
-      final url = 'https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.placeId}&key=${AppConfig.googleMapsApiKey}';
+      final url =
+          'https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.placeId}&key=${AppConfig.googleMapsApiKey}';
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -447,7 +461,10 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
       Map<String, dynamic>? match;
       final search = label.toLowerCase();
       for (final a in list) {
-        final l = (a['address_name'] ?? a['address_label'] ?? a['address_type'] ?? '').toString().toLowerCase();
+        final l =
+            (a['address_name'] ?? a['address_label'] ?? a['address_type'] ?? '')
+                .toString()
+                .toLowerCase();
         if (l.contains(search)) {
           match = a is Map<String, dynamic> ? a : Map<String, dynamic>.from(a);
           break;
@@ -504,22 +521,23 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     }
   }
 
-
   void _confirmRide() {
     final app = FFAppState();
     if (app.pickuplocation.isEmpty || app.droplocation.isEmpty) {
-      _showSnackBar('Please select both pickup and drop locations', isError: true);
+      _showSnackBar('Please select both pickup and drop locations',
+          isError: true);
       return;
     }
 
     // ✅ SHIELD: Prevent same pickup and drop
-    bool isSameAddress = app.pickuplocation.trim().toLowerCase() == 
-                         app.droplocation.trim().toLowerCase();
-    bool isSameCoords = app.pickupLatitude == app.dropLatitude && 
-                         app.pickupLongitude == app.dropLongitude;
+    bool isSameAddress = app.pickuplocation.trim().toLowerCase() ==
+        app.droplocation.trim().toLowerCase();
+    bool isSameCoords = app.pickupLatitude == app.dropLatitude &&
+        app.pickupLongitude == app.dropLongitude;
 
     if (isSameAddress || isSameCoords) {
-      _showSnackBar('Pickup and drop locations cannot be the same', isError: true);
+      _showSnackBar('Pickup and drop locations cannot be the same',
+          isError: true);
       return;
     }
 
@@ -532,12 +550,17 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
     });
   }
 
-  void _showSnackBar(String message, {bool isError = false, bool isInfo = false}) {
+  void _showSnackBar(String message,
+      {bool isError = false, bool isInfo = false}) {
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500, color: Colors.white)),
-        backgroundColor: isError ? Colors.red : (isInfo ? const Color(0xFFFF7B10) : Colors.green),
+        content: Text(message,
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.w500, color: Colors.white)),
+        backgroundColor: isError
+            ? Colors.red
+            : (isInfo ? const Color(0xFFFF7B10) : Colors.green),
         duration: const Duration(milliseconds: 2000),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -589,21 +612,23 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
               child: Container(
                 color: Colors.white,
                 child: Padding(
-                  padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 270),
+                  padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).padding.top + 270),
                   child: SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-
                         // Search Results or Recent Locations
-                        if (activeSelection == LocationSelection.pickup && pickupPredictions.isNotEmpty)
+                        if (activeSelection == LocationSelection.pickup &&
+                            pickupPredictions.isNotEmpty)
                           ...pickupPredictions.map((p) => _buildListEntry(
                                 icon: Icons.location_on_outlined,
                                 title: p.mainText,
                                 subtitle: p.secondaryText,
                                 onTap: () => _selectPlace(p, true),
                               ))
-                        else if (activeSelection == LocationSelection.drop && dropPredictions.isNotEmpty)
+                        else if (activeSelection == LocationSelection.drop &&
+                            dropPredictions.isNotEmpty)
                           ...dropPredictions.map((p) => _buildListEntry(
                                 icon: Icons.location_on_outlined,
                                 title: p.mainText,
@@ -611,66 +636,88 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                                 onTap: () => _selectPlace(p, false),
                               ))
                         else ...[
-                        // Recent Locations Section
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                          child: Row(
-                            children: [
-                              Text(
-                                'RECENT & SAVED LOCATIONS',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.grey[500],
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                              if (isLoadingSavedAddresses)
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 8.0),
-                                  child: SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)),
-                                ),
-                            ],
-                          ),
-                        ),
-                        if (dynamicRecentSearchList.isEmpty && !isLoadingSavedAddresses)
+                          // Recent Locations Section
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                            child: Text(
-                              'No recent searches yet.',
-                              style: GoogleFonts.inter(color: Colors.grey[400], fontSize: 13),
+                            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'RECENT & SAVED LOCATIONS',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.grey[500],
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                if (isLoadingSavedAddresses)
+                                  const Padding(
+                                    padding: EdgeInsets.only(left: 8.0),
+                                    child: SizedBox(
+                                        width: 12,
+                                        height: 12,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2)),
+                                  ),
+                              ],
                             ),
                           ),
-                        ...dynamicRecentSearchList.map((loc) => _buildListEntry(
-                              icon: (loc['icon'] is IconData) ? (loc['icon'] as IconData) : Icons.history,
-                              title: loc['name'].toString(),
-                              subtitle: loc['address'].toString(),
-                              onTap: () {
-                                final latLng = LatLng(loc['lat'] as double, loc['lng'] as double);
-                                if (activeSelection == LocationSelection.pickup) {
-                                  setState(() {
-                                    _model.pickupController.text = loc['address'].toString();
-                                    _addPickupMarker(latLng);
-                                    FFAppState().pickuplocation = loc['address'].toString();
-                                    FFAppState().pickupLatitude = latLng.latitude;
-                                    FFAppState().pickupLongitude = latLng.longitude;
-                                    pickupPredictions = [];
-                                  });
-                                } else {
-                                  setState(() {
-                                    _model.dropController.text = loc['address'].toString();
-                                    _addDropMarker(latLng);
-                                    FFAppState().droplocation = loc['address'].toString();
-                                    FFAppState().dropLatitude = latLng.latitude;
-                                    FFAppState().dropLongitude = latLng.longitude;
-                                    dropPredictions = [];
-                                  });
-                                }
-                                mapController?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
-                              },
-                            )),
-                      ],
-                        const SizedBox(height: 100), // Bottom padding for confirm button
+                          if (dynamicRecentSearchList.isEmpty &&
+                              !isLoadingSavedAddresses)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 20),
+                              child: Text(
+                                'No recent searches yet.',
+                                style: GoogleFonts.inter(
+                                    color: Colors.grey[400], fontSize: 13),
+                              ),
+                            ),
+                          ...dynamicRecentSearchList.map((loc) =>
+                              _buildListEntry(
+                                icon: (loc['icon'] is IconData)
+                                    ? (loc['icon'] as IconData)
+                                    : Icons.history,
+                                title: loc['name'].toString(),
+                                subtitle: loc['address'].toString(),
+                                onTap: () {
+                                  final latLng = LatLng(loc['lat'] as double,
+                                      loc['lng'] as double);
+                                  if (activeSelection ==
+                                      LocationSelection.pickup) {
+                                    setState(() {
+                                      _model.pickupController.text =
+                                          loc['address'].toString();
+                                      _addPickupMarker(latLng);
+                                      FFAppState().pickuplocation =
+                                          loc['address'].toString();
+                                      FFAppState().pickupLatitude =
+                                          latLng.latitude;
+                                      FFAppState().pickupLongitude =
+                                          latLng.longitude;
+                                      pickupPredictions = [];
+                                    });
+                                  } else {
+                                    setState(() {
+                                      _model.dropController.text =
+                                          loc['address'].toString();
+                                      _addDropMarker(latLng);
+                                      FFAppState().droplocation =
+                                          loc['address'].toString();
+                                      FFAppState().dropLatitude =
+                                          latLng.latitude;
+                                      FFAppState().dropLongitude =
+                                          latLng.longitude;
+                                      dropPredictions = [];
+                                    });
+                                  }
+                                  mapController?.animateCamera(
+                                      CameraUpdate.newLatLngZoom(latLng, 15));
+                                },
+                              )),
+                        ],
+                        const SizedBox(
+                            height: 100), // Bottom padding for confirm button
                       ],
                     ),
                   ),
@@ -680,11 +727,15 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
 
           // Header & Input Area (UGO Branding)
           Positioned(
-            top: 0, left: 0, right: 0,
+            top: 0,
+            left: 0,
+            right: 0,
             child: Container(
               padding: EdgeInsets.only(
                 top: MediaQuery.of(context).padding.top + 8,
-                left: 16, right: 16, bottom: 24,
+                left: 16,
+                right: 16,
+                bottom: 24,
               ),
               decoration: BoxDecoration(
                 color: const Color(0xFFFF7B10), // UGO Orange
@@ -707,7 +758,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                     children: [
                       IconButton(
                         onPressed: () => context.pop(),
-                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+                        icon: const Icon(Icons.arrow_back_ios_new,
+                            color: Colors.white, size: 20),
                       ),
                       Text(
                         'Plan Your Ride',
@@ -726,14 +778,20 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: TextButton.icon(
-                            onPressed: () => setState(() => isMapSelected = false),
-                            icon: const Icon(Icons.search, size: 16, color: Colors.white),
+                            onPressed: () =>
+                                setState(() => isMapSelected = false),
+                            icon: const Icon(Icons.search,
+                                size: 16, color: Colors.white),
                             label: Text(
                               'Search',
-                              style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                              style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13),
                             ),
                             style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
                             ),
                           ),
                         ),
@@ -749,28 +807,36 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                         child: Column(
                           children: [
                             Container(
-                              width: 12, height: 12,
+                              width: 12,
+                              height: 12,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.white,
-                                border: Border.all(color: const Color(0xFF2DB854), width: 3),
+                                border: Border.all(
+                                    color: const Color(0xFF2DB854), width: 3),
                               ),
                             ),
                             Container(
-                              width: 2, height: 48,
+                              width: 2,
+                              height: 48,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
-                                  colors: [Colors.white, Colors.white.withValues(alpha: 0.5)],
+                                  colors: [
+                                    Colors.white,
+                                    Colors.white.withValues(alpha: 0.5)
+                                  ],
                                 ),
                               ),
                             ),
                             Container(
-                              width: 12, height: 12,
+                              width: 12,
+                              height: 12,
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                border: Border.all(color: const Color(0xFFFF5A5F), width: 3),
+                                border: Border.all(
+                                    color: const Color(0xFFFF5A5F), width: 3),
                               ),
                             ),
                           ],
@@ -791,7 +857,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                               }),
                               onChanged: (v) => _searchPlaces(v, true),
                               suffixIcon: IconButton(
-                                icon: const Icon(Icons.my_location, size: 18, color: Colors.green),
+                                icon: const Icon(Icons.my_location,
+                                    size: 18, color: Colors.green),
                                 onPressed: _setCurrentLocationAsPickup,
                               ),
                             ),
@@ -814,7 +881,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                         padding: const EdgeInsets.only(top: 38),
                         child: IconButton(
                           onPressed: _swapLocations,
-                          icon: const Icon(Icons.swap_vert_circle, color: Colors.white, size: 32),
+                          icon: const Icon(Icons.swap_vert_circle,
+                              color: Colors.white, size: 32),
                         ),
                       ),
                     ],
@@ -832,7 +900,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                       _buildHeaderActionButton(
                         icon: Icons.add_circle_outline,
                         label: 'Add stops',
-                        onTap: () => _showSnackBar('Add stops coming soon!', isInfo: true),
+                        onTap: () => _showSnackBar('Add stops coming soon!',
+                            isInfo: true),
                       ),
                     ],
                   ),
@@ -843,14 +912,20 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
 
           // Bottom Confirmation Button
           Positioned(
-            bottom: 24, left: 16, right: 16,
+            bottom: 24,
+            left: 16,
+            right: 16,
             child: Container(
               height: 56,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFFFF7B10), Color(0xFFE65100)]),
+                gradient: const LinearGradient(
+                    colors: [Color(0xFFFF7B10), Color(0xFFE65100)]),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
-                  BoxShadow(color: const Color(0xFFFF7B10).withValues(alpha:0.4), blurRadius: 12, offset: const Offset(0, 4)),
+                  BoxShadow(
+                      color: const Color(0xFFFF7B10).withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4)),
                 ],
               ),
               child: Material(
@@ -861,7 +936,11 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                   child: Center(
                     child: Text(
                       'Confirm',
-                      style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+                      style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5),
                     ),
                   ),
                 ),
@@ -896,16 +975,21 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: (iconColor ?? const Color(0xFFFF7B10)).withValues(alpha: 0.1),
+                    color: (iconColor ?? const Color(0xFFFF7B10))
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(icon, size: 22, color: iconColor ?? const Color(0xFFFF7B10)),
+                  child: Icon(icon,
+                      size: 22, color: iconColor ?? const Color(0xFFFF7B10)),
                 ),
                 if (distance != null) ...[
                   const SizedBox(height: 4),
                   Text(
                     distance,
-                    style: GoogleFonts.inter(fontSize: 10, color: Colors.grey[400], fontWeight: FontWeight.w500),
+                    style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: Colors.grey[400],
+                        fontWeight: FontWeight.w500),
                   ),
                 ],
               ],
@@ -917,20 +1001,29 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.black87),
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(fontSize: 13, color: Colors.grey[500], fontWeight: FontWeight.w400),
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w400),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
             IconButton(
-              icon: Icon(Icons.favorite_border, size: 20, color: Colors.grey[300]),
+              icon: Icon(Icons.favorite_border,
+                  size: 20, color: Colors.grey[300]),
               onPressed: () {}, // Future: Add to favorites logic
             ),
           ],
@@ -964,7 +1057,10 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
                 const SizedBox(width: 8),
                 Text(
                   label,
-                  style: GoogleFonts.inter(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 13),
+                  style: GoogleFonts.inter(
+                      color: Colors.orange,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13),
                 ),
               ],
             ),
@@ -998,7 +1094,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
         controller: controller,
         onTap: onTap,
         onChanged: onChanged,
-        style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black),
+        style: GoogleFonts.inter(
+            fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black),
         cursorColor: Colors.black,
         decoration: InputDecoration(
           hintText: hintText,
@@ -1010,7 +1107,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
             children: [
               if (controller.text.isNotEmpty)
                 IconButton(
-                  icon: Icon(Icons.close_rounded, size: 18, color: Colors.red[400]),
+                  icon: Icon(Icons.close_rounded,
+                      size: 18, color: Colors.red[400]),
                   onPressed: () {
                     controller.clear();
                     onChanged('');
@@ -1024,7 +1122,8 @@ class _PlanYourRideWidgetState extends State<PlanYourRideWidget> {
             ],
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
     );

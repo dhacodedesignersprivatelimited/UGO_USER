@@ -18,15 +18,21 @@ class ScanBookingService {
 
   // Stream controllers for UI
   final _qrValidatedController = StreamController<QrValidatedData>.broadcast();
-  final _rideStartedController = StreamController<Map<String, dynamic>>.broadcast();
-  final _locationUpdateController = StreamController<LocationUpdateData>.broadcast();
-  final _rideCompletedController = StreamController<Map<String, dynamic>>.broadcast();
+  final _rideStartedController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  final _locationUpdateController =
+      StreamController<LocationUpdateData>.broadcast();
+  final _rideCompletedController =
+      StreamController<Map<String, dynamic>>.broadcast();
   final _errorController = StreamController<String>.broadcast();
 
   Stream<QrValidatedData> get onQrValidated => _qrValidatedController.stream;
-  Stream<Map<String, dynamic>> get onRideStarted => _rideStartedController.stream;
-  Stream<LocationUpdateData> get onLocationUpdate => _locationUpdateController.stream;
-  Stream<Map<String, dynamic>> get onRideCompleted => _rideCompletedController.stream;
+  Stream<Map<String, dynamic>> get onRideStarted =>
+      _rideStartedController.stream;
+  Stream<LocationUpdateData> get onLocationUpdate =>
+      _locationUpdateController.stream;
+  Stream<Map<String, dynamic>> get onRideCompleted =>
+      _rideCompletedController.stream;
   Stream<String> get onError => _errorController.stream;
 
   String get _baseUrl => AppConfig.baseApiUrl;
@@ -53,7 +59,6 @@ class ScanBookingService {
       return ScanBookResult(error: 'Please log in');
     }
 
-
     try {
       final response = await ScanBookRideCall.call(
         driverId: driverId,
@@ -74,16 +79,20 @@ class ScanBookingService {
       );
 
       if (!response.succeeded) {
-        final msg = getJsonField(response.jsonBody, r'$.message') ?? 'Scan failed';
+        final msg =
+            getJsonField(response.jsonBody, r'$.message') ?? 'Scan failed';
         return ScanBookResult(error: msg.toString());
       }
 
       final rideId = ScanBookRideCall.rideId(response.jsonBody) ??
           ScanBookRideCall.rideIdAlt(response.jsonBody);
-      final data = response.jsonBody is Map ? response.jsonBody as Map<String, dynamic> : <String, dynamic>{};
+      final data = response.jsonBody is Map
+          ? response.jsonBody as Map<String, dynamic>
+          : <String, dynamic>{};
       final dataField = data['data'];
       final rideIdFromData = dataField is Map
-          ? (dataField['rideId'] ?? dataField['id'] ?? dataField['ride_id']) as int?
+          ? (dataField['rideId'] ?? dataField['id'] ?? dataField['ride_id'])
+              as int?
           : null;
 
       int? id = rideId;
@@ -119,7 +128,8 @@ class ScanBookingService {
       _socket!.emit('watch_entity', {'type': 'ride', 'id': rideId});
     });
 
-    _socket!.onConnectError((data) => _errorController.add('Connection error: $data'));
+    _socket!.onConnectError(
+        (data) => _errorController.add('Connection error: $data'));
     _socket!.onError((data) => _errorController.add('Socket error: $data'));
 
     _socket!.on('qr_validated', (data) {
@@ -140,25 +150,34 @@ class ScanBookingService {
     });
 
     void handleLiveDriverMap(Map<String, dynamic> m) {
-        final latVal = m['lat'] ?? m['latitude'];
-        final lngVal = m['lng'] ?? m['longitude'];
-        final lat = latVal != null ? (latVal is num ? latVal.toDouble() : double.tryParse(latVal.toString())) : null;
-        final lng = lngVal != null ? (lngVal is num ? lngVal.toDouble() : double.tryParse(lngVal.toString())) : null;
-        
-        final status = m['ride_status']?.toString().toUpperCase();
+      final latVal = m['lat'] ?? m['latitude'];
+      final lngVal = m['lng'] ?? m['longitude'];
+      final lat = latVal != null
+          ? (latVal is num
+              ? latVal.toDouble()
+              : double.tryParse(latVal.toString()))
+          : null;
+      final lng = lngVal != null
+          ? (lngVal is num
+              ? lngVal.toDouble()
+              : double.tryParse(lngVal.toString()))
+          : null;
 
-        if (lat != null && lng != null) {
-          _locationUpdateController.add(LocationUpdateData(lat: lat, lng: lng, eta: m['eta']?.toString()));
-        }
+      final status = m['ride_status']?.toString().toUpperCase();
 
-        final state = FFAppState();
-        if (status == 'COMPLETED') {
-          state.bookingInProgress = false;
-          _rideCompletedController.add(m);
-        } else if (status == 'CANCELLED') {
-          state.bookingInProgress = false;
-          _errorController.add("Ride Cancelled by Driver.");
-        }
+      if (lat != null && lng != null) {
+        _locationUpdateController.add(
+            LocationUpdateData(lat: lat, lng: lng, eta: m['eta']?.toString()));
+      }
+
+      final state = FFAppState();
+      if (status == 'COMPLETED') {
+        state.bookingInProgress = false;
+        _rideCompletedController.add(m);
+      } else if (status == 'CANCELLED') {
+        state.bookingInProgress = false;
+        _errorController.add("Ride Cancelled by Driver.");
+      }
     }
 
     _socket!.on('location_update', (data) {
@@ -187,8 +206,11 @@ class ScanBookingService {
     _socket!.on('ride_updated', (data) {
       if (data is Map) {
         final m = Map<String, dynamic>.from(data);
-        final status = (m['ride_status'] ?? m['status'])?.toString().toLowerCase();
-        if (status == 'started' || status == 'in_progress' || status == 'picked_up') {
+        final status =
+            (m['ride_status'] ?? m['status'])?.toString().toLowerCase();
+        if (status == 'started' ||
+            status == 'in_progress' ||
+            status == 'picked_up') {
           _rideStartedController.add(m);
         } else if (status == 'completed' || status == 'complete') {
           _rideCompletedController.add(m);
@@ -210,7 +232,8 @@ class ScanBookingService {
     if (token.isEmpty) return false;
 
     try {
-      final response = await ConfirmScanStartCall.call(rideId: rideId, token: token);
+      final response =
+          await ConfirmScanStartCall.call(rideId: rideId, token: token);
       return response.succeeded;
     } catch (_) {
       return false;
@@ -258,15 +281,22 @@ class QrValidatedData {
   });
 
   factory QrValidatedData.fromMap(Map<String, dynamic> m) {
-    final driver = m['driver'] is Map ? m['driver'] as Map<String, dynamic> : <String, dynamic>{};
+    final driver = m['driver'] is Map
+        ? m['driver'] as Map<String, dynamic>
+        : <String, dynamic>{};
     final rideIdVal = m['rideId'] ?? m['ride_id'] ?? driver['ride_id'] ?? 0;
     final ratingVal = driver['rating'] ?? 4.5;
     final fareVal = m['fare_estimate'] ?? m['fare'] ?? 0;
     return QrValidatedData(
-      rideId: rideIdVal is int ? rideIdVal : (int.tryParse(rideIdVal.toString()) ?? 0),
-      driverName: (driver['name'] ?? driver['first_name'] ?? 'Driver').toString(),
-      driverPhoto: driver['photo'] ?? driver['profile_image'] ?? driver['image'],
-      vehicleNo: (driver['vehicle_no'] ?? driver['vehicle_number'] ?? 'N/A').toString(),
+      rideId: rideIdVal is int
+          ? rideIdVal
+          : (int.tryParse(rideIdVal.toString()) ?? 0),
+      driverName:
+          (driver['name'] ?? driver['first_name'] ?? 'Driver').toString(),
+      driverPhoto:
+          driver['photo'] ?? driver['profile_image'] ?? driver['image'],
+      vehicleNo: (driver['vehicle_no'] ?? driver['vehicle_number'] ?? 'N/A')
+          .toString(),
       rating: ratingVal is num ? ratingVal.toDouble() : 4.5,
       fareEstimate: fareVal is num ? fareVal.toDouble() : 0,
     );

@@ -52,7 +52,6 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
   double _calculatedFare = 0;
   int? _rideId;
 
-
   // Computed total
   double get totalAmount => _calculatedFare + _selectedTip;
   final appState = FFAppState();
@@ -67,8 +66,6 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDistanceAndFare();
     });
-                 
-      
   }
 //   Future<void> _createRide() async {
 //   try {
@@ -121,71 +118,71 @@ class _DriverDetailsWidgetState extends State<DriverDetailsWidget> {
 //     print('🔥 Exception while creating ride: $e');
 //   }
 // }
-Future<void> _createRide() async {
-  try {
-    print('🚕 Creating ride...');
+  Future<void> _createRide() async {
+    try {
+      print('🚕 Creating ride...');
 
-    final response = await CreateRideCall.call(
-      token: FFAppState().accessToken, // USER token is correct for create ride
-      userId: FFAppState().userid,
-      pickupLocationAddress: FFAppState().pickuplocation.isNotEmpty
-          ? FFAppState().pickuplocation
-          : "Current Location",
-      dropLocationAddress: FFAppState().droplocation.isNotEmpty
-          ? FFAppState().droplocation
-          : "Drop Location",
-      pickupLatitude: FFAppState().pickupLatitude!,
-      pickupLongitude: FFAppState().pickupLongitude!,
-      dropLatitude: FFAppState().dropLatitude!,
-      dropLongitude: FFAppState().dropLongitude!,
-      adminVehicleId: widget.vehicleType ?? 1,
-      estimatedFare: totalAmount.toStringAsFixed(2),
-      rideStatus: 'started', // Create with started since driver is assigned
-      driverId: widget.driverId,
-      paymentType: 'cash', // Scan booking: cash only
-    );
+      final response = await CreateRideCall.call(
+        token:
+            FFAppState().accessToken, // USER token is correct for create ride
+        userId: FFAppState().userid,
+        pickupLocationAddress: FFAppState().pickuplocation.isNotEmpty
+            ? FFAppState().pickuplocation
+            : "Current Location",
+        dropLocationAddress: FFAppState().droplocation.isNotEmpty
+            ? FFAppState().droplocation
+            : "Drop Location",
+        pickupLatitude: FFAppState().pickupLatitude!,
+        pickupLongitude: FFAppState().pickupLongitude!,
+        dropLatitude: FFAppState().dropLatitude!,
+        dropLongitude: FFAppState().dropLongitude!,
+        adminVehicleId: widget.vehicleType ?? 1,
+        estimatedFare: totalAmount.toStringAsFixed(2),
+        rideStatus: 'started', // Create with started since driver is assigned
+        driverId: widget.driverId,
+        paymentType: 'cash', // Scan booking: cash only
+      );
 
-    print('🟢 CreateRide response: ${response.jsonBody}');
+      print('🟢 CreateRide response: ${response.jsonBody}');
 
-    if (response.succeeded == true) {
-      final bool success =
-          getJsonField(response.jsonBody, r'$.success') ?? false;
+      if (response.succeeded == true) {
+        final bool success =
+            getJsonField(response.jsonBody, r'$.success') ?? false;
 
-      if (success) {
-        final int rideId =
-            int.parse(getJsonField(response.jsonBody, r'$.data.id').toString());
+        if (success) {
+          final int rideId = int.parse(
+              getJsonField(response.jsonBody, r'$.data.id').toString());
 
-        // ✅ SAVE RIDE ID PROPERLY
-        _rideId = rideId;
-        FFAppState().currentRideId = rideId;
-        FFAppState().bookingInProgress = true;
+          // ✅ SAVE RIDE ID PROPERLY
+          _rideId = rideId;
+          FFAppState().currentRideId = rideId;
+          FFAppState().bookingInProgress = true;
 
-        print('✅ Ride created successfully');
-        print('🆔 rideId = $_rideId');
+          print('✅ Ride created successfully');
+          print('🆔 rideId = $_rideId');
 
-        setState(() {});
+          setState(() {});
+        } else {
+          final message = getJsonField(response.jsonBody, r'$.message') ??
+              'Ride creation failed';
+          print('❌ Backend error: $message');
+          if (mounted) _showDriverInRideError(message.toString());
+        }
       } else {
-        final message =
-            getJsonField(response.jsonBody, r'$.message') ?? 'Ride creation failed';
-        print('❌ Backend error: $message');
-        if (mounted) _showDriverInRideError(message.toString());
-      }
-    } else {
-      final body = response.jsonBody;
-      final message = body != null
-          ? (getJsonField(body, r'$.message') ??
+        final body = response.jsonBody;
+        final message = body != null
+            ? (getJsonField(body, r'$.message') ??
                 getJsonField(body, r'$.error') ??
                 'Ride creation failed')
-          : 'Ride creation failed';
-      print('❌ CreateRide API failed: $message');
-      if (mounted) _showDriverInRideError(message.toString());
+            : 'Ride creation failed';
+        print('❌ CreateRide API failed: $message');
+        if (mounted) _showDriverInRideError(message.toString());
+      }
+    } catch (e) {
+      print('🔥 Exception in _createRide(): $e');
+      if (mounted) _showError('Something went wrong. Please try again.');
     }
-  } catch (e) {
-    print('🔥 Exception in _createRide(): $e');
-    if (mounted) _showError('Something went wrong. Please try again.');
   }
-}
-
 
   @override
   void dispose() {
@@ -219,7 +216,8 @@ Future<void> _createRide() async {
 
     // 1. Validation: Ensure Pickup is set (Red Pin logic)
     if (appState.pickupLatitude == null || appState.pickupLatitude == 0.0) {
-      debugPrint('⚠️ Pickup coordinates missing. Attempting to fetch current location...');
+      debugPrint(
+          '⚠️ Pickup coordinates missing. Attempting to fetch current location...');
       await _refreshCurrentLocation();
     }
 
@@ -235,11 +233,13 @@ Future<void> _createRide() async {
 
     // 2. Calculate Road Distance using Google Directions
     final distance = await RouteDistanceService().getDrivingDistanceKm(
-      originLat: lat1,
-      originLng: lon1,
-      destLat: lat2,
-      destLng: lon2,
-    ) ?? calculateDistance(lat1, lon1, lat2, lon2); // Fallback to Haversine if API fails
+          originLat: lat1,
+          originLng: lon1,
+          destLat: lat2,
+          destLng: lon2,
+        ) ??
+        calculateDistance(
+            lat1, lon1, lat2, lon2); // Fallback to Haversine if API fails
 
     // 3. Pricing Logic (Robust Fallback)
     // Prioritize widget params passed from QR scan, fallback to defaults
@@ -262,7 +262,8 @@ Future<void> _createRide() async {
         _calculatedDistanceKm = distance;
         _calculatedFare = fare;
       });
-      debugPrint('✅ Road Distance: ${distance.toStringAsFixed(2)} km, Fare: ₹${fare.toStringAsFixed(2)}');
+      debugPrint(
+          '✅ Road Distance: ${distance.toStringAsFixed(2)} km, Fare: ₹${fare.toStringAsFixed(2)}');
     }
   }
 
@@ -288,6 +289,7 @@ Future<void> _createRide() async {
       debugPrint("Error fetching location: $e");
     }
   }
+
   // --- Helper: Distance Math ---
   double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     const double earthRadius = 6371; // Radius of earth in km
@@ -371,6 +373,7 @@ Future<void> _createRide() async {
       ),
     );
   }
+
   /// On tap Continue/START RIDE: create ride with status started, then go to tracking
   Future<void> _confirmBooking() async {
     if (isLoadingRide) return;
@@ -398,7 +401,6 @@ Future<void> _createRide() async {
     }
   }
 
-
   // --- UI Construction ---
 
   @override
@@ -406,18 +408,21 @@ Future<void> _createRide() async {
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Colors.white,
-        body: Center(child: CircularProgressIndicator(color: Color(0xFFFF7B10))),
+        body:
+            Center(child: CircularProgressIndicator(color: Color(0xFFFF7B10))),
       );
     }
 
     // Extract Driver Details
     final driverName = GetDriverDetailsCall.name(_driverData) ?? 'Driver';
-    final vehicleNum = GetDriverDetailsCall.vehicleNumber(_driverData) ?? 'Unknown';
+    final vehicleNum =
+        GetDriverDetailsCall.vehicleNumber(_driverData) ?? 'Unknown';
     final rating = GetDriverDetailsCall.rating(_driverData) ?? '4.5';
     final profileImg = GetDriverDetailsCall.profileImage(_driverData);
 
     final dropLoc = widget.dropLocation ?? FFAppState().droplocation;
-    final displayDropLoc = (dropLoc.isNotEmpty) ? dropLoc : 'Selected Destination';
+    final displayDropLoc =
+        (dropLoc.isNotEmpty) ? dropLoc : 'Selected Destination';
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -438,7 +443,7 @@ Future<void> _createRide() async {
                       borderRadius: BorderRadius.circular(12.0),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha:0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
                         )
@@ -483,20 +488,25 @@ Future<void> _createRide() async {
                               height: 140,
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(70), // Circle
-                                border: Border.all(color: Colors.white, width: 4),
+                                borderRadius:
+                                    BorderRadius.circular(70), // Circle
+                                border:
+                                    Border.all(color: Colors.white, width: 4),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha:0.1),
+                                    color: Colors.black.withValues(alpha: 0.1),
                                     blurRadius: 10,
                                   )
                                 ],
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(70),
-                                child: profileImg != null && profileImg.isNotEmpty
-                                    ? Image.network(profileImg, fit: BoxFit.cover)
-                                    : Image.asset('assets/images/0l6yw6.png', fit: BoxFit.cover),
+                                child: profileImg != null &&
+                                        profileImg.isNotEmpty
+                                    ? Image.network(profileImg,
+                                        fit: BoxFit.cover)
+                                    : Image.asset('assets/images/0l6yw6.png',
+                                        fit: BoxFit.cover),
                               ),
                             ),
                           ),
@@ -509,7 +519,7 @@ Future<void> _createRide() async {
                               style: GoogleFonts.poppins(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white.withValues(alpha:0.9),
+                                color: Colors.white.withValues(alpha: 0.9),
                               ),
                             ),
                           ),
@@ -526,12 +536,15 @@ Future<void> _createRide() async {
                               children: [
                                 Text(
                                   'Rating : ',
-                                  style: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 16, color: Colors.white),
                                 ),
-                                const Icon(Icons.star, color: Color(0xFFFFDE14), size: 20),
+                                const Icon(Icons.star,
+                                    color: Color(0xFFFFDE14), size: 20),
                                 Text(
                                   ' $rating',
-                                  style: GoogleFonts.poppins(fontSize: 16, color: Colors.white),
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 16, color: Colors.white),
                                 ),
                               ],
                             ),
@@ -541,8 +554,10 @@ Future<void> _createRide() async {
 
                           // Trip Details
                           _buildDetailRow('Destination', displayDropLoc),
-                          _buildDetailRow('Distance', _formatDistance(_calculatedDistanceKm)),
-                          _buildDetailRow('Est. Fare', '₹${_calculatedFare.toStringAsFixed(0)}'),
+                          _buildDetailRow('Distance',
+                              _formatDistance(_calculatedDistanceKm)),
+                          _buildDetailRow('Est. Fare',
+                              '₹${_calculatedFare.toStringAsFixed(0)}'),
 
                           const SizedBox(height: 20),
 
@@ -569,7 +584,8 @@ Future<void> _createRide() async {
 
                           // Total Amount Box
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 16),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
@@ -612,10 +628,13 @@ Future<void> _createRide() async {
                       child: SizedBox(
                         height: 56,
                         child: OutlinedButton(
-                          onPressed: () => context.goNamed(HomeWidget.routeName),
+                          onPressed: () =>
+                              context.goNamed(HomeWidget.routeName),
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFFF01C1C), width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: const BorderSide(
+                                color: Color(0xFFF01C1C), width: 1.5),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             backgroundColor: Colors.white,
                           ),
                           child: Text(
@@ -640,24 +659,26 @@ Future<void> _createRide() async {
                           onPressed: isLoadingRide ? null : _confirmBooking,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFF7B10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                             elevation: 4,
                           ),
                           child: isLoadingRide
                               ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                          )
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2.5),
+                                )
                               : Text(
-                            'START RIDE',
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
+                                  'START RIDE',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -683,7 +704,7 @@ Future<void> _createRide() async {
               '$label :',
               style: GoogleFonts.poppins(
                 fontSize: 16,
-                color: Colors.white.withValues(alpha:0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 fontWeight: FontWeight.w400,
               ),
             ),
@@ -715,12 +736,12 @@ Future<void> _createRide() async {
         width: MediaQuery.of(context).size.width * 0.23,
         height: 45,
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.white.withValues(alpha:0.2),
+          color:
+              isSelected ? Colors.white : Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
               color: isSelected ? const Color(0xFFFF7B10) : Colors.white70,
-              width: 1.5
-          ),
+              width: 1.5),
         ),
         child: Center(
           child: Text(

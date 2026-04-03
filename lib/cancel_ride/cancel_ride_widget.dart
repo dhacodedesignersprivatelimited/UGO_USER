@@ -55,7 +55,8 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
     super.didChangeDependencies();
 
     // Parse query parameters
-    final params = GoRouter.of(context).routeInformationProvider.value.uri.queryParameters;
+    final params =
+        GoRouter.of(context).routeInformationProvider.value.uri.queryParameters;
 
     rideId = params['rideId'];
     vehicleType = params['vehicleType'];
@@ -92,7 +93,8 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
     try {
       final token = FFAppState().accessToken; // ✅ Get from FFAppState
 
-      print('🚫 Cancelling ride $rideId with token: ${token.substring(0, 20)}...');
+      print(
+          '🚫 Cancelling ride $rideId with token: ${token.substring(0, 20)}...');
 
       final response = await CancelRide.call(
         rideId: int.parse(rideId!), // ✅ Parse string to int
@@ -108,7 +110,8 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
           // ✅ Success - Navigate back 2 screens (home)
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(CancelRide.message(response) ?? 'Ride cancelled successfully!'),
+              content: Text(CancelRide.message(response) ??
+                  'Ride cancelled successfully!'),
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
             ),
@@ -168,7 +171,8 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                 decoration: const BoxDecoration(
                   image: DecorationImage(
                     fit: BoxFit.cover,
-                    image: AssetImage('assets/images/map_background.png'), // ✅ Update path
+                    image: AssetImage(
+                        'assets/images/map_background.png'), // ✅ Update path
                   ),
                 ),
                 child: Stack(
@@ -183,10 +187,14 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
-                            BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
+                            BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 8,
+                                offset: Offset(0, 2)),
                           ],
                         ),
-                        child: const Icon(Icons.circle, color: Colors.green, size: 20),
+                        child: const Icon(Icons.circle,
+                            color: Colors.green, size: 20),
                       ),
                     ),
                     // Drop Marker (Red)
@@ -199,10 +207,14 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
-                            BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 2)),
+                            BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 8,
+                                offset: Offset(0, 2)),
                           ],
                         ),
-                        child: const Icon(Icons.location_on, color: Colors.red, size: 24),
+                        child: const Icon(Icons.location_on,
+                            color: Colors.red, size: 24),
                       ),
                     ),
                   ],
@@ -222,7 +234,10 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                     topRight: Radius.circular(24),
                   ),
                   boxShadow: [
-                    BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -5)),
+                    BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 20,
+                        offset: Offset(0, -5)),
                   ],
                 ),
                 child: Column(
@@ -241,7 +256,8 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                     // Scrollable Content
                     Expanded(
                       child: ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 20),
                         children: [
                           // Pickup Location (UGO Compact Style)
                           Container(
@@ -259,12 +275,14 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                                     color: Colors.green,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.circle, color: Colors.white, size: 12),
+                                  child: const Icon(Icons.circle,
+                                      color: Colors.white, size: 12),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Pickup',
@@ -309,12 +327,14 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                                     color: Colors.red,
                                     shape: BoxShape.circle,
                                   ),
-                                  child: const Icon(Icons.location_on, color: Colors.white, size: 12),
+                                  child: const Icon(Icons.location_on,
+                                      color: Colors.white, size: 12),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Drop',
@@ -349,7 +369,8 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Color(0xFFE9ECEF), width: 1),
+                              border: Border.all(
+                                  color: Color(0xFFE9ECEF), width: 1),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black12,
@@ -370,14 +391,19 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                                       color: Color(0xFFF8F9FA),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: displayVehicleImage != null && displayVehicleImage.isNotEmpty
+                                    child: displayVehicleImage != null &&
+                                            displayVehicleImage.isNotEmpty
                                         ? Image.network(
-                                      '${AppConfig.baseApiUrl}/$displayVehicleImage',
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          Icon(Icons.directions_car, size: 40, color: Colors.grey),
-                                    )
-                                        : Icon(Icons.directions_car, size: 40, color: Colors.grey),
+                                            '${AppConfig.baseApiUrl}/$displayVehicleImage',
+                                            fit: BoxFit.contain,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Icon(Icons.directions_car,
+                                                        size: 40,
+                                                        color: Colors.grey),
+                                          )
+                                        : Icon(Icons.directions_car,
+                                            size: 40, color: Colors.grey),
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -385,7 +411,8 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                                 // Vehicle Details + Price
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         displayVehicleType,
@@ -403,13 +430,17 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                                           color: Colors.grey[600],
                                         ),
                                       ),
-                                      if (estimatedFare != null && estimatedFare! > 0) ...[
+                                      if (estimatedFare != null &&
+                                          estimatedFare! > 0) ...[
                                         const SizedBox(height: 8),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 12, vertical: 6),
                                           decoration: BoxDecoration(
-                                            color: Color(0xFFFFD700), // UGO Yellow
-                                            borderRadius: BorderRadius.circular(20),
+                                            color:
+                                                Color(0xFFFFD700), // UGO Yellow
+                                            borderRadius:
+                                                BorderRadius.circular(20),
                                           ),
                                           child: Text(
                                             '₹${estimatedFare!.toStringAsFixed(0)}',
@@ -435,7 +466,9 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                             width: double.infinity,
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: _isCancelling ? null : _cancelRide, // ✅ Real API Call
+                              onPressed: _isCancelling
+                                  ? null
+                                  : _cancelRide, // ✅ Real API Call
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: _isCancelling
                                     ? Colors.grey[300]
@@ -448,20 +481,22 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                               ),
                               child: _isCancelling
                                   ? SizedBox(
-                                height: 24,
-                                width: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
+                                      ),
+                                    )
                                   : Text(
-                                'Cancel Ride',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                                      'Cancel Ride',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                             ),
                           ),
 
@@ -483,13 +518,17 @@ class _CancelRideWidgetState extends State<CancelRideWidget> {
                   color: Colors.white,
                   shape: BoxShape.circle,
                   boxShadow: [
-                    BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 4)),
+                    BoxShadow(
+                        color: Colors.black26,
+                        blurRadius: 12,
+                        offset: Offset(0, 4)),
                   ],
                 ),
                 child: FlutterFlowIconButton(
                   borderRadius: 30,
                   buttonSize: 56,
-                  icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFFFF7B10), size: 20),
+                  icon: const Icon(Icons.arrow_back_ios_new,
+                      color: Color(0xFFFF7B10), size: 20),
                   onPressed: () => context.pop(),
                 ),
               ),

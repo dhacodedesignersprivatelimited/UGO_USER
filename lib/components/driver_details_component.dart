@@ -566,8 +566,10 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
               alignment: Alignment.center,
               child: Text(
                 d.toUpperCase(),
-                style:
-                    _font(size: isNarrow ? 16 : 18, weight: FontWeight.w800, color: _kPrimary),
+                style: _font(
+                    size: isNarrow ? 16 : 18,
+                    weight: FontWeight.w800,
+                    color: _kPrimary),
               ),
             );
           }).toList(),
@@ -617,7 +619,8 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
                         const SizedBox(height: 2),
                         Text(
                           'Share with captain',
-                          style: _font(size: 10, color: const Color(0xFF9CA3AF)),
+                          style:
+                              _font(size: 10, color: const Color(0xFF9CA3AF)),
                         ),
                       ],
                     ),
@@ -775,7 +778,6 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
       ),
     );
   }
-
 
   // ─── Action Buttons ─────────────────────────────────────────────────────
 
@@ -992,8 +994,7 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Distance',
-                        style:
-                            _font(size: 11, color: const Color(0xFF9CA3AF))),
+                        style: _font(size: 11, color: const Color(0xFF9CA3AF))),
                     const SizedBox(height: 2),
                     Text(
                       _formatDistance(widget.totalRoadDistanceKm),
@@ -1138,8 +1139,9 @@ class _DriverDetailsComponentState extends State<DriverDetailsComponent>
   }
 
   static String _sanitizePersonName(String raw) {
-    final normalized =
-        raw.replaceAll(RegExp(r'[\r\n\t]+'), ' ').replaceAll(RegExp(r'\s+'), ' ');
+    final normalized = raw
+        .replaceAll(RegExp(r'[\r\n\t]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ');
     return normalized.trim();
   }
 }

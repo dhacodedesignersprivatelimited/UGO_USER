@@ -102,22 +102,26 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
         final first = (GetUserDetailsCall.firstName(res.jsonBody) ?? '').trim();
         final last = (GetUserDetailsCall.lastName(res.jsonBody) ?? '').trim();
         final mobile =
-        (GetUserDetailsCall.mobileNumber(res.jsonBody) ?? '').trim();
+            (GetUserDetailsCall.mobileNumber(res.jsonBody) ?? '').trim();
         final email = (GetUserDetailsCall.email(res.jsonBody) ?? '').trim();
         final rawImg =
-        (GetUserDetailsCall.profileImage(res.jsonBody) ?? '').trim();
+            (GetUserDetailsCall.profileImage(res.jsonBody) ?? '').trim();
 
         final fullName = [first, last].where((e) => e.isNotEmpty).join(' ');
         final imgUrl = rawImg.isNotEmpty
             ? (rawImg.startsWith('http')
-            ? rawImg
-            : '${AppConfig.baseApiUrl}/$rawImg')
+                ? rawImg
+                : '${AppConfig.baseApiUrl}/$rawImg')
             : '';
 
         final refBy = GetUserDetailsCall.referredByUserId(res.jsonBody);
         final usedCode =
             (GetUserDetailsCall.usedReferralCodeField(res.jsonBody) ?? '')
                 .trim();
+        // Cache the successful profile data
+        FFAppState().cachedProfileData = res.bodyText;
+        FFAppState().offlineMode = false;
+
         if (mounted) {
           setState(() {
             _nameController.text = fullName.isNotEmpty ? fullName : 'User';
@@ -131,11 +135,101 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
           });
         }
       } else {
+        if (res.statusCode == 401 || res.statusCode == 403) {
+          FFAppState().clearAuthSession();
+          if (mounted) setState(() => _loading = false);
+          return;
+        }
+
+        // Handle network error using cached data if available
+        if (FFAppState().cachedProfileData.isNotEmpty) {
+          try {
+            final cachedJson = jsonDecode(FFAppState().cachedProfileData);
+            final first =
+                (GetUserDetailsCall.firstName(cachedJson) ?? '').trim();
+            final last = (GetUserDetailsCall.lastName(cachedJson) ?? '').trim();
+            final mobile =
+                (GetUserDetailsCall.mobileNumber(cachedJson) ?? '').trim();
+            final email = (GetUserDetailsCall.email(cachedJson) ?? '').trim();
+            final rawImg =
+                (GetUserDetailsCall.profileImage(cachedJson) ?? '').trim();
+
+            final fullName = [first, last].where((e) => e.isNotEmpty).join(' ');
+            final imgUrl = rawImg.isNotEmpty
+                ? (rawImg.startsWith('http')
+                    ? rawImg
+                    : '${AppConfig.baseApiUrl}/$rawImg')
+                : '';
+
+            final refBy = GetUserDetailsCall.referredByUserId(cachedJson);
+            final usedCode =
+                (GetUserDetailsCall.usedReferralCodeField(cachedJson) ?? '')
+                    .trim();
+
+            FFAppState().offlineMode = true;
+            if (mounted) {
+              setState(() {
+                _nameController.text = fullName.isNotEmpty ? fullName : 'User';
+                _phoneController.text = mobile;
+                _emailController.text = email;
+                _profileImageUrl = imgUrl;
+                _referralLocked =
+                    (refBy != null && refBy > 0) || usedCode.isNotEmpty;
+                _linkedReferralCode = usedCode.isNotEmpty ? usedCode : null;
+                _loading = false;
+              });
+            }
+            return;
+          } catch (_) {}
+        }
+
         if (mounted) setState(() => _loading = false);
       }
     } catch (e) {
       // ignore: avoid_print
       print('Load profile error: $e');
+
+      // Handle network error using cached data if available
+      if (FFAppState().cachedProfileData.isNotEmpty) {
+        try {
+          final cachedJson = jsonDecode(FFAppState().cachedProfileData);
+          final first = (GetUserDetailsCall.firstName(cachedJson) ?? '').trim();
+          final last = (GetUserDetailsCall.lastName(cachedJson) ?? '').trim();
+          final mobile =
+              (GetUserDetailsCall.mobileNumber(cachedJson) ?? '').trim();
+          final email = (GetUserDetailsCall.email(cachedJson) ?? '').trim();
+          final rawImg =
+              (GetUserDetailsCall.profileImage(cachedJson) ?? '').trim();
+
+          final fullName = [first, last].where((e) => e.isNotEmpty).join(' ');
+          final imgUrl = rawImg.isNotEmpty
+              ? (rawImg.startsWith('http')
+                  ? rawImg
+                  : '${AppConfig.baseApiUrl}/$rawImg')
+              : '';
+
+          final refBy = GetUserDetailsCall.referredByUserId(cachedJson);
+          final usedCode =
+              (GetUserDetailsCall.usedReferralCodeField(cachedJson) ?? '')
+                  .trim();
+
+          FFAppState().offlineMode = true;
+          if (mounted) {
+            setState(() {
+              _nameController.text = fullName.isNotEmpty ? fullName : 'User';
+              _phoneController.text = mobile;
+              _emailController.text = email;
+              _profileImageUrl = imgUrl;
+              _referralLocked =
+                  (refBy != null && refBy > 0) || usedCode.isNotEmpty;
+              _linkedReferralCode = usedCode.isNotEmpty ? usedCode : null;
+              _loading = false;
+            });
+          }
+          return;
+        } catch (_) {}
+      }
+
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -161,7 +255,8 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
       }
 
       // ignore: avoid_print
-      print('✅ Selected image: ${file.name}, size: ${await file.length()} bytes');
+      print(
+          '✅ Selected image: ${file.name}, size: ${await file.length()} bytes');
 
       final Uint8List bytes = await file.readAsBytes();
       if (!mounted) return;
@@ -186,7 +281,7 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
           backgroundColor: Colors.green.shade500,
           behavior: SnackBarBehavior.floating,
           shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -247,7 +342,8 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
         final result = await Permission.camera.request();
         if (!result.isGranted) {
           if (result.isPermanentlyDenied) {
-            _showError('Camera permission permanently denied. Enable in settings.');
+            _showError(
+                'Camera permission permanently denied. Enable in settings.');
             await openAppSettings();
           } else {
             _showError('Camera permission required');
@@ -494,15 +590,15 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
                             colors: [
                               FlutterFlowTheme.of(context)
                                   .primary
-                                  .withValues(alpha:0.15),
+                                  .withValues(alpha: 0.15),
                               FlutterFlowTheme.of(context)
                                   .secondary
-                                  .withValues(alpha:0.15),
+                                  .withValues(alpha: 0.15),
                             ],
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha:0.12),
+                              color: Colors.black.withValues(alpha: 0.12),
                               blurRadius: 24,
                               offset: const Offset(0, 12),
                             ),
@@ -519,57 +615,58 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
                     color: Colors.white,
                     child: _loading
                         ? Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          FlutterFlowTheme.of(context).primary,
-                        ),
-                      ),
-                    )
-                        : _pickedProfileImage?.bytes != null
-                        ? Image.memory(
-                      _pickedProfileImage!.bytes!,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                    )
-                        : _profileImageUrl.isNotEmpty
-                        ? Image.network(
-                      _profileImageUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                      loadingBuilder: (context, child, progress) {
-                        if (progress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                            AlwaysStoppedAnimation<Color>(
-                              FlutterFlowTheme.of(context).primary,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                FlutterFlowTheme.of(context).primary,
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[100],
-                          child: const Icon(
-                            Icons.person,
-                            size: 48,
-                            color: Colors.grey,
-                          ),
-                        );
-                      },
-                    )
-                        : Container(
-                      color: Colors.grey[100],
-                      child: const Icon(
-                        Icons.person,
-                        size: 48,
-                        color: Colors.grey,
-                      ),
-                    ),
+                          )
+                        : _pickedProfileImage?.bytes != null
+                            ? Image.memory(
+                                _pickedProfileImage!.bytes!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              )
+                            : _profileImageUrl.isNotEmpty
+                                ? Image.network(
+                                    _profileImageUrl,
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    loadingBuilder: (context, child, progress) {
+                                      if (progress == null) return child;
+                                      return Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                            FlutterFlowTheme.of(context)
+                                                .primary,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey[100],
+                                        child: const Icon(
+                                          Icons.person,
+                                          size: 48,
+                                          color: Colors.grey,
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : Container(
+                                    color: Colors.grey[100],
+                                    child: const Icon(
+                                      Icons.person,
+                                      size: 48,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                   ),
                 ),
                 Positioned(
@@ -585,14 +682,16 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha:0.25),
+                            color: Colors.black.withValues(alpha: 0.25),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
                       child: Icon(
-                        _pickedProfileImage != null ? Icons.edit : Icons.camera_alt,
+                        _pickedProfileImage != null
+                            ? Icons.edit
+                            : Icons.camera_alt,
                         size: 22,
                         color: FlutterFlowTheme.of(context).primary,
                       ),
@@ -630,10 +729,10 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
             Text(
               label,
               style: FlutterFlowTheme.of(context).bodyMedium.override(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: FlutterFlowTheme.of(context).primaryText,
-              ),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: FlutterFlowTheme.of(context).primaryText,
+                  ),
             ),
           ],
         ),
@@ -646,7 +745,7 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha:0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -666,15 +765,15 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
               filled: true,
               fillColor: Colors.transparent,
               contentPadding:
-              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               prefixIcon: icon != null && readOnly
                   ? Icon(icon, size: 20, color: Colors.grey.shade400)
                   : null,
             ),
             style: FlutterFlowTheme.of(context).bodyMedium.override(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
           ),
         ),
       ],
@@ -698,7 +797,7 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
                 end: Alignment.bottomRight,
                 colors: [
                   FlutterFlowTheme.of(context).primary,
-                  FlutterFlowTheme.of(context).primary.withValues(alpha:0.9),
+                  FlutterFlowTheme.of(context).primary.withValues(alpha: 0.9),
                 ],
               ),
             ),
@@ -716,178 +815,211 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
           title: Text(
             'Profile Settings',
             style: FlutterFlowTheme.of(context).titleLarge.override(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: FlutterFlowTheme.of(context).secondaryBackground,
-            ),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                ),
           ),
         ),
         body: Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
           child: _loading
               ? const Center(
-            child: CircularProgressIndicator(strokeWidth: 2.5),
-          )
+                  child: CircularProgressIndicator(strokeWidth: 2.5),
+                )
               : SingleChildScrollView(
-            child: Column(
-              children: [
-                _profileImageSection().animate().fadeIn(
-                  duration: 600.ms,
-                  delay: 200.ms,
-                ),
-                const SizedBox(height: 40),
-                _inputField(
-                  label: 'Full Name',
-                  controller: _nameController,
-                  icon: Icons.person_outline,
-                ).animate().fadeIn(delay: 400.ms),
-                const SizedBox(height: 24),
-                _inputField(
-                  label: 'Phone Number',
-                  controller: _phoneController,
-                  readOnly: true,
-                  keyboardType: TextInputType.phone,
-                  icon: Icons.phone_outlined,
-                ).animate().fadeIn(delay: 500.ms),
-                const SizedBox(height: 24),
-                _inputField(
-                  label: 'Email Address',
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  icon: Icons.email_outlined,
-                ).animate().fadeIn(delay: 600.ms),
-                const SizedBox(height: 24),
-                if (_referralLocked)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Referral code',
-                          style: FlutterFlowTheme.of(context).bodyMedium.override(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: FlutterFlowTheme.of(context).primary,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(16),
+                  child: Column(
+                    children: [
+                      _profileImageSection().animate().fadeIn(
+                            duration: 600.ms,
+                            delay: 200.ms,
                           ),
+                      if (FFAppState().offlineMode)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16.0),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 8, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange.shade400),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.cloud_off,
+                                    color: Colors.orange.shade800, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Offline Mode - Displaying cached data',
+                                    style: TextStyle(
+                                      color: Colors.orange.shade900,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 40),
+                      _inputField(
+                        label: 'Full Name',
+                        controller: _nameController,
+                        icon: Icons.person_outline,
+                      ).animate().fadeIn(delay: 400.ms),
+                      const SizedBox(height: 24),
+                      _inputField(
+                        label: 'Phone Number',
+                        controller: _phoneController,
+                        readOnly: true,
+                        keyboardType: TextInputType.phone,
+                        icon: Icons.phone_outlined,
+                      ).animate().fadeIn(delay: 500.ms),
+                      const SizedBox(height: 24),
+                      _inputField(
+                        label: 'Email Address',
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        icon: Icons.email_outlined,
+                      ).animate().fadeIn(delay: 600.ms),
+                      const SizedBox(height: 24),
+                      if (_referralLocked)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _linkedReferralCode ?? 'Linked at signup',
+                                'Referral code',
                                 style: FlutterFlowTheme.of(context)
                                     .bodyMedium
                                     .override(
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      fontSize: 16,
+                                      color:
+                                          FlutterFlowTheme.of(context).primary,
                                     ),
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'A friend\'s code is already linked. For security, referral codes can\'t be changed later.',
-                                style: FlutterFlowTheme.of(context)
-                                    .bodySmall
-                                    .override(
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryText,
-                                      fontSize: 12,
+                              const SizedBox(height: 8),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _linkedReferralCode ?? 'Linked at signup',
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                          ),
                                     ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'A friend\'s code is already linked. For security, referral codes can\'t be changed later.',
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodySmall
+                                          .override(
+                                            color: FlutterFlowTheme.of(context)
+                                                .secondaryText,
+                                            fontSize: 12,
+                                          ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                  ).animate().fadeIn(delay: 650.ms)
-                else ...[
-                  _inputField(
-                    label: 'Friend\'s referral code (optional)',
-                    controller: _referralCodeController,
-                    icon: Icons.card_giftcard_outlined,
-                    hintText: 'From Refer & Earn in their app',
-                  ).animate().fadeIn(delay: 650.ms),
-                  const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: _saving ? null : _applyReferralCode,
-                      icon: Icon(Icons.check_circle_outline,
-                          size: 18,
-                          color: FlutterFlowTheme.of(context).primary),
-                      label: Text(
-                        'Apply code',
-                        style: TextStyle(
-                          color: FlutterFlowTheme.of(context).primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ).animate().fadeIn(delay: 670.ms),
-                ],
-                const SizedBox(height: 36),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _saving ? null : _saveProfile,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                      FlutterFlowTheme.of(context).primary,
-                      foregroundColor: Colors.white,
-                      elevation: _saving ? 0 : 8,
-                      shadowColor: Colors.black.withValues(alpha:0.2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: _saving
-                        ? Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                            AlwaysStoppedAnimation<Color>(
-                                Colors.white),
+                        ).animate().fadeIn(delay: 650.ms)
+                      else ...[
+                        _inputField(
+                          label: 'Friend\'s referral code (optional)',
+                          controller: _referralCodeController,
+                          icon: Icons.card_giftcard_outlined,
+                          hintText: 'From Refer & Earn in their app',
+                        ).animate().fadeIn(delay: 650.ms),
+                        const SizedBox(height: 12),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: _saving ? null : _applyReferralCode,
+                            icon: Icon(Icons.check_circle_outline,
+                                size: 18,
+                                color: FlutterFlowTheme.of(context).primary),
+                            label: Text(
+                              'Apply code',
+                              style: TextStyle(
+                                color: FlutterFlowTheme.of(context).primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Saving...',
-                          style: FlutterFlowTheme.of(context)
-                              .titleSmall
-                              .override(color: Colors.white),
-                        ),
+                        ).animate().fadeIn(delay: 670.ms),
                       ],
-                    )
-                        : Text(
-                      'Save Changes',
-                      style: FlutterFlowTheme.of(context)
-                          .titleSmall
-                          .override(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+                      const SizedBox(height: 36),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _saving ? null : _saveProfile,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                FlutterFlowTheme.of(context).primary,
+                            foregroundColor: Colors.white,
+                            elevation: _saving ? 0 : 8,
+                            shadowColor: Colors.black.withValues(alpha: 0.2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: _saving
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Saving...',
+                                      style: FlutterFlowTheme.of(context)
+                                          .titleSmall
+                                          .override(color: Colors.white),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  'Save Changes',
+                                  style: FlutterFlowTheme.of(context)
+                                      .titleSmall
+                                      .override(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                ),
+                        ),
+                      ).animate().fadeIn(delay: 700.ms),
+                    ],
                   ),
-                ).animate().fadeIn(delay: 700.ms),
-              ],
-            ),
-          ),
+                ),
         ),
       ),
     );

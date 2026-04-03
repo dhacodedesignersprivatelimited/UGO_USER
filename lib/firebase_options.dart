@@ -71,5 +71,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'Ugo User-8ff52.firebasestorage.app',
     iosBundleId: 'com.ugotaxi_rajkumar.user',
   );
-
 }

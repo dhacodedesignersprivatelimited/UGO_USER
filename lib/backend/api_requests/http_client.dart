@@ -24,19 +24,20 @@ class TimeoutHttpClient extends http.BaseClient {
       _instance ??= TimeoutHttpClient(timeout: const Duration(seconds: 30));
 
   /// Create a client with custom timeout.
-  static TimeoutHttpClient create({Duration timeout = const Duration(seconds: 30)}) {
+  static TimeoutHttpClient create(
+      {Duration timeout = const Duration(seconds: 30)}) {
     return TimeoutHttpClient(timeout: timeout);
   }
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) {
     return _inner.send(request).timeout(
-      timeout,
-      onTimeout: () => throw TimeoutException(
-        'Request to ${request.url} timed out after ${timeout.inSeconds}s',
-        timeout,
-      ),
-    );
+          timeout,
+          onTimeout: () => throw TimeoutException(
+            'Request to ${request.url} timed out after ${timeout.inSeconds}s',
+            timeout,
+          ),
+        );
   }
 
   /// Close the underlying client. Call when shutting down the app.

@@ -9,9 +9,9 @@ class AiSupportService {
   AiSupportService._internal();
 
   GenerativeModel? _model;
-  
+
   // Note: In a production app, this should be fetched from remote config or a secure backend.
-  static const String _geminiApiKey = AppConfig.geminiApiKey; 
+  static const String _geminiApiKey = AppConfig.geminiApiKey;
 
   void _initModel(String systemInstruction) {
     _model = GenerativeModel(
@@ -28,8 +28,9 @@ class AiSupportService {
 
       final prompt = [Content.text(userMessage)];
       final response = await _model?.generateContent(prompt);
-      
-      return response?.text ?? "I'm sorry, I couldn't generate a response. Please try again later.";
+
+      return response?.text ??
+          "I'm sorry, I couldn't generate a response. Please try again later.";
     } catch (e) {
       return "I'm having trouble connecting to my brain right now. Please try again in a bit! (Error: ${e.toString()})";
     }
@@ -45,7 +46,8 @@ class AiSupportService {
     // 1. Fetch User Profile
     String userName = "User";
     try {
-      final userRes = await GetUserDetailsCall.call(userId: userId, token: token);
+      final userRes =
+          await GetUserDetailsCall.call(userId: userId, token: token);
       if (userRes.succeeded) {
         userName = GetUserDetailsCall.firstName(userRes.jsonBody) ?? "User";
       }
@@ -54,7 +56,8 @@ class AiSupportService {
     // 2. Fetch Ride History
     String rideContext = "No recent rides found.";
     try {
-      final historyRes = await GetRideHistoryCall.call(userId: userId, token: token);
+      final historyRes =
+          await GetRideHistoryCall.call(userId: userId, token: token);
       if (historyRes.succeeded) {
         final rides = GetRideHistoryCall.rides(historyRes.jsonBody);
         if (rides != null && rides.isNotEmpty) {
@@ -69,11 +72,17 @@ class AiSupportService {
     // 3. Fetch Scheduled Rides
     String scheduledContext = "No upcoming scheduled rides.";
     try {
-      final scheduledRes = await GetScheduledRidesCall.call(userId: userId, token: token);
+      final scheduledRes =
+          await GetScheduledRidesCall.call(userId: userId, token: token);
       if (scheduledRes.succeeded) {
         final rides = GetScheduledRidesCall.rides(scheduledRes.jsonBody);
         if (rides != null && rides.isNotEmpty) {
-          scheduledContext = "Scheduled rides:\n" + rides.take(2).map((r) => "Date: ${r['scheduled_at']}, To: ${r['drop_location_address']}").join("\n");
+          scheduledContext = "Scheduled rides:\n" +
+              rides
+                  .take(2)
+                  .map((r) =>
+                      "Date: ${r['scheduled_at']}, To: ${r['drop_location_address']}")
+                  .join("\n");
         }
       }
     } catch (_) {}
@@ -85,7 +94,8 @@ class AiSupportService {
       if (vouchersRes.succeeded) {
         final data = GetAllVouchersCall.data(vouchersRes.jsonBody);
         if (data != null && data.isNotEmpty) {
-          voucherContext = "Available Promo Codes: " + data.take(3).map((v) => v['promo_code']).join(", ");
+          voucherContext = "Available Promo Codes: " +
+              data.take(3).map((v) => v['promo_code']).join(", ");
         }
       }
     } catch (_) {}
@@ -93,7 +103,9 @@ class AiSupportService {
     // 3. App State Context
     final currentRideId = appState.currentRideId;
     final walletBalance = appState.walletBalance;
-    final currentRideInfo = currentRideId != null ? "Currently in a ride (ID: $currentRideId)." : "No active ride.";
+    final currentRideInfo = currentRideId != null
+        ? "Currently in a ride (ID: $currentRideId)."
+        : "No active ride.";
 
     return """
 You are UGO AI Support, a highly capable and intelligent assistant for the UGO Taxi & Parcel app.

@@ -66,13 +66,13 @@ class _VisionWidgetState extends State<VisionWidget> {
               'tmb60xz8' /* Vision */,
             ),
             style: FlutterFlowTheme.of(context).titleMedium.override(
-              font: GoogleFonts.interTight(
-                fontWeight: FontWeight.w500,
-              ),
-              color: FlutterFlowTheme.of(context).secondaryBackground,
-              fontSize: 16.0,
-              letterSpacing: 0.0,
-            ),
+                  font: GoogleFonts.interTight(
+                    fontWeight: FontWeight.w500,
+                  ),
+                  color: FlutterFlowTheme.of(context).secondaryBackground,
+                  fontSize: 16.0,
+                  letterSpacing: 0.0,
+                ),
           ),
           actions: const [],
           centerTitle: true,
@@ -101,14 +101,14 @@ class _VisionWidgetState extends State<VisionWidget> {
                       'l7hiz6yp' /* Let drivers and couriers know ... */,
                     ),
                     style: FlutterFlowTheme.of(context).titleLarge.override(
-                      font: GoogleFonts.interTight(
-                        fontWeight: FontWeight.normal,
-                      ),
-                      color: FlutterFlowTheme.of(context).accent1,
-                      fontSize: 16.0,
-                      letterSpacing: 0.0,
-                      lineHeight: 1.5,
-                    ),
+                          font: GoogleFonts.interTight(
+                            fontWeight: FontWeight.normal,
+                          ),
+                          color: FlutterFlowTheme.of(context).accent1,
+                          fontSize: 16.0,
+                          letterSpacing: 0.0,
+                          lineHeight: 1.5,
+                        ),
                   ),
                   Column(
                     mainAxisSize: MainAxisSize.max,
@@ -123,7 +123,8 @@ class _VisionWidgetState extends State<VisionWidget> {
                             width: 24.0,
                             height: 24.0,
                             decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context).secondaryBackground,
+                              color: FlutterFlowTheme.of(context)
+                                  .secondaryBackground,
                               borderRadius: BorderRadius.circular(4.0),
                               border: Border.all(
                                 color: const Color(0xFF3B3B3B),
@@ -134,23 +135,27 @@ class _VisionWidgetState extends State<VisionWidget> {
                               data: ThemeData(
                                 checkboxTheme: CheckboxThemeData(
                                   visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(4.0),
                                   ),
                                 ),
-                                unselectedWidgetColor: FlutterFlowTheme.of(context).alternate,
+                                unselectedWidgetColor:
+                                    FlutterFlowTheme.of(context).alternate,
                               ),
                               child: Checkbox(
                                 value: _model.checkboxValue1 ??= true,
                                 onChanged: (newValue) async {
-                                  safeSetState(() => _model.checkboxValue1 = newValue!);
+                                  safeSetState(
+                                      () => _model.checkboxValue1 = newValue!);
                                 },
                                 side: BorderSide(
                                   width: 2,
                                   color: FlutterFlowTheme.of(context).alternate,
                                 ),
-                                activeColor: FlutterFlowTheme.of(context).primary,
+                                activeColor:
+                                    FlutterFlowTheme.of(context).primary,
                                 checkColor: FlutterFlowTheme.of(context).info,
                               ),
                             ),
@@ -159,14 +164,16 @@ class _VisionWidgetState extends State<VisionWidget> {
                             FFLocalizations.of(context).getText(
                               '3zrdl7j9' /* I'm blind */,
                             ),
-                            style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              font: GoogleFonts.inter(
-                                fontWeight: FontWeight.normal,
-                              ),
-                              color: const Color(0xFF3B3B3B),
-                              fontSize: 14.0,
-                              letterSpacing: 0.0,
-                            ),
+                            style: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .override(
+                                  font: GoogleFonts.inter(
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                  color: const Color(0xFF3B3B3B),
+                                  fontSize: 14.0,
+                                  letterSpacing: 0.0,
+                                ),
                           ),
                         ].divide(const SizedBox(width: 12.0)),
                       ),
@@ -179,7 +186,8 @@ class _VisionWidgetState extends State<VisionWidget> {
                             width: 24.0,
                             height: 24.0,
                             decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context).secondaryBackground,
+                              color: FlutterFlowTheme.of(context)
+                                  .secondaryBackground,
                               borderRadius: BorderRadius.circular(4.0),
                               border: Border.all(
                                 color: const Color(0xFF3B3B3B),
@@ -190,23 +198,27 @@ class _VisionWidgetState extends State<VisionWidget> {
                               data: ThemeData(
                                 checkboxTheme: CheckboxThemeData(
                                   visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(4.0),
                                   ),
                                 ),
-                                unselectedWidgetColor: FlutterFlowTheme.of(context).alternate,
+                                unselectedWidgetColor:
+                                    FlutterFlowTheme.of(context).alternate,
                               ),
                               child: Checkbox(
                                 value: _model.checkboxValue2 ??= true,
                                 onChanged: (newValue) async {
-                                  safeSetState(() => _model.checkboxValue2 = newValue!);
+                                  safeSetState(
+                                      () => _model.checkboxValue2 = newValue!);
                                 },
                                 side: BorderSide(
                                   width: 2,
                                   color: FlutterFlowTheme.of(context).alternate,
                                 ),
-                                activeColor: FlutterFlowTheme.of(context).primary,
+                                activeColor:
+                                    FlutterFlowTheme.of(context).primary,
                                 checkColor: FlutterFlowTheme.of(context).info,
                               ),
                             ),
@@ -215,14 +227,16 @@ class _VisionWidgetState extends State<VisionWidget> {
                             FFLocalizations.of(context).getText(
                               'rdyxxwt6' /* I'm low vision */,
                             ),
-                            style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              font: GoogleFonts.inter(
-                                fontWeight: FontWeight.normal,
-                              ),
-                              color: const Color(0xFF3B3B3B),
-                              fontSize: 14.0,
-                              letterSpacing: 0.0,
-                            ),
+                            style: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .override(
+                                  font: GoogleFonts.inter(
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                  color: const Color(0xFF3B3B3B),
+                                  fontSize: 14.0,
+                                  letterSpacing: 0.0,
+                                ),
                           ),
                         ].divide(const SizedBox(width: 12.0)),
                       ),
@@ -241,23 +255,27 @@ class _VisionWidgetState extends State<VisionWidget> {
                               data: ThemeData(
                                 checkboxTheme: CheckboxThemeData(
                                   visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(4.0),
                                   ),
                                 ),
-                                unselectedWidgetColor: FlutterFlowTheme.of(context).alternate,
+                                unselectedWidgetColor:
+                                    FlutterFlowTheme.of(context).alternate,
                               ),
                               child: Checkbox(
                                 value: _model.checkboxValue3 ??= true,
                                 onChanged: (newValue) async {
-                                  safeSetState(() => _model.checkboxValue3 = newValue!);
+                                  safeSetState(
+                                      () => _model.checkboxValue3 = newValue!);
                                 },
                                 side: BorderSide(
                                   width: 2,
                                   color: FlutterFlowTheme.of(context).alternate,
                                 ),
-                                activeColor: FlutterFlowTheme.of(context).primary,
+                                activeColor:
+                                    FlutterFlowTheme.of(context).primary,
                                 checkColor: FlutterFlowTheme.of(context).info,
                               ),
                             ),
@@ -266,20 +284,24 @@ class _VisionWidgetState extends State<VisionWidget> {
                             FFLocalizations.of(context).getText(
                               'kx5zxhf5' /* I'm not blind or low vision */,
                             ),
-                            style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              font: GoogleFonts.inter(
-                                fontWeight: FontWeight.normal,
-                              ),
-                              color: const Color(0xFF3B3B3B),
-                              fontSize: 14.0,
-                              letterSpacing: 0.0,
-                            ),
+                            style: FlutterFlowTheme.of(context)
+                                .bodyMedium
+                                .override(
+                                  font: GoogleFonts.inter(
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                  color: const Color(0xFF3B3B3B),
+                                  fontSize: 14.0,
+                                  letterSpacing: 0.0,
+                                ),
                           ),
                         ].divide(const SizedBox(width: 12.0)),
                       ),
                     ].divide(const SizedBox(height: 16.0)),
                   ),
-                ].divide(const SizedBox(height: 24.0)).addToStart(const SizedBox(height: 24.0)),
+                ]
+                    .divide(const SizedBox(height: 24.0))
+                    .addToStart(const SizedBox(height: 24.0)),
               ),
             ),
           ),

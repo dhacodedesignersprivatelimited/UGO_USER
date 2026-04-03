@@ -139,12 +139,17 @@ class _SupportWidgetState extends State<SupportWidget> {
                         ),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'app_issue', child: Text('App issue')),
-                        DropdownMenuItem(value: 'ride_issue', child: Text('Ride issue')),
-                        DropdownMenuItem(value: 'payment_issue', child: Text('Payment issue')),
+                        DropdownMenuItem(
+                            value: 'app_issue', child: Text('App issue')),
+                        DropdownMenuItem(
+                            value: 'ride_issue', child: Text('Ride issue')),
+                        DropdownMenuItem(
+                            value: 'payment_issue',
+                            child: Text('Payment issue')),
                         DropdownMenuItem(value: 'other', child: Text('Other')),
                       ],
-                      onChanged: (v) => setState(() => ticketType = v ?? ticketType),
+                      onChanged: (v) =>
+                          setState(() => ticketType = v ?? ticketType),
                     ),
                     const SizedBox(height: 16),
                     TextField(
@@ -181,10 +186,12 @@ class _SupportWidgetState extends State<SupportWidget> {
                       ),
                       items: const [
                         DropdownMenuItem(value: 'low', child: Text('Low')),
-                        DropdownMenuItem(value: 'medium', child: Text('Medium')),
+                        DropdownMenuItem(
+                            value: 'medium', child: Text('Medium')),
                         DropdownMenuItem(value: 'high', child: Text('High')),
                       ],
-                      onChanged: (v) => setState(() => priorityLevel = v ?? priorityLevel),
+                      onChanged: (v) =>
+                          setState(() => priorityLevel = v ?? priorityLevel),
                     ),
                     const SizedBox(height: 24),
                     FilledButton(
@@ -193,7 +200,9 @@ class _SupportWidgetState extends State<SupportWidget> {
                         final desc = descController.text.trim();
                         if (title.isEmpty || desc.isEmpty) {
                           ScaffoldMessenger.of(ctx).showSnackBar(
-                            const SnackBar(content: Text('Title and description are required')),
+                            const SnackBar(
+                                content:
+                                    Text('Title and description are required')),
                           );
                           return;
                         }
@@ -207,10 +216,12 @@ class _SupportWidgetState extends State<SupportWidget> {
                           token: FFAppState().accessToken,
                         );
                         if (!context.mounted) return;
-                        if (CreateSupportTicketCall.success(resp.jsonBody) == true) {
+                        if (CreateSupportTicketCall.success(resp.jsonBody) ==
+                            true) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Support ticket created successfully'),
+                              content:
+                                  Text('Support ticket created successfully'),
                               backgroundColor: Colors.green,
                             ),
                           );
@@ -218,7 +229,8 @@ class _SupportWidgetState extends State<SupportWidget> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                (getJsonField(resp.jsonBody, r'$.message') as String?) ??
+                                (getJsonField(resp.jsonBody, r'$.message')
+                                        as String?) ??
                                     'Failed to create ticket',
                               ),
                               backgroundColor: Colors.red,
@@ -276,11 +288,11 @@ class _SupportWidgetState extends State<SupportWidget> {
           title: Text(
             'Support Center',
             style: FlutterFlowTheme.of(context).headlineMedium.override(
-              font: GoogleFonts.interTight(),
-              color: Colors.white,
-              fontSize: 22.0,
-              fontWeight: FontWeight.w600,
-            ),
+                  font: GoogleFonts.interTight(),
+                  color: Colors.white,
+                  fontSize: 22.0,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           centerTitle: true,
           elevation: 0.0,
@@ -408,7 +420,7 @@ class _SupportWidgetState extends State<SupportWidget> {
     return Material(
       color: Colors.transparent,
       elevation: 2,
-      shadowColor: Colors.black.withValues(alpha:0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -427,7 +439,7 @@ class _SupportWidgetState extends State<SupportWidget> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha:0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Center(

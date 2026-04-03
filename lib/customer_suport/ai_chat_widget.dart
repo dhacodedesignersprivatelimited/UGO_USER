@@ -20,7 +20,8 @@ class ChatMessage {
   final bool isUser;
   final DateTime timestamp;
 
-  ChatMessage({required this.text, required this.isUser, required this.timestamp});
+  ChatMessage(
+      {required this.text, required this.isUser, required this.timestamp});
 }
 
 class _AiChatWidgetState extends State<AiChatWidget> {
@@ -213,7 +214,8 @@ class _AiChatWidgetState extends State<AiChatWidget> {
     );
   }
 
-  Widget _buildMessageBubble(ChatMessage message, FlutterFlowTheme theme, bool isDark) {
+  Widget _buildMessageBubble(
+      ChatMessage message, FlutterFlowTheme theme, bool isDark) {
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -223,8 +225,8 @@ class _AiChatWidgetState extends State<AiChatWidget> {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
-          color: message.isUser 
-              ? theme.primary 
+          color: message.isUser
+              ? theme.primary
               : (isDark ? theme.secondaryBackground : const Color(0xFFE8F0FF)),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16.0),
@@ -241,7 +243,9 @@ class _AiChatWidgetState extends State<AiChatWidget> {
           ],
         ),
         child: Column(
-          crossAxisAlignment: message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: message.isUser
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Text(
               message.text,
@@ -320,7 +324,8 @@ class _AiChatWidgetState extends State<AiChatWidget> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
+                color:
+                    isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF0F0F0),
                 borderRadius: BorderRadius.circular(24.0),
               ),
               child: TextField(
@@ -328,9 +333,11 @@ class _AiChatWidgetState extends State<AiChatWidget> {
                 style: theme.bodyLarge,
                 decoration: InputDecoration(
                   hintText: 'Type a message...',
-                  hintStyle: theme.bodyMedium.copyWith(color: theme.secondaryText),
+                  hintStyle:
+                      theme.bodyMedium.copyWith(color: theme.secondaryText),
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 12.0),
                 ),
                 onSubmitted: _sendMessage,
               ),
@@ -353,9 +360,8 @@ class _AiChatWidgetState extends State<AiChatWidget> {
                       ),
                     )
                   : const Icon(Icons.send_rounded, color: Colors.white),
-              onPressed: _aiLoading
-                  ? null
-                  : () => _sendMessage(_textController.text),
+              onPressed:
+                  _aiLoading ? null : () => _sendMessage(_textController.text),
             ),
           ),
         ],

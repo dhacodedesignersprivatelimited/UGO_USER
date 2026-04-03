@@ -108,11 +108,11 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
           title: Text(
             'Verification',
             style: FlutterFlowTheme.of(context).headlineMedium.override(
-              font: GoogleFonts.interTight(),
-              color: Colors.white,
-              fontSize: 22.0,
-              fontWeight: FontWeight.w600,
-            ),
+                  font: GoogleFonts.interTight(),
+                  color: Colors.white,
+                  fontSize: 22.0,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
           centerTitle: true,
           elevation: 0.0,
@@ -132,11 +132,11 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                     'Enter OTP',
                     textAlign: TextAlign.center,
                     style: FlutterFlowTheme.of(context).headlineMedium.override(
-                      font: GoogleFonts.interTight(),
-                      color: Colors.black,
-                      fontSize: 24.0,
-                      fontWeight: FontWeight.bold,
-                    ),
+                          font: GoogleFonts.interTight(),
+                          color: Colors.black,
+                          fontSize: 24.0,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   const SizedBox(height: 12),
                   RichText(
@@ -145,20 +145,22 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                       children: [
                         TextSpan(
                           text: "We've sent a 6-digit code to \n",
-                          style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            font: GoogleFonts.inter(),
-                            color: Colors.grey[600],
-                            fontSize: 16.0,
-                          ),
+                          style:
+                              FlutterFlowTheme.of(context).bodyMedium.override(
+                                    font: GoogleFonts.inter(),
+                                    color: Colors.grey[600],
+                                    fontSize: 16.0,
+                                  ),
                         ),
                         TextSpan(
                           text: "+91 ${widget.mobile}",
-                          style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            font: GoogleFonts.inter(),
-                            color: const Color(0xFFFF7B10),
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style:
+                              FlutterFlowTheme.of(context).bodyMedium.override(
+                                    font: GoogleFonts.inter(),
+                                    color: const Color(0xFFFF7B10),
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                       ],
                     ),
@@ -169,11 +171,11 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                     appContext: context,
                     length: 6,
                     textStyle: FlutterFlowTheme.of(context).bodyLarge.override(
-                      font: GoogleFonts.inter(),
-                      color: Colors.black,
-                      fontSize: 20.0,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          font: GoogleFonts.inter(),
+                          color: Colors.black,
+                          fontSize: 20.0,
+                          fontWeight: FontWeight.w600,
+                        ),
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     enableActiveFill: true,
                     autoFocus: true,
@@ -200,7 +202,8 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                     controller: _model.pinCodeController,
                     onChanged: (_) {},
                     autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: _model.pinCodeControllerValidator.asValidator(context),
+                    validator:
+                        _model.pinCodeControllerValidator.asValidator(context),
                   ),
                   const SizedBox(height: 20),
                   Align(
@@ -208,42 +211,42 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                     child: TextButton(
                       onPressed: _canResendOtp
                           ? () async {
-                        try {
-                          final phoneNumber = '+91${widget.mobile}';
-                          await authManager.beginPhoneAuth(
-                            context: context,
-                            phoneNumber: phoneNumber,
-                            onCodeSent: (context) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('OTP sent successfully'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            },
-                          );
-                          _startResendTimer();
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
+                              try {
+                                final phoneNumber = '+91${widget.mobile}';
+                                await authManager.beginPhoneAuth(
+                                  context: context,
+                                  phoneNumber: phoneNumber,
+                                  onCodeSent: (context) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('OTP sent successfully'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  },
+                                );
+                                _startResendTimer();
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
                           : null,
                       child: Text(
                         _canResendOtp
                             ? 'RESEND OTP'
                             : 'Resend in $_resendSeconds s',
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
-                          font: GoogleFonts.inter(),
-                          color: _canResendOtp
-                              ? const Color(0xFFFF7B10)
-                              : Colors.grey,
-                          fontWeight: FontWeight.w600,
-                        ),
+                              font: GoogleFonts.inter(),
+                              color: _canResendOtp
+                                  ? const Color(0xFFFF7B10)
+                                  : Colors.grey,
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
                   ),
@@ -283,10 +286,12 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                       // 3. Navigate based on Backend Result
                       if ((_model.apiResultx4u?.succeeded ?? false)) {
                         // User EXISTS
-                        final token = LoginCall.accessToken(_model.apiResultx4u?.jsonBody);
-                        final refreshToken =
-                            LoginCall.refreshToken(_model.apiResultx4u?.jsonBody);
-                        final userId = LoginCall.userid(_model.apiResultx4u?.jsonBody);
+                        final token = LoginCall.accessToken(
+                            _model.apiResultx4u?.jsonBody);
+                        final refreshToken = LoginCall.refreshToken(
+                            _model.apiResultx4u?.jsonBody);
+                        final userId =
+                            LoginCall.userid(_model.apiResultx4u?.jsonBody);
 
                         if (token != null) FFAppState().accessToken = token;
                         if (refreshToken != null && refreshToken.isNotEmpty) {
@@ -295,12 +300,14 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                         if (userId != null) FFAppState().userid = userId;
                         syncRideChatFcmRegistration();
 
-                        context.goNamedAuth(HomeWidget.routeName, context.mounted);
-                      } else {
+                        context.goNamedAuth(
+                            HomeWidget.routeName, context.mounted);
+                      } else if (_model.apiResultx4u?.statusCode == 404) {
                         // User DOES NOT EXIST -> Registration
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('New user detected. Please complete registration.'),
+                            content: Text(
+                                'New user detected. Please complete registration.'),
                             duration: Duration(seconds: 2),
                           ),
                         );
@@ -315,6 +322,14 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                             ),
                           }.withoutNulls,
                         );
+                      } else {
+                        // Network error or server error
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Something went wrong. Please try again.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
                       }
                     },
                     text: 'VERIFY',
@@ -323,12 +338,13 @@ class _OtpverificationWidgetState extends State<OtpverificationWidget> {
                       height: 56.0,
                       padding: const EdgeInsets.all(8.0),
                       color: const Color(0xFFFF7B10),
-                      textStyle: FlutterFlowTheme.of(context).titleMedium.override(
-                        font: GoogleFonts.interTight(),
-                        color: Colors.white,
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      textStyle:
+                          FlutterFlowTheme.of(context).titleMedium.override(
+                                font: GoogleFonts.interTight(),
+                                color: Colors.white,
+                                fontSize: 18.0,
+                                fontWeight: FontWeight.bold,
+                              ),
                       elevation: 2.0,
                       borderRadius: BorderRadius.circular(12.0),
                     ),

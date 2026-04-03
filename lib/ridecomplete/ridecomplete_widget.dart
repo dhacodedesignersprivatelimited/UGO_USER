@@ -39,9 +39,7 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
   Future<void> _fetchDriverIfMissing() async {
     if (RideSession().driverData != null) return;
     final rawRide = RideSession().rideData ?? {};
-    final rideData = rawRide['data'] is Map
-        ? rawRide['data'] as Map
-        : rawRide;
+    final rideData = rawRide['data'] is Map ? rawRide['data'] as Map : rawRide;
     final driverId = rideData['driver_id'];
     if (driverId == null) return;
     try {
@@ -94,8 +92,10 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
             ? Map<String, dynamic>.from(rawDriver)
             : null;
 
-    final rideIdRaw = widget.rideId ?? FFAppState().currentRideId ??
-        rideData['id'] ?? rideData['ride_id'];
+    final rideIdRaw = widget.rideId ??
+        FFAppState().currentRideId ??
+        rideData['id'] ??
+        rideData['ride_id'];
     final rideId = rideIdRaw is int
         ? rideIdRaw
         : (rideIdRaw != null ? int.tryParse(rideIdRaw.toString()) : null);
@@ -132,114 +132,114 @@ class _RidecompleteWidgetState extends State<RidecompleteWidget> {
     print('   - fare: $fare');
 
     return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        if (context.mounted) {
-          context.goNamed(HomeWidget.routeName);
-        }
-      },
-      child: GestureDetector(
-        onTap: () {
-          FocusScope.of(context).unfocus();
-          FocusManager.instance.primaryFocus?.unfocus();
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          if (context.mounted) {
+            context.goNamed(HomeWidget.routeName);
+          }
         },
-        child: Scaffold(
-        key: scaffoldKey,
-        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-        appBar: AppBar(
-          backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-          automaticallyImplyLeading: false,
-          leading: _model.currentStep > 0
-              ? FlutterFlowIconButton(
-                  borderColor: Colors.transparent,
-                  borderRadius: 30.0,
-                  borderWidth: 1.0,
-                  buttonSize: 60.0,
-                  icon: Icon(
-                    Icons.arrow_back_rounded,
-                    color: FlutterFlowTheme.of(context).primaryText,
-                    size: 30.0,
-                  ),
-                  onPressed: () async {
-                    print(
-                        'DEBUG: [RidecompleteWidget] Back button pressed. Moving to step: ${_model.currentStep - 1}');
-                    setState(() {
-                      _model.currentStep--;
-                    });
-                  },
-                )
-              : null,
-          title: Text(
-            _model.currentStep == 0 ? 'Ride Complete' : 'Trip Summary',
-            style: FlutterFlowTheme.of(context).headlineMedium.override(
-                  font: GoogleFonts.interTight(),
-                  color: FlutterFlowTheme.of(context).primaryText,
-                  fontSize: 22.0,
-                  fontWeight: FontWeight.bold,
-                ),
+        child: GestureDetector(
+          onTap: () {
+            FocusScope.of(context).unfocus();
+            FocusManager.instance.primaryFocus?.unfocus();
+          },
+          child: Scaffold(
+            key: scaffoldKey,
+            backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+            appBar: AppBar(
+              backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+              automaticallyImplyLeading: false,
+              leading: _model.currentStep > 0
+                  ? FlutterFlowIconButton(
+                      borderColor: Colors.transparent,
+                      borderRadius: 30.0,
+                      borderWidth: 1.0,
+                      buttonSize: 60.0,
+                      icon: Icon(
+                        Icons.arrow_back_rounded,
+                        color: FlutterFlowTheme.of(context).primaryText,
+                        size: 30.0,
+                      ),
+                      onPressed: () async {
+                        print(
+                            'DEBUG: [RidecompleteWidget] Back button pressed. Moving to step: ${_model.currentStep - 1}');
+                        setState(() {
+                          _model.currentStep--;
+                        });
+                      },
+                    )
+                  : null,
+              title: Text(
+                _model.currentStep == 0 ? 'Ride Complete' : 'Trip Summary',
+                style: FlutterFlowTheme.of(context).headlineMedium.override(
+                      font: GoogleFonts.interTight(),
+                      color: FlutterFlowTheme.of(context).primaryText,
+                      fontSize: 22.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              actions: [],
+              centerTitle: true,
+              elevation: 0.0,
+            ),
+            body: SafeArea(
+              top: true,
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  if (_model.currentStep == 0)
+                    Expanded(
+                      child: RidecompletWidget(
+                        rideId: rideId,
+                        userId: FFAppState().userid,
+                        paymentMethod: (rideData['payment_method'] ??
+                                rideData['payment_type'] ??
+                                FFAppState().selectedPaymentMethod)
+                            ?.toString(),
+                        fareAmount: _parseFare(
+                            rideData['estimated_fare'] ?? rideData['fare']),
+                        pickupLocation: rideData['pickup_location_address'] ??
+                            rideData['pickup_address'],
+                        dropoffLocation: rideData['drop_location_address'] ??
+                            rideData['drop_address'],
+                        distance: rideData['ride_distance_km']?.toString() ??
+                            rideData['distance']?.toString(),
+                        duration: rideData['duration']?.toString(),
+                        driverName: driverName,
+                        vehicleNumber: vehicleNumber,
+                        fare: fare,
+                        driverDetails: driverData,
+                        onNext: () {
+                          print(
+                              'DEBUG: [RidecompleteWidget] Step 0 (Ride Complete) finished. Moving to Trip Summary');
+                          setState(() {
+                            _model.currentStep = 1;
+                          });
+                        },
+                      ),
+                    ),
+                  if (_model.currentStep == 1)
+                    Expanded(
+                      child: TripSummaryWidget(
+                        pickupLocation: rideData['pickup_location_address'],
+                        dropoffLocation: rideData['drop_location_address'],
+                        distance: rideData['ride_distance_km']?.toString(),
+                        duration: rideData['duration']?.toString(),
+                        totalFare: rideData['estimated_fare'] != null
+                            ? '₹${rideData['estimated_fare']}'
+                            : null,
+                        onNext: () {
+                          print(
+                              'DEBUG: [RidecompleteWidget] Step 1 (Trip Summary) finished. Navigating to Reviews');
+                          context.pushNamed(ReviewWidget.routeName);
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
-          actions: [],
-          centerTitle: true,
-          elevation: 0.0,
-        ),
-        body: SafeArea(
-          top: true,
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              if (_model.currentStep == 0)
-                Expanded(
-                  child: RidecompletWidget(
-                    rideId: rideId,
-                    userId: FFAppState().userid,
-                    paymentMethod: (rideData['payment_method'] ??
-                            rideData['payment_type'] ??
-                            FFAppState().selectedPaymentMethod)
-                        ?.toString(),
-                    fareAmount: _parseFare(rideData['estimated_fare'] ?? rideData['fare']),
-                    pickupLocation: rideData['pickup_location_address'] ??
-                        rideData['pickup_address'],
-                    dropoffLocation: rideData['drop_location_address'] ??
-                        rideData['drop_address'],
-                    distance: rideData['ride_distance_km']?.toString() ??
-                        rideData['distance']?.toString(),
-                    duration: rideData['duration']?.toString(),
-                    driverName: driverName,
-                    vehicleNumber: vehicleNumber,
-                    fare: fare,
-                    driverDetails: driverData,
-                    
-                    onNext: () {
-                      print(
-                          'DEBUG: [RidecompleteWidget] Step 0 (Ride Complete) finished. Moving to Trip Summary');
-                      setState(() {
-                        _model.currentStep = 1;
-                      });
-                    },
-                  ),
-                ),
-              if (_model.currentStep == 1)
-                Expanded(
-                  child: TripSummaryWidget(
-                    pickupLocation: rideData['pickup_location_address'],
-                    dropoffLocation: rideData['drop_location_address'],
-                    distance: rideData['ride_distance_km']?.toString(),
-                    duration: rideData['duration']?.toString(),
-                    totalFare: rideData['estimated_fare'] != null
-                        ? '₹${rideData['estimated_fare']}'
-                        : null,
-                    onNext: () {
-                      print(
-                          'DEBUG: [RidecompleteWidget] Step 1 (Trip Summary) finished. Navigating to Reviews');
-                      context.pushNamed(ReviewWidget.routeName);
-                    },
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    ));
+        ));
   }
 }

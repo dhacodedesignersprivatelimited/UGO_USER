@@ -1,4 +1,5 @@
-import '/flutter_flow/flutter_flow_google_map.dart' show GoogleMapStyle, googleMapStyleStrings;
+import '/flutter_flow/flutter_flow_google_map.dart'
+    show GoogleMapStyle, googleMapStyleStrings;
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
@@ -57,15 +58,21 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
     }
 
     // Set initial map center logic
-    if (appState.dropLatitude != null && appState.dropLongitude != null && appState.dropLatitude != 0.0) {
+    if (appState.dropLatitude != null &&
+        appState.dropLongitude != null &&
+        appState.dropLatitude != 0.0) {
       // If previous drop location exists, center on that
-      _currentMapCenter = gmaps.LatLng(appState.dropLatitude!, appState.dropLongitude!);
+      _currentMapCenter =
+          gmaps.LatLng(appState.dropLatitude!, appState.dropLongitude!);
       if (appState.droplocation.isNotEmpty) {
         _model.destinationLocationController?.text = appState.droplocation;
       }
-    } else if (appState.pickupLatitude != null && appState.pickupLongitude != null && appState.pickupLatitude != 0.0) {
+    } else if (appState.pickupLatitude != null &&
+        appState.pickupLongitude != null &&
+        appState.pickupLatitude != 0.0) {
       // Fallback to pickup location
-      _currentMapCenter = gmaps.LatLng(appState.pickupLatitude!, appState.pickupLongitude!);
+      _currentMapCenter =
+          gmaps.LatLng(appState.pickupLatitude!, appState.pickupLongitude!);
     }
 
     // Post-frame callback to handle initial location setup
@@ -89,7 +96,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
         );
         if (placemarks.isNotEmpty && mounted) {
           final place = placemarks.first;
-          final address = "${place.name}, ${place.subLocality}, ${place.locality}";
+          final address =
+              "${place.name}, ${place.subLocality}, ${place.locality}";
           setState(() {
             _model.pickupLocationController?.text = address;
             FFAppState().pickuplocation = address;
@@ -104,7 +112,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
     if (_currentMapCenter == null && mounted) {
       if (appState.pickupLatitude != null && appState.pickupLatitude != 0.0) {
         setState(() {
-          _currentMapCenter = gmaps.LatLng(appState.pickupLatitude!, appState.pickupLongitude!);
+          _currentMapCenter =
+              gmaps.LatLng(appState.pickupLatitude!, appState.pickupLongitude!);
         });
       } else {
         // Fallback to a default location (e.g., city center) if absolutely nothing is available
@@ -133,7 +142,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
 
       if (placemarks.isNotEmpty && mounted) {
         geo.Placemark place = placemarks[0];
-        String address = "${place.name}, ${place.subLocality}, ${place.locality}";
+        String address =
+            "${place.name}, ${place.subLocality}, ${place.locality}";
 
         setState(() {
           _model.pickupLocationController?.text = address;
@@ -142,7 +152,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
           FFAppState().pickupLongitude = position.longitude;
 
           if (_currentMapCenter == null) {
-            _currentMapCenter = gmaps.LatLng(position.latitude, position.longitude);
+            _currentMapCenter =
+                gmaps.LatLng(position.latitude, position.longitude);
             _moveCameraToCenter();
           }
         });
@@ -163,35 +174,35 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
   Future<void> _getPlacePredictions(String input) async {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
-    if (input.isEmpty) {
-      setState(() {
-        _predictions = [];
-        _isSearching = false;
-      });
-      return;
-    }
-
-    setState(() => _isSearching = true);
-
-    final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=${AppConfig.googleMapsApiKey}&components=country:in',
-    );
-
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (mounted) {
-          setState(() {
-            _predictions = data['predictions'];
-            _isSearching = false;
-          });
-        }
+      if (input.isEmpty) {
+        setState(() {
+          _predictions = [];
+          _isSearching = false;
+        });
+        return;
       }
-    } catch (e) {
-      debugPrint("Error fetching predictions: $e");
-      if (mounted) setState(() => _isSearching = false);
-    }
+
+      setState(() => _isSearching = true);
+
+      final url = Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$input&key=${AppConfig.googleMapsApiKey}&components=country:in',
+      );
+
+      try {
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (mounted) {
+            setState(() {
+              _predictions = data['predictions'];
+              _isSearching = false;
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint("Error fetching predictions: $e");
+        if (mounted) setState(() => _isSearching = false);
+      }
     });
   }
 
@@ -258,13 +269,17 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
           final decodedData = jsonDecode(scanResult);
 
           driverId = int.tryParse(decodedData['driver_id']?.toString() ?? '');
-          vehicleType = int.tryParse(decodedData['vehicle_type_id']?.toString() ?? '');
+          vehicleType =
+              int.tryParse(decodedData['vehicle_type_id']?.toString() ?? '');
 
           final pricing = decodedData['pricing'] ?? {};
           baseFare = double.tryParse(pricing['base_fare']?.toString() ?? '0');
-          pricePerKm = double.tryParse(pricing['price_per_km']?.toString() ?? '0');
-          baseKmStart = double.tryParse(pricing['base_km_start']?.toString() ?? '1');
-          baseKmEnd = double.tryParse(pricing['base_km_end']?.toString() ?? '5');
+          pricePerKm =
+              double.tryParse(pricing['price_per_km']?.toString() ?? '0');
+          baseKmStart =
+              double.tryParse(pricing['base_km_start']?.toString() ?? '1');
+          baseKmEnd =
+              double.tryParse(pricing['base_km_end']?.toString() ?? '5');
         } else {
           driverId = int.tryParse(scanResult);
         }
@@ -331,9 +346,9 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                   },
                   // Optional: Enable this if you want the pin to update address on drag end
                   onCameraIdle: () {
-                     if (_currentMapCenter != null && !_isSearching) {
-                       _updateDestinationFromMap(_currentMapCenter!);
-                     }
+                    if (_currentMapCenter != null && !_isSearching) {
+                      _updateDestinationFromMap(_currentMapCenter!);
+                    }
                   },
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
@@ -365,7 +380,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                       color: const Color(0xFFFF7B10),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha:0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -377,7 +392,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_back, color: Colors.white),
+                              icon: const Icon(Icons.arrow_back,
+                                  color: Colors.white),
                               onPressed: () => context.safePop(),
                             ),
                             Expanded(
@@ -398,13 +414,15 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                             // Visual Path Line
                             Column(
                               children: [
-                                const Icon(Icons.circle, size: 12, color: Colors.white),
+                                const Icon(Icons.circle,
+                                    size: 12, color: Colors.white),
                                 Container(
                                   width: 1,
                                   height: 35,
-                                  color: Colors.white.withValues(alpha:0.6),
+                                  color: Colors.white.withValues(alpha: 0.6),
                                 ),
-                                const Icon(Icons.square, size: 12, color: Colors.white),
+                                const Icon(Icons.square,
+                                    size: 12, color: Colors.white),
                               ],
                             ),
                             const SizedBox(width: 16),
@@ -420,17 +438,22 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: TextField(
-                                      controller: _model.pickupLocationController,
+                                      controller:
+                                          _model.pickupLocationController,
                                       enabled: false,
                                       decoration: InputDecoration(
                                         hintText: 'Pickup Location',
                                         hintStyle: GoogleFonts.inter(
-                                            color: Colors.grey[600], fontSize: 14),
+                                            color: Colors.grey[600],
+                                            fontSize: 14),
                                         border: InputBorder.none,
-                                        contentPadding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 10),
-                                        prefixIcon: const Icon(Icons.location_on,
-                                            size: 18, color: Colors.grey),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 10),
+                                        prefixIcon: const Icon(
+                                            Icons.location_on,
+                                            size: 18,
+                                            color: Colors.grey),
                                       ),
                                       style: GoogleFonts.inter(
                                           fontSize: 14,
@@ -445,13 +468,19 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(8),
-                                      border: _model.destinationLocationFocusNode?.hasFocus ?? false
-                                          ? Border.all(color: Colors.black, width: 1.5)
+                                      border: _model
+                                                  .destinationLocationFocusNode
+                                                  ?.hasFocus ??
+                                              false
+                                          ? Border.all(
+                                              color: Colors.black, width: 1.5)
                                           : null,
                                     ),
                                     child: TextField(
-                                      controller: _model.destinationLocationController,
-                                      focusNode: _model.destinationLocationFocusNode,
+                                      controller:
+                                          _model.destinationLocationController,
+                                      focusNode:
+                                          _model.destinationLocationFocusNode,
                                       decoration: InputDecoration(
                                         hintText: 'Where to?',
                                         hintStyle: GoogleFonts.inter(
@@ -459,27 +488,36 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                                             fontSize: 14,
                                             fontWeight: FontWeight.w600),
                                         border: InputBorder.none,
-                                        contentPadding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 10),
-                                        suffixIcon: _model.destinationLocationController!.text.isNotEmpty
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 10),
+                                        suffixIcon: _model
+                                                .destinationLocationController!
+                                                .text
+                                                .isNotEmpty
                                             ? IconButton(
-                                          icon: const Icon(Icons.clear,
-                                              size: 18, color: Colors.grey),
-                                          onPressed: () {
-                                            _model.destinationLocationController?.clear();
-                                            FFAppState().droplocation = '';
-                                            setState(() {
-                                              _predictions = [];
-                                            });
-                                          },
-                                        )
+                                                icon: const Icon(Icons.clear,
+                                                    size: 18,
+                                                    color: Colors.grey),
+                                                onPressed: () {
+                                                  _model
+                                                      .destinationLocationController
+                                                      ?.clear();
+                                                  FFAppState().droplocation =
+                                                      '';
+                                                  setState(() {
+                                                    _predictions = [];
+                                                  });
+                                                },
+                                              )
                                             : null,
                                       ),
                                       style: GoogleFonts.inter(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.black),
-                                      onChanged: (val) => _getPlacePredictions(val),
+                                      onChanged: (val) =>
+                                          _getPlacePredictions(val),
                                     ),
                                   ),
                                 ],
@@ -511,14 +549,17 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                               leading: const Icon(Icons.location_on_outlined,
                                   color: Color(0xFFFF7B10)),
                               title: Text(
-                                prediction['structured_formatting']['main_text'],
+                                prediction['structured_formatting']
+                                    ['main_text'],
                                 style: GoogleFonts.inter(
                                     fontWeight: FontWeight.w600,
                                     fontSize: 15,
                                     color: Colors.black),
                               ),
                               subtitle: Text(
-                                prediction['structured_formatting']['secondary_text'] ?? '',
+                                prediction['structured_formatting']
+                                        ['secondary_text'] ??
+                                    '',
                                 style: GoogleFonts.inter(
                                     fontSize: 13, color: Colors.grey[600]),
                                 maxLines: 1,
@@ -551,7 +592,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                         height: 52,
                         child: ElevatedButton.icon(
                           onPressed: _openScanner,
-                          icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+                          icon: const Icon(Icons.qr_code_scanner,
+                              color: Colors.white),
                           label: Text(
                             'Scan to go',
                             style: GoogleFonts.inter(
@@ -574,7 +616,8 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
                         width: double.infinity,
                         height: 48,
                         child: OutlinedButton(
-                          onPressed: () => context.goNamed(HomeWidget.routeName),
+                          onPressed: () =>
+                              context.goNamed(HomeWidget.routeName),
                           style: OutlinedButton.styleFrom(
                             backgroundColor: Colors.white,
                             side: const BorderSide(color: Colors.black),
@@ -601,6 +644,7 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
       ),
     );
   }
+
   Future<void> _updateDestinationFromMap(gmaps.LatLng latLng) async {
     _reverseGeocodeDebounce?.cancel();
     _reverseGeocodeDebounce =
@@ -629,5 +673,4 @@ class _ChooseDestinationWidgetState extends State<ChooseDestinationWidget> {
       }
     });
   }
-
 }

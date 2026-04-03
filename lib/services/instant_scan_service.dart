@@ -11,7 +11,7 @@ class InstantScanService {
   /// Hooks into the raw QR string processed by scanner UI
   Future<bool> processInstantScan(String scannedVehicleId) async {
     final state = FFAppState();
-    
+
     // Prevent overriding if already in a ride
     if (state.bookingInProgress) return false;
 
@@ -32,12 +32,12 @@ class InstantScanService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
+
         // 1. Immediately mutate global Ride State Machine
         state.currentRideId = data['data']['id'];
         state.bookingInProgress = true;
-        
-        // 2. We can now safely let the UI redirect or auto-start tracking 
+
+        // 2. We can now safely let the UI redirect or auto-start tracking
         // through the existing Socket Service logic.
         return true;
       }

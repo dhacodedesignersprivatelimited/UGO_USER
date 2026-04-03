@@ -7,7 +7,7 @@ import '/backend/api_requests/api_calls.dart';
 
 class HomeModel extends FlutterFlowModel<HomeWidget> {
   ///  State fields for stateful widgets in this page.
-ApiCallResponse? apiResult85c;
+  ApiCallResponse? apiResult85c;
   var scantobook = '';
   // Model for Menu component.
   late MenuModel menuModel;

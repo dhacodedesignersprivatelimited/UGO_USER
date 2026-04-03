@@ -31,6 +31,7 @@ class FlutterFlowPlacePicker extends StatefulWidget {
   final FFButtonOptions buttonOptions;
   final Function(FFPlace place) onSelect;
   final String? proxyBaseUrl;
+
   /// True while fetching place details after user picks a prediction (for in-app loaders).
   final ValueChanged<bool>? onPlaceDetailsBusy;
 
@@ -143,9 +144,3 @@ class _FFPlacePickerState extends State<FlutterFlowPlacePicker> {
     }
   }
 }
-
-
-
-
-
-

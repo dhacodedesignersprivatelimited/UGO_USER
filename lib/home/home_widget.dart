@@ -92,7 +92,8 @@ class _HomeWidgetState extends State<HomeWidget>
         final list = GetVehicleTypesCall.vehicles(res.jsonBody);
         setState(() {
           _vehicleTypes = (list ?? [])
-              .map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{})
+              .map((e) =>
+                  e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{})
               .toList();
           _vehicleTypesLoading = false;
         });
@@ -108,7 +109,7 @@ class _HomeWidgetState extends State<HomeWidget>
   void _startNotificationRefresh() {
     _notificationTimer = Timer.periodic(
       const Duration(seconds: 30),
-          (timer) {
+      (timer) {
         if (mounted) {
           _updateNotificationCount();
         }
@@ -118,9 +119,11 @@ class _HomeWidgetState extends State<HomeWidget>
 
   /// Ensure Pickup Location is set (Step 1 of Scan to Book)
   Future<void> _initializePickupLocation() async {
-    if (FFAppState().pickupLatitude == 0.0 || FFAppState().pickupLatitude == null) {
+    if (FFAppState().pickupLatitude == 0.0 ||
+        FFAppState().pickupLatitude == null) {
       try {
-        final loc = await getCurrentUserLocation(defaultLocation: const LatLng(0.0, 0.0));
+        final loc = await getCurrentUserLocation(
+            defaultLocation: const LatLng(0.0, 0.0));
         if (mounted && loc.latitude != 0.0) {
           setState(() {
             FFAppState().pickupLatitude = loc.latitude;
@@ -146,8 +149,7 @@ class _HomeWidgetState extends State<HomeWidget>
 
     try {
       final router = GoRouter.of(context);
-      final res =
-          await ActiveRideNavigation.tryOpenActiveRideFromApi(router);
+      final res = await ActiveRideNavigation.tryOpenActiveRideFromApi(router);
 
       if (!mounted) return;
 
@@ -155,8 +157,7 @@ class _HomeWidgetState extends State<HomeWidget>
         _model.apiResult85c = res;
       }
 
-      if (mounted &&
-          (res?.statusCode == 401 || res?.statusCode == 403)) {
+      if (mounted && (res?.statusCode == 401 || res?.statusCode == 403)) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Your session expired. Please log in again.'),
@@ -178,7 +179,8 @@ class _HomeWidgetState extends State<HomeWidget>
   Future<void> _checkVersionUpdate() async {
     final remoteConfig = FirebaseRemoteConfigService();
     await remoteConfig.ensureInitialized();
-    final isMandatory = remoteConfig.getBool('is_update_mandatory', defaultValue: false);
+    final isMandatory =
+        remoteConfig.getBool('is_update_mandatory', defaultValue: false);
 
     // 1. Check for Play Store In-App Updates (OTA)
     await InAppUpdateService().checkRemainingUpdate();
@@ -191,13 +193,14 @@ class _HomeWidgetState extends State<HomeWidget>
       final String latestVersion = remoteConfig.latestAppVersion;
       final String minRequiredVersion = remoteConfig.minRequiredVersion;
 
-      debugPrint('UGO_UPDATE: Current=$currentVersion, Latest=$latestVersion, Min=$minRequiredVersion');
+      debugPrint(
+          'UGO_UPDATE: Current=$currentVersion, Latest=$latestVersion, Min=$minRequiredVersion');
 
       // Mandatory Update (Blocker)
       if (_isVersionLower(currentVersion, minRequiredVersion)) {
         if (!mounted) return;
         _showUpdateDialog(isMandatory: true);
-      } 
+      }
       // Optional Update (Suggestion)
       else if (_isVersionLower(currentVersion, latestVersion) && !isMandatory) {
         if (!mounted) return;
@@ -210,8 +213,10 @@ class _HomeWidgetState extends State<HomeWidget>
 
   bool _isVersionLower(String current, String required) {
     try {
-      final List<int> v1 = current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
-      final List<int> v2 = required.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      final List<int> v1 =
+          current.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      final List<int> v2 =
+          required.split('.').map((e) => int.tryParse(e) ?? 0).toList();
       for (int i = 0; i < v2.length; i++) {
         final int part1 = i < v1.length ? v1[i] : 0;
         final int part2 = v2[i];
@@ -229,7 +234,8 @@ class _HomeWidgetState extends State<HomeWidget>
       builder: (context) => PopScope(
         canPop: !isMandatory,
         child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
             isMandatory ? 'Update Required' : 'Update Available',
             style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
@@ -244,20 +250,24 @@ class _HomeWidgetState extends State<HomeWidget>
             if (!isMandatory)
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text('Later', style: GoogleFonts.inter(color: Colors.grey)),
+                child:
+                    Text('Later', style: GoogleFonts.inter(color: Colors.grey)),
               ),
             ElevatedButton(
               onPressed: () async {
                 final url = FirebaseRemoteConfigService().playStoreUrl;
                 if (url.isNotEmpty && await canLaunchUrl(Uri.parse(url))) {
-                  await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                  await launchUrl(Uri.parse(url),
+                      mode: LaunchMode.externalApplication);
                 }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryOrange,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
-              child: Text(isMandatory ? 'Update Now' : 'Update', style: GoogleFonts.inter(color: Colors.white)),
+              child: Text(isMandatory ? 'Update Now' : 'Update',
+                  style: GoogleFonts.inter(color: Colors.white)),
             ),
           ],
         ),
@@ -273,7 +283,8 @@ class _HomeWidgetState extends State<HomeWidget>
       final response = await GetAllNotificationsCall.call(token: token);
 
       if (response.succeeded) {
-        final serverUnread = GetAllNotificationsCall.unreadCount(response.jsonBody);
+        final serverUnread =
+            GetAllNotificationsCall.unreadCount(response.jsonBody);
         if (serverUnread != null) {
           _unreadCountNotifier.value = serverUnread;
           return;
@@ -363,165 +374,165 @@ class _HomeWidgetState extends State<HomeWidget>
         }
       },
       child: GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        key: scaffoldKey,
-        backgroundColor: Colors.grey[50],
-        drawer: Drawer(
-          elevation: 16.0,
-          child: InkWell(
-            onTap: () {},
-            child: wrapWithModel(
-              model: _model.menuModel,
-              updateCallback: () => safeSetState(() {}),
-              child: const MenuWidget(),
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
+          key: scaffoldKey,
+          backgroundColor: Colors.grey[50],
+          drawer: Drawer(
+            elevation: 16.0,
+            child: InkWell(
+              onTap: () {},
+              child: wrapWithModel(
+                model: _model.menuModel,
+                updateCallback: () => safeSetState(() {}),
+                child: const MenuWidget(),
+              ),
             ),
           ),
-        ),
-        body: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              expandedHeight: screenHeight * 0.38,
-              floating: false,
-              pinned: true,
-              backgroundColor: primaryOrange,
-              leading: Builder(
-                builder: (context) => IconButton(
-                  icon: const Icon(Icons.menu_rounded,
-                      color: Colors.white, size: 30),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
+          body: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                expandedHeight: screenHeight * 0.38,
+                floating: false,
+                pinned: true,
+                backgroundColor: primaryOrange,
+                leading: Builder(
+                  builder: (context) => IconButton(
+                    icon: const Icon(Icons.menu_rounded,
+                        color: Colors.white, size: 30),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  ),
                 ),
-              ),
-              title: Image.asset(
-                'assets/images/k45cu8.png',
-                width: isSmallScreen ? 70 : 90,
-                fit: BoxFit.contain,
-              ),
-              centerTitle: true,
-              actions: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: ValueListenableBuilder<int>(
-                    valueListenable: _unreadCountNotifier,
-                    builder: (context, unreadCount, child) {
-                      return Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                              Icons.notifications_none_rounded,
-                              color: Colors.white,
-                              size: 30,
+                title: Image.asset(
+                  'assets/images/k45cu8.png',
+                  width: isSmallScreen ? 70 : 90,
+                  fit: BoxFit.contain,
+                ),
+                centerTitle: true,
+                actions: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: _unreadCountNotifier,
+                      builder: (context, unreadCount, child) {
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.notifications_none_rounded,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                              onPressed: () {
+                                context.pushNamed(
+                                    PushnotificationsWidget.routeName);
+                              },
                             ),
-                            onPressed: () {
-                              context
-                                  .pushNamed(PushnotificationsWidget.routeName);
-                            },
-                          ),
-                          if (unreadCount > 0)
-                            Positioned(
-                              right: 2,
-                              top: 2,
-                              child: Container(
-                                padding:
-                                EdgeInsets.all(unreadCount > 9 ? 4 : 5),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                  border:
-                                  Border.all(color: Colors.white, width: 1),
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 16,
-                                  minHeight: 16,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    unreadCount > 99
-                                        ? '99+'
-                                        : unreadCount.toString(),
-                                    style: GoogleFonts.inter(
-                                      color: Colors.white,
-                                      fontSize: unreadCount > 9 ? 9 : 10,
-                                      fontWeight: FontWeight.bold,
+                            if (unreadCount > 0)
+                              Positioned(
+                                right: 2,
+                                top: 2,
+                                child: Container(
+                                  padding:
+                                      EdgeInsets.all(unreadCount > 9 ? 4 : 5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                        color: Colors.white, width: 1),
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 16,
+                                    minHeight: 16,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      unreadCount > 99
+                                          ? '99+'
+                                          : unreadCount.toString(),
+                                      style: GoogleFonts.inter(
+                                        color: Colors.white,
+                                        fontSize: unreadCount > 9 ? 9 : 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [primaryOrange, deepOrange],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                        horizontalPadding, 70, horizontalPadding, 10),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        _buildSearchBar(context, isSmallScreen),
-                        SizedBox(height: screenHeight * 0.02),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Scan to Go',
-                              style: GoogleFonts.poppins(
-                                fontSize: isSmallScreen ? 18 : 22,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
                           ],
-                        ),
-                        SizedBox(height: screenHeight * 0.015),
-                        _buildActionButtonsRow(
-                            context, screenWidth, isSmallScreen),
-                        SizedBox(height: screenHeight * 0.02),
-                      ],
+                        );
+                      },
                     ),
                   ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.all(horizontalPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    Text(
-                      'Our Services',
-                      style: GoogleFonts.poppins(
-                        fontSize: isSmallScreen ? 18 : 20,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
+                ],
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [primaryOrange, deepOrange],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    _buildOurServicesSection(context, isSmallScreen),
-                    const SizedBox(height: 20),
-                    _buildPromoBanner(context, screenWidth),
-                  ],
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          horizontalPadding, 70, horizontalPadding, 10),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          _buildSearchBar(context, isSmallScreen),
+                          SizedBox(height: screenHeight * 0.02),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Scan to Go',
+                                style: GoogleFonts.poppins(
+                                  fontSize: isSmallScreen ? 18 : 22,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: screenHeight * 0.015),
+                          _buildActionButtonsRow(
+                              context, screenWidth, isSmallScreen),
+                          SizedBox(height: screenHeight * 0.02),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ],
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.all(horizontalPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+                      Text(
+                        'Our Services',
+                        style: GoogleFonts.poppins(
+                          fontSize: isSmallScreen ? 18 : 20,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildOurServicesSection(context, isSmallScreen),
+                      const SizedBox(height: 20),
+                      _buildPromoBanner(context, screenWidth),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 
@@ -529,30 +540,33 @@ class _HomeWidgetState extends State<HomeWidget>
     if (_vehicleTypesLoading) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: List.generate(3, (_) => Expanded(
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 6),
-            height: isSmallScreen ? 90 : 100,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 14,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2, color: primaryOrange),
-              ),
-            ),
-          ),
-        )),
+        children: List.generate(
+            3,
+            (_) => Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    height: isSmallScreen ? 90 : 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 14,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: primaryOrange),
+                      ),
+                    ),
+                  ),
+                )),
       );
     }
     final vehicles = _vehicleTypes.isEmpty
@@ -639,7 +653,8 @@ class _HomeWidgetState extends State<HomeWidget>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_circle_outline, color: Colors.grey[500], size: isSmallScreen ? 28 : 32),
+                  Icon(Icons.add_circle_outline,
+                      color: Colors.grey[500], size: isSmallScreen ? 28 : 32),
                   SizedBox(height: isSmallScreen ? 4 : 6),
                   Text(
                     'Coming soon',
@@ -798,7 +813,7 @@ class _HomeWidgetState extends State<HomeWidget>
           borderRadius: BorderRadius.circular(30),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha:0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -809,7 +824,7 @@ class _HomeWidgetState extends State<HomeWidget>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: primaryOrange.withValues(alpha:0.1),
+                color: primaryOrange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.search_rounded,
@@ -854,8 +869,8 @@ class _HomeWidgetState extends State<HomeWidget>
               onTap: isScanning
                   ? null
                   : () {
-                _handleQRScan();
-              },
+                      _handleQRScan();
+                    },
               borderRadius: BorderRadius.circular(16),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -871,7 +886,7 @@ class _HomeWidgetState extends State<HomeWidget>
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha:0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -893,15 +908,15 @@ class _HomeWidgetState extends State<HomeWidget>
                       ),
                       child: isScanning
                           ? const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
+                              padding: EdgeInsets.all(10),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
                           : const Icon(Icons.qr_code_scanner_rounded,
-                          color: Colors.white, size: 18),
+                              color: Colors.white, size: 18),
                     ),
                     const SizedBox(width: 12),
                     Flexible(
@@ -944,7 +959,7 @@ class _HomeWidgetState extends State<HomeWidget>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha:0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -969,7 +984,7 @@ class _HomeWidgetState extends State<HomeWidget>
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: primaryOrange.withValues(alpha:0.2),
+              color: primaryOrange.withValues(alpha: 0.2),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -984,7 +999,10 @@ class _HomeWidgetState extends State<HomeWidget>
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.transparent, Colors.black.withValues(alpha:0.7)],
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.7)
+                    ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -1017,7 +1035,7 @@ class _HomeWidgetState extends State<HomeWidget>
                       'Upfront fares doorstep pickup',
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: Colors.white.withValues(alpha:0.85),
+                        color: Colors.white.withValues(alpha: 0.85),
                       ),
                     ),
                   ],
