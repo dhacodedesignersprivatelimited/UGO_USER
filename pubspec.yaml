@@ -3,7 +3,7 @@ description: this is taxi project for flutter app.
 
 publish_to: 'none'
 
-version: 3.0.0+14
+version: 3.0.0+15
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -48,7 +48,7 @@ dependencies:
       url: https://github.com/ShehanYjoz/flutter_google_places.git
       ref: 52ddef33b785fac671a04dd387c5ba7d921709bf
   flutter_plugin_android_lifecycle: 2.0.28
-  font_awesome_flutter: ^10.12.0
+  font_awesome_flutter: ^11.0.0
   from_css_color: 2.0.0
   geolocator: 14.0.1
   geolocator_android: 5.0.1+1
@@ -71,12 +71,12 @@ dependencies:
   google_sign_in_platform_interface: 2.5.0
   google_sign_in_web: 0.12.4+4
   http: 1.4.0
-  intl: 0.20.2
+  intl: ^0.20.3
   json_path: 0.7.2
   mime_type: 1.0.0
   package_info_plus: 8.0.2
   package_info_plus_platform_interface: 3.0.1
-  page_transition: 2.1.0
+  page_transition: ^2.2.2
   path_provider: 2.1.4
   path_provider_android: 2.2.10
   path_provider_foundation: 2.4.0

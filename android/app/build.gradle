@@ -33,7 +33,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace "com.ugotaxi_rajkumar.user"
-    compileSdkVersion 35
+    compileSdkVersion 36
 
     // ✅ THIS FIXES THE AAR ERROR
     configurations.all {
@@ -70,7 +70,7 @@ android {
     defaultConfig {
         applicationId "com.ugotaxi_rajkumar.user"
         minSdkVersion flutter.minSdkVersion
-        targetSdkVersion 35
+        targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true

@@ -286,7 +286,7 @@ class _LoginWidgetState extends State<LoginWidget> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _buildSocialButton(
-                            icon: FontAwesomeIcons.google,
+                            icon: FontAwesomeIcons.google.data,
                             color: const Color(0xFF4285F4),
                             onTap: () async {
                               final user =
@@ -346,7 +346,7 @@ class _LoginWidgetState extends State<LoginWidget> {
           ],
         ),
         child: Center(
-          child: FaIcon(icon, color: color, size: 28.0),
+          child: FaIcon(FaIconData(icon), color: color, size: 28.0),
         ),
       ),
     );

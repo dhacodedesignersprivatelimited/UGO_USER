@@ -356,7 +356,7 @@ class _SupportWidgetState extends State<SupportWidget> {
                   const SizedBox(height: 16),
 
                   _buildContactCard(
-                    icon: FontAwesomeIcons.whatsapp,
+                    icon: FontAwesomeIcons.whatsapp.data,
                     title: 'WhatsApp Us',
                     subtitle: 'Chat with support',
                     color: const Color(0xFF25D366),
@@ -444,7 +444,7 @@ class _SupportWidgetState extends State<SupportWidget> {
                 ),
                 child: Center(
                   child: FaIcon(
-                    icon,
+                    FaIconData(icon),
                     color: color,
                     size: 24,
                   ),
