@@ -751,6 +751,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
         amount: amountToAdd,
         currency: 'INR',
         token: appState.accessToken,
+        razorpayPaymentId: response.paymentId,
+        razorpayOrderId: response.orderId,
       );
 
       if (addMoneyRes.succeeded) {

@@ -95,7 +95,7 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
 
   void _onRazorpaySuccess(PaymentSuccessResponse response) {
     print('✅ Razorpay success: ${response.paymentId}');
-    _recordPaymentAfterUpiSuccess();
+    _recordPaymentAfterUpiSuccess(response);
   }
 
   void _onRazorpayError(PaymentFailureResponse response) {
@@ -114,7 +114,7 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
     }
   }
 
-  Future<void> _recordPaymentAfterUpiSuccess() async {
+  Future<void> _recordPaymentAfterUpiSuccess(PaymentSuccessResponse rz) async {
     final rideId = widget.rideId ?? appState.currentRideId;
     final userId = widget.userId ?? appState.userid;
     final amount = widget.fareAmount ?? 0;
@@ -127,6 +127,9 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
         paymentMethod: 'online',
         paymentStatus: 'success',
         token: appState.accessToken,
+        razorpayPaymentId: rz.paymentId,
+        razorpayOrderId: rz.orderId,
+        razorpaySignature: rz.signature,
       );
       if (res.succeeded && mounted) {
         setState(() {
@@ -186,31 +189,22 @@ class _RidecompletWidgetState extends State<RidecompletWidget> {
                 (appState.walletBalance - amount).clamp(0.0, double.infinity);
             print('✅ Wallet payment processed');
           } else {
-            final fallback = await CreatePaymentCall.call(
-              rideId: rideId,
-              userId: userId,
-              amount: amount,
-              paymentMethod: 'wallet',
-              paymentStatus: 'success',
-              token: appState.accessToken,
-            );
-            if (fallback.succeeded && mounted)
-              setState(() => _paymentProcessed = true);
+            final msg = getJsonField(res.jsonBody, r'''$.message''')?.toString();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(msg ?? 'Wallet payment failed. Please choose another method.'),
+                backgroundColor: Colors.orange,
+              ));
+            }
           }
         } catch (e) {
           print('❌ Wallet payment error: $e');
-          try {
-            final fallback = await CreatePaymentCall.call(
-              rideId: rideId,
-              userId: userId,
-              amount: amount,
-              paymentMethod: 'wallet',
-              paymentStatus: 'success',
-              token: appState.accessToken,
-            );
-            if (fallback.succeeded && mounted)
-              setState(() => _paymentProcessed = true);
-          } catch (_) {}
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Wallet payment failed. Please choose another method.'),
+              backgroundColor: Colors.orange,
+            ));
+          }
         }
         break;
       case 'online':

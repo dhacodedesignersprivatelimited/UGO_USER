@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '/core/app_config.dart';
@@ -9,6 +10,16 @@ export 'api_manager.dart' show ApiCallResponse;
 
 /// Base API URL - single source of truth.
 String get _baseUrl => AppConfig.baseApiUrl;
+
+/// Firebase ID token proving the user just verified their phone via OTP.
+/// The backend rejects login/signup without it (it no longer trusts a bare mobile number).
+Future<String> _firebaseIdToken() async {
+  try {
+    return await FirebaseAuth.instance.currentUser?.getIdToken() ?? '';
+  } catch (_) {
+    return '';
+  }
+}
 
 /// ---------------------------------------------------------------------------
 /// USER MANAGEMENT
@@ -24,6 +35,7 @@ class CreateUserCall {
     FFUploadedFile? profileImage,
     String? fcmToken,
   }) async {
+    final idToken = await _firebaseIdToken();
     return ApiManager.instance.makeApiCall(
       callName: 'createUser',
       apiUrl: '$_baseUrl/api/users/post',
@@ -37,6 +49,7 @@ class CreateUserCall {
         'referral_code': referralCode,
         'profile_image': profileImage,
         'fcm_token': fcmToken,
+        'firebase_id_token': idToken,
       },
       bodyType: BodyType.MULTIPART,
       returnBody: true,
@@ -77,6 +90,7 @@ class LoginCall {
     final ffApiRequestBody = jsonEncode({
       'mobile_number': mobile?.toString() ?? '',
       'fcm_token': fcmToken ?? '',
+      'firebase_id_token': await _firebaseIdToken(),
     });
     return ApiManager.instance.makeApiCall(
       callName: 'login',
@@ -1099,6 +1113,9 @@ class CreatePaymentCall {
     required String paymentMethod,
     String paymentStatus = 'success',
     String? token,
+    String? razorpayPaymentId,
+    String? razorpayOrderId,
+    String? razorpaySignature,
   }) async {
     final body = {
       'ride_id': rideId,
@@ -1106,6 +1123,13 @@ class CreatePaymentCall {
       'amount': amount,
       'payment_method': paymentMethod,
       'payment_status': paymentStatus,
+      // Required by the backend for online payments: it verifies the payment with Razorpay.
+      if (razorpayPaymentId != null && razorpayPaymentId.isNotEmpty)
+        'razorpay_payment_id': razorpayPaymentId,
+      if (razorpayOrderId != null && razorpayOrderId.isNotEmpty)
+        'razorpay_order_id': razorpayOrderId,
+      if (razorpaySignature != null && razorpaySignature.isNotEmpty)
+        'razorpay_signature': razorpaySignature,
     };
     return ApiManager.instance.makeApiCall(
       callName: 'CreatePayment',
