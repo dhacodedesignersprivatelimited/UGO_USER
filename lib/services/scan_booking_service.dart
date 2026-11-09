@@ -1,3 +1,4 @@
+import '/app_state.dart';
 import 'dart:async';
 
 import 'package:socket_io_client/socket_io_client.dart' as IO;
@@ -123,6 +124,9 @@ class ScanBookingService {
           .setReconnectionAttempts(3)
           .build(),
     );
+    // Read the token on every (re)connect so reconnects after a token refresh
+    // don't present the old, expired token.
+    _socket!.auth = (cb) => cb({'token': FFAppState().accessToken});
 
     _socket!.onConnect((_) {
       _socket!.emit('watch_entity', {'type': 'ride', 'id': rideId});

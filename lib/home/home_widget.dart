@@ -157,14 +157,8 @@ class _HomeWidgetState extends State<HomeWidget>
         _model.apiResult85c = res;
       }
 
-      if (mounted && (res?.statusCode == 401 || res?.statusCode == 403)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Your session expired. Please log in again.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      // Session expiry is handled centrally (AuthSessionGuard → forced-logout dialog);
+      // a 403 here is a permission error, not an expired session.
     } catch (e) {
       debugPrint('Ride status check failed: $e');
     } finally {

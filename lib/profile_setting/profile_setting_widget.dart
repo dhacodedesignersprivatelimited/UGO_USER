@@ -135,8 +135,8 @@ class _ProfileSettingWidgetState extends State<ProfileSettingWidget>
           });
         }
       } else {
-        if (res.statusCode == 401 || res.statusCode == 403) {
-          FFAppState().clearAuthSession();
+        // 401: handled centrally by AuthSessionGuard (refresh or forced logout).
+        if (res.statusCode == 401) {
           if (mounted) setState(() => _loading = false);
           return;
         }

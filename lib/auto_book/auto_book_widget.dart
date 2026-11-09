@@ -1,3 +1,4 @@
+import '/app_state.dart';
 import '../flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_google_map.dart'
     show GoogleMapStyle, googleMapStyleStrings;
@@ -1142,6 +1143,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
             .setReconnectionAttempts(5)
             .build(),
       );
+      // Read the token on every (re)connect so reconnects after a token refresh
+      // don't present the old, expired token.
+      socket!.auth = (cb) => cb({'token': FFAppState().accessToken});
 
       // 2. Setup Listeners
       socket!.onConnect((_) {

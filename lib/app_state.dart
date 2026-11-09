@@ -478,7 +478,14 @@ class FFAppState extends ChangeNotifier {
     prefs.remove('ff_coinsBalance');
     prefs.remove('ff_cachedProfileData');
     _cachedProfileData = '';
-    notifyListeners();
+    // Per-user data must not leak to the next account on this device.
+    _walletBalance = 0.0;
+    prefs.remove('ff_walletBalance');
+    _bookingInProgress = false;
+    prefs.remove('ff_bookingInProgress');
+    _recentSearches = [];
+    prefs.remove('ff_recentSearches');
+    clearRideData(); // ride/booking selections, current ride id + OTP (notifies listeners)
   }
 }
 

@@ -1,3 +1,4 @@
+import '/app_state.dart';
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -144,6 +145,9 @@ class RideChatService {
           .setQuery({'token': cleanToken})
           .build(),
     );
+    // Read the token on every (re)connect so reconnects after a token refresh
+    // don't present the old, expired token.
+    _socket!.auth = (cb) => cb({'token': FFAppState().accessToken});
 
     _socket!.onConnect((_) {
       if (kDebugMode) debugPrint('[RideChat] connected');

@@ -1,5 +1,7 @@
 import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
+import '/backend/api_requests/auth_session_guard.dart';
+import 'package:ugouser/ride_session.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -232,7 +234,11 @@ Future<void> _validatePersistedBackendSession(FFAppState appState) async {
       return;
     }
 
-    if (response.statusCode == 401 || response.statusCode == 403) {
+    // ApiManager already tried a refresh. 401 now = session really over;
+    // 403 only when the account is blocked (other 403s are permissions).
+    if (response.statusCode == 401 ||
+        (response.statusCode == 403 &&
+            AuthSessionGuard.codeOf(response.jsonBody) == 'ACCOUNT_BLOCKED')) {
       appState.clearAuthSession();
     }
   } catch (_) {
@@ -298,6 +304,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   Future<void> _showSessionExpiredDialog({
     required bool anotherDevice,
+    bool blocked = false,
   }) async {
     final ctx = appNavigatorKey.currentContext;
     if (ctx == null || !ctx.mounted) return;
@@ -308,9 +315,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         return AlertDialog(
           title: const Text('Session Ended'),
           content: Text(
-            anotherDevice
-                ? 'Your account was logged in on another device. Please login again.'
-                : 'Your session expired. Please login again.',
+            blocked
+                ? 'Your account has been blocked. Please contact support.'
+                : anotherDevice
+                    ? 'Your account was logged in on another device. Please login again.'
+                    : 'Your session expired. Please login again.',
           ),
           actions: [
             TextButton(
@@ -334,14 +343,24 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     ApiManager.onAccessTokenRefreshed = () {
       syncRideChatFcmRegistration();
     };
+    // Called by AuthSessionGuard only when the SERVER ended the session (never for
+    // network errors or permission 403s), at most once per burst of 401s.
     ApiManager.onUnauthenticated = (reason) async {
-      if (!_appStateNotifier.loggedIn) return;
-      final anotherDevice = (reason ?? '').contains('another_device');
+      final r = reason ?? '';
+      debugPrint('[auth] forced logout ($r)');
+      final hadSession =
+          _appStateNotifier.loggedIn || FFAppState().accessToken.isNotEmpty;
+      final anotherDevice =
+          r == 'SESSION_REPLACED' || r.contains('another_device');
+      final blocked = r == 'ACCOUNT_BLOCKED';
       await FirebaseAuth.instance.signOut().catchError((_) => null);
-      FFAppState().clearAuthSession();
-      _router.goNamed(LoginWidget.routeName);
+      FFAppState().clearAuthSession(); // tokens, user id, profile, wallet, ride data
+      RideSession().clear();
+      if (!hadSession) return;
+      _router.goNamed(LoginWidget.routeName); // screens (and their sockets) are disposed
       unawaited(Future<void>.delayed(const Duration(milliseconds: 120), () {
-        return _showSessionExpiredDialog(anotherDevice: anotherDevice);
+        return _showSessionExpiredDialog(
+            anotherDevice: anotherDevice, blocked: blocked);
       }));
     };
     userStream = ugouserFirebaseUserStream()

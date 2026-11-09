@@ -111,17 +111,9 @@ class _MenuWidgetState extends State<MenuWidget> with TickerProviderStateMixin {
           _isLoadingUser = false;
         });
       } else {
-        if (response.statusCode == 401 || response.statusCode == 403) {
-          FFAppState().clearAuthSession();
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Session expired. Please sign in again.'),
-            ),
-          );
-          context.goNamedAuth(LoginWidget.routeName, context.mounted);
-          return;
-        }
+        // 401: AuthSessionGuard already refreshed or ended the session centrally.
+        // 403 is a permission error — never a reason to log out here.
+        if (response.statusCode == 401) return;
 
         // Handle network error using cached data if available
         if (FFAppState().cachedProfileData.isNotEmpty) {

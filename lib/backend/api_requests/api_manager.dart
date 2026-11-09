@@ -19,6 +19,7 @@ import '/app_state.dart';
 import '/core/app_config.dart';
 import '/flutter_flow/uploaded_file.dart';
 
+import 'auth_session_guard.dart';
 import 'get_streamed_response.dart';
 import 'http_client.dart';
 
@@ -173,8 +174,14 @@ class ApiCallResponse {
       (jsonBody is String ? jsonBody as String : jsonEncode(jsonBody));
   String get exceptionMessage => exception.toString();
   String get userFriendlyMessage {
-    if (statusCode == 401 || statusCode == 403) {
+    if (statusCode == 401) {
       return 'Your session expired. Please sign in again.';
+    }
+    if (statusCode == 403) {
+      final serverMessage = _extractServerMessage(jsonBody);
+      return (serverMessage != null && serverMessage.isNotEmpty)
+          ? serverMessage
+          : "You don't have permission to do that.";
     }
     if (statusCode >= 500) {
       return 'Server is busy right now. Please try again in a moment.';
@@ -257,7 +264,6 @@ class ApiManager {
 
   // Cache that will ensure identical calls are not repeatedly made.
   static Map<ApiCallOptions, ApiCallResponse> _apiCache = {};
-  static Future<String?>? _refreshInFlight;
   static void Function()? onAccessTokenRefreshed;
   static void Function(String? reason)? onUnauthenticated;
 
@@ -516,16 +522,6 @@ class ApiManager {
     return false;
   }
 
-  static bool _isAuthFailure(ApiCallResponse response) {
-    if (response.statusCode == 401 || response.statusCode == 403) return true;
-    final body = response.bodyText.toLowerCase();
-    return body.contains('invalid or expired access token') ||
-        body.contains('invalid token') ||
-        body.contains('token expired') ||
-        body.contains('jwt expired') ||
-        body.contains('unauthorized');
-  }
-
   static String? _extractBearerToken(Map<String, dynamic> headers) {
     for (final entry in headers.entries) {
       if (entry.key.toLowerCase() == 'authorization') {
@@ -555,91 +551,22 @@ class ApiManager {
     return updated;
   }
 
-  static String? _extractTokenFromBody(dynamic body, List<String> keys) {
-    if (body is! Map) return null;
-    final data = body['data'];
-    for (final key in keys) {
-      final direct = body[key];
-      if (direct is String && direct.isNotEmpty) return direct;
-      if (data is Map) {
-        final nested = data[key];
-        if (nested is String && nested.isNotEmpty) return nested;
-      }
-    }
-    return null;
-  }
-
-  static Future<String?> _tryRefreshAccessToken(String oldAccessToken) async {
-    if (_refreshInFlight != null) {
-      return _refreshInFlight;
-    }
-    final completer = Completer<String?>();
-    _refreshInFlight = completer.future;
-    final appState = FFAppState();
-    final refreshToken = appState.refreshToken;
-    if (refreshToken.isEmpty) {
-      completer.complete(null);
-      _refreshInFlight = null;
-      return null;
-    }
-
-    final endpoints = <String>[
-      '/api/auth/refresh',
-      '/api/users/refresh-token',
-      '/api/users/refresh',
-      '/api/auth/refresh-token',
-    ];
-
-    for (final path in endpoints) {
-      try {
-        final response = await TimeoutHttpClient.instance.post(
-          Uri.parse('${AppConfig.baseApiUrl}$path'),
-          headers: {
-            'Content-Type': 'application/json',
-            ..._injectDeviceHeaders(const {}),
-          },
-          body: jsonEncode({
-            'refreshToken': refreshToken,
-            'refresh_token': refreshToken,
-            'accessToken': oldAccessToken,
-            'access_token': oldAccessToken,
-          }),
-        );
-        if (response.statusCode < 200 || response.statusCode >= 300) continue;
-
-        dynamic decoded;
-        try {
-          decoded = jsonDecode(response.body);
-        } catch (_) {
-          continue;
-        }
-
-        final newAccessToken = _extractTokenFromBody(
-          decoded,
-          const ['accessToken', 'access_token', 'token'],
-        );
-        if (newAccessToken == null || newAccessToken.isEmpty) continue;
-
-        final newRefreshToken = _extractTokenFromBody(
-          decoded,
-          const ['refreshToken', 'refresh_token'],
-        );
-
-        appState.accessToken = newAccessToken;
-        if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
-          appState.refreshToken = newRefreshToken;
-        }
-        onAccessTokenRefreshed?.call();
-        completer.complete(newAccessToken);
-        _refreshInFlight = null;
-        return newAccessToken;
-      } catch (_) {
-        // Try next endpoint candidate.
-      }
-    }
-    completer.complete(null);
-    _refreshInFlight = null;
-    return null;
+  /// Wire the shared auth policy (see auth_session_guard.dart) to this app once.
+  static void _ensureAuthGuard() {
+    if (AuthSessionGuard.configured) return;
+    AuthSessionGuard.configured = true;
+    AuthSessionGuard.baseUrl = () => AppConfig.baseApiUrl;
+    AuthSessionGuard.readAccessToken = () => FFAppState().accessToken;
+    AuthSessionGuard.readRefreshToken = () => FFAppState().refreshToken;
+    AuthSessionGuard.writeTokens = (access, refresh) {
+      final appState = FFAppState();
+      appState.accessToken = access;
+      if (refresh != null && refresh.isNotEmpty) appState.refreshToken = refresh;
+    };
+    AuthSessionGuard.extraHeaders = () => _injectDeviceHeaders(const {})
+        .map((k, v) => MapEntry(k, v?.toString() ?? ''));
+    AuthSessionGuard.onRefreshed = () => onAccessTokenRefreshed?.call();
+    AuthSessionGuard.onSessionEnded = (reason) => onUnauthenticated?.call(reason);
   }
 
   Future<ApiCallResponse> makeApiCall({
@@ -782,24 +709,24 @@ class ApiManager {
 
     var response = result;
 
+    // Central auth handling: only calls that carried a token can refresh/logout.
     final requestToken = _extractBearerToken(headers);
-    final currentToken = FFAppState().accessToken;
-    final canAttemptRefresh = !hasRetriedAuth &&
-        response.statusCode > 0 &&
-        _isAuthFailure(response) &&
-        requestToken != null &&
+    if (requestToken != null &&
         requestToken.isNotEmpty &&
-        currentToken.isNotEmpty;
-
-    if (canAttemptRefresh) {
-      final refreshedToken = await _tryRefreshAccessToken(currentToken);
-      if (refreshedToken != null && refreshedToken.isNotEmpty) {
-        final updatedHeaders = _headersWithAccessToken(headers, refreshedToken);
+        (response.statusCode == 401 || response.statusCode == 403)) {
+      _ensureAuthGuard();
+      final retryToken = await AuthSessionGuard.handleAuthFailure(
+        status: response.statusCode,
+        body: response.jsonBody,
+        requestToken: requestToken,
+        alreadyRetried: hasRetriedAuth,
+      );
+      if (retryToken != null) {
         response = await makeApiCall(
           callName: callName,
           apiUrl: apiUrl,
           callType: callType,
-          headers: updatedHeaders,
+          headers: _headersWithAccessToken(headers, retryToken),
           params: params,
           body: body,
           bodyType: bodyType,
@@ -813,20 +740,7 @@ class ApiManager {
           hasRetriedAuth: true,
           client: client,
         );
-      } else {
-        onUnauthenticated?.call('refresh_failed');
       }
-    }
-
-    if (response.statusCode == 401) {
-      final body = response.jsonBody;
-      String? reason;
-      if (body is Map) {
-        reason = (body['code'] ??
-                (body['data'] is Map ? body['data']['code'] : null))
-            ?.toString();
-      }
-      onUnauthenticated?.call(reason);
     }
 
     if (cache && response.statusCode >= 200 && response.statusCode < 300) {
