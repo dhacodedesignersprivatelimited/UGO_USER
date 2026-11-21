@@ -139,7 +139,8 @@ class _SearchingRideComponentState extends State<SearchingRideComponent>
               _serverNudgeBanner(theme),
               const SizedBox(height: 16),
             ],
-            _extraFareCard(theme),
+            // Fare-boost chips only when a boost handler is wired (none in auto_book).
+            if (widget.onRebookWithExtra != null) _extraFareCard(theme),
             if (_selectedExtra != null && widget.onRebookWithExtra != null) ...[
               const SizedBox(height: 14),
               _rebookCta(theme),

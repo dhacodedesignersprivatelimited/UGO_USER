@@ -9,6 +9,11 @@ class RideCancelledComponent extends StatelessWidget {
   final int rebookingFee;
   final bool cancelledByDriver;
 
+  /// Optional overrides (e.g. "No drivers available right now"); defaults unchanged.
+  final String? title;
+  final String? subtitle;
+  final String? rebookLabel;
+
   const RideCancelledComponent({
     Key? key,
     required this.onBackToHome,
@@ -16,6 +21,9 @@ class RideCancelledComponent extends StatelessWidget {
     this.onRebook,
     this.rebookingFee = 20,
     this.cancelledByDriver = false,
+    this.title,
+    this.subtitle,
+    this.rebookLabel,
   }) : super(key: key);
 
   @override
@@ -55,7 +63,7 @@ class RideCancelledComponent extends StatelessWidget {
 
           // Title
           Text(
-            'Ride Cancelled',
+            title ?? 'Ride Cancelled',
             style: GoogleFonts.inter(
               fontSize: 24,
               fontWeight: FontWeight.w700,
@@ -66,9 +74,10 @@ class RideCancelledComponent extends StatelessWidget {
 
           // Subtitle
           Text(
-            cancelledByDriver
-                ? 'Driver not available. You can rebook instantly.'
-                : 'Your ride has been cancelled successfully',
+            subtitle ??
+                (cancelledByDriver
+                    ? 'Driver not available. You can rebook instantly.'
+                    : 'Your ride has been cancelled successfully'),
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 14,
@@ -92,7 +101,7 @@ class RideCancelledComponent extends StatelessWidget {
                   elevation: 0,
                 ),
                 child: Text(
-                  'Rebook Ride + ₹$rebookingFee',
+                  rebookLabel ?? 'Rebook Ride + ₹$rebookingFee',
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,

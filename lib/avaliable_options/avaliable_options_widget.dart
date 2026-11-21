@@ -445,7 +445,8 @@ class _AvaliableOptionsWidgetState extends State<AvaliableOptionsWidget>
     final count = getJsonField(data, r'''$.available_drivers_count''');
     final n =
         count is int ? count : int.tryParse(count?.toString() ?? '0') ?? 0;
-    if (n <= 0) return '10 drivers nearby';
+    // Real count only — never invent drivers when there are none.
+    if (n <= 0) return 'No drivers nearby yet';
     if (n == 1) return '1 driver available';
     return '$n drivers available';
   }

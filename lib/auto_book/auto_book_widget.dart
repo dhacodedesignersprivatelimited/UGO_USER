@@ -76,18 +76,21 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   bool _cancelledByDriver = false;
   String? _rideOtp;
 
+  /// Search ended with nobody accepting (no_driver_available / expired / rejected /
+  /// ride_expired). Shown as "No drivers available right now — Try Again" on the
+  /// cancelled sheet instead of leaving the rider on the search spinner.
+  bool _noDriversAvailable = false;
+
+  /// REST status poll while the socket is down (pauses itself while connected).
+  Timer? _statusPollTimer;
+  bool _statusPollInFlight = false;
+  String? _lastProcessedRawStatus;
+
   // Decline / extra fare tracking
   int _declineCount = 0;
   int _totalDriversNotified = 0;
   double _estimatedFare = 0;
   double _extraFare = 0;
-
-  /// Backend `no_driver_found` socket (30s no-accept nudge).
-  String? _noDriverNudgeMessage;
-  double? _serverSuggestedExtra;
-
-  /// Rapido-style: one "increase offer" dialog per search cycle at 30s (matches driver offer window).
-  bool _rapido30sIncreaseDialogShown = false;
 
   // UI Status
   String _rideStatus = 'searching';
@@ -124,6 +127,14 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   static const STATUS_COMPLETED = 'completed';
   static const STATUS_CANCELLED = 'cancelled';
 
+  /// Backend statuses meaning "search over, nobody accepted" (any case).
+  static const _NO_DRIVER_STATUSES = <String>{
+    'expired',
+    'no_driver_available',
+    'no_drivers_available',
+    'rejected',
+  };
+
   // ============================================================================
   // INITIALIZATION
   // ============================================================================
@@ -146,6 +157,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     _startSearchTimer();
     _startNearbyDriversTimer();
     _initializeSocket();
+    _startStatusPollFallback();
 
     // 3. ✅ CRITICAL: Always fetch fresh status on load
     _fetchInitialRideStatus();
@@ -604,6 +616,9 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       _rideStatus = STATUS_ARRIVING;
     } else if (status == 'accepted' || status == 'driver_assigned') {
       _rideStatus = STATUS_ACCEPTED;
+    } else if (_NO_DRIVER_STATUSES.contains(status)) {
+      _rideStatus = STATUS_CANCELLED;
+      _noDriversAvailable = true;
     }
   }
 
@@ -613,232 +628,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       if (!mounted || _rideStatus != STATUS_SEARCHING) return;
       final next = _searchSeconds + 1;
       setState(() => _searchSeconds = next);
-      if (next == 30 && !_rapido30sIncreaseDialogShown) {
-        _rapido30sIncreaseDialogShown = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _rideStatus == STATUS_SEARCHING) {
-            _showRapidoIncreasePriceDialog();
-          }
-        });
-      }
     });
-  }
-
-  int _rapidoSuggestedExtraRs() {
-    var base = _estimatedFare;
-    if (base <= 0 && ridesCache.isNotEmpty) {
-      base =
-          double.tryParse(ridesCache[0]['estimated_fare']?.toString() ?? '') ??
-              0;
-    }
-    final sug = _serverSuggestedExtra;
-    if (sug != null && sug > 0) {
-      return sug.round().clamp(1, 100000);
-    }
-    if (base > 0) {
-      return (base * 0.2).round().clamp(1, 100000);
-    }
-    return 20;
-  }
-
-  /// Shown at 30s while still searching (same cadence as driver card timeout + backend nudge).
-  void _showRapidoIncreasePriceDialog() {
-    if (!mounted || _rideStatus != STATUS_SEARCHING) return;
-    final extraRs = _rapidoSuggestedExtraRs();
-    const deepOrange = Color(0xFFE86500);
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierColor: Colors.black.withValues(alpha: 0.55),
-      builder: (ctx) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(26),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFFFF8A3D),
-                      primaryColor,
-                      deepOrange,
-                    ],
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.22),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.local_fire_department_rounded,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'No captain free yet',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'A quick fare boost helps you get picked up faster.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        height: 1.4,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.95),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: double.infinity,
-                color: const Color(0xFFFFFBF7),
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 18, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: primaryColor.withValues(alpha: 0.35),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.trending_up_rounded,
-                              color: deepOrange, size: 22),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Suggested boost',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF5D4037),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '+ ₹$extraRs',
-                            style: GoogleFonts.inter(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: deepOrange,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.pop(ctx);
-                          _handleRebookWithExtra(extraRs);
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: Ink(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            gradient: const LinearGradient(
-                              colors: [primaryColor, deepOrange],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: primaryColor.withValues(alpha: 0.4),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: SizedBox(
-                            width: double.infinity,
-                            height: 54,
-                            child: Center(
-                              child: Text(
-                                'Boost & search again · + ₹$extraRs',
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        style: TextButton.styleFrom(
-                          foregroundColor: deepOrange,
-                        ),
-                        child: Text(
-                          'Keep searching',
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _cancelRide('Cancelled while waiting for driver');
-                      },
-                      child: Text(
-                        'Cancel ride',
-                        style: GoogleFonts.inter(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.red.shade700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   bool get _canEditPickupLocation {
@@ -1109,11 +899,59 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
     }
   }
 
+  /// Ride phases the rider is waiting on (poll only these).
+  bool get _isRideLive =>
+      _rideStatus == STATUS_SEARCHING ||
+      _rideStatus == STATUS_ACCEPTED ||
+      _rideStatus == STATUS_ARRIVING ||
+      _rideStatus == STATUS_PICKED_UP;
+
+  /// Every 10 s while the ride is live and the socket is NOT connected, read the ride
+  /// over REST so a dropped socket can't freeze the screen (accept / cancel / start /
+  /// complete / no-driver are all picked up). Idle while the socket is connected.
+  void _startStatusPollFallback() {
+    _statusPollTimer?.cancel();
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      unawaited(_pollRideStatusIfSocketDown());
+    });
+  }
+
+  Future<void> _pollRideStatusIfSocketDown() async {
+    if (!mounted) return;
+    if (!_isRideLive) {
+      _statusPollTimer?.cancel();
+      return;
+    }
+    if (socket?.connected == true || _statusPollInFlight) return;
+    _statusPollInFlight = true;
+    try {
+      final response = await GetRideDetailsCall.call(
+        rideId: widget.rideId,
+        token: FFAppState().accessToken,
+      );
+      if (!mounted || !response.succeeded) return;
+      final rideData = getJsonField(response.jsonBody, r'$.data') ?? response.jsonBody;
+      if (rideData is! Map) return;
+      final m = Map<String, dynamic>.from(rideData);
+      final raw = (m['ride_status'] ?? m['status'])?.toString().toLowerCase().trim();
+      // Same status as last processed: nothing to re-run (avoids restarting route
+      // timers / map refreshes every 10 s).
+      if (raw == null || raw == _lastProcessedRawStatus) return;
+      debugPrint('📡 Socket down → REST poll picked up status "$raw"');
+      _processRideUpdate(m);
+    } catch (e) {
+      debugPrint('Ride status poll error: $e');
+    } finally {
+      _statusPollInFlight = false;
+    }
+  }
+
   void _disposeSocket() {
     try {
       socket?.off('ride_updated');
       socket?.off('ride_location_updated');
       socket?.off('no_driver_found');
+      socket?.off('ride_expired');
       socket?.off('ride_completed');
       socket?.off('location_update');
       socket?.off('driver_location_update');
@@ -1136,11 +974,17 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       socket = IO.io(
         _baseUrl,
         IO.OptionBuilder()
-            .setTransports(['websocket'])
+            // Polling fallback: some mobile networks / proxies block the WebSocket
+            // upgrade, and websocket-only then never connected.
+            .setTransports(['websocket', 'polling'])
             .disableAutoConnect()
             .enableForceNew()
             .setAuth({'token': token})
-            .setReconnectionAttempts(5)
+            // Keep retrying (was 5 attempts, then the screen froze until reopened).
+            .enableReconnection()
+            .setReconnectionAttempts(double.infinity)
+            .setReconnectionDelay(1000)
+            .setReconnectionDelayMax(10000)
             .build(),
       );
       // Read the token on every (re)connect so reconnects after a token refresh
@@ -1272,27 +1116,19 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         }
       });
 
-      socket!.on('no_driver_found', (data) {
+      // Search closed (timed out / replaced). Old builds ignored this and spun forever.
+      socket!.on('ride_expired', (data) {
         if (!mounted || data is! Map) return;
         final m = Map<String, dynamic>.from(data);
-        final rid = m['ride_id'];
+        final rid = m['ride_id'] ?? m['rideId'];
         final id = rid is int ? rid : int.tryParse(rid?.toString() ?? '');
         if (id != null && id != widget.rideId) return;
-        if (_rideStatus != STATUS_SEARCHING) return;
-        final msg = m['message']?.toString();
-        final sug = m['suggested_increase'];
-        final extra = sug is num
-            ? sug.toDouble()
-            : double.tryParse(sug?.toString() ?? '');
-        final bannerText = (msg != null && msg.isNotEmpty)
-            ? msg
-            : 'Try increasing your offer to get a driver faster.';
-        if (!mounted) return;
-        setState(() {
-          _noDriverNudgeMessage = bannerText;
-          _serverSuggestedExtra = (extra != null && extra > 0) ? extra : null;
+        if (_rideStatus != STATUS_SEARCHING) return; // only ends a search
+        final st = (m['ride_status'] ?? 'expired').toString();
+        _processRideUpdate({
+          'id': widget.rideId,
+          'ride_status': _NO_DRIVER_STATUSES.contains(st.toLowerCase()) ? st : 'expired',
         });
-        // Banner in SearchingRideComponent + optional 30s dialog; skip duplicate SnackBar.
       });
 
       // 4. Connect
@@ -1315,6 +1151,8 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       updatedRide['ride_status'] = status;
 
       print('🔄 Processing Status: "$status"');
+      _lastProcessedRawStatus = status;
+      final isNoDriverEnd = status != null && _NO_DRIVER_STATUSES.contains(status);
 
       bool navigateToComplete = false;
       String previousStatus = _rideStatus;
@@ -1327,11 +1165,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           ];
         } else {
           ridesCache = [updatedRide];
-        }
-
-        if (status != 'searching') {
-          _noDriverNudgeMessage = null;
-          _serverSuggestedExtra = null;
         }
 
         // 1b. Extract decline count and fare info
@@ -1362,9 +1195,11 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         }
 
         // 3. Status State Machine
-        if (status == 'cancelled') {
+        if (status == 'cancelled' || isNoDriverEnd) {
           _rideStatus = STATUS_CANCELLED;
-          _cancelledByDriver = !_userInitiatedCancel;
+          _noDriversAvailable = isNoDriverEnd;
+          _cancelledByDriver = isNoDriverEnd ? false : !_userInitiatedCancel;
+          _statusPollTimer?.cancel();
           _searchTimer?.cancel();
           _rideCheckTimer?.cancel();
           _stopDistanceUpdateTimer();
@@ -1375,6 +1210,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
           socket?.off("ride_updated");
           socket?.off('ride_location_updated');
           socket?.off('no_driver_found');
+          socket?.off('ride_expired');
           FFAppState().bookingInProgress = false;
           FFAppState().currentRideId = null;
           RideSession().clear();
@@ -1709,12 +1545,10 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         setState(() {
           _rideStatus = STATUS_SEARCHING;
           _cancelledByDriver = false;
+          _noDriversAvailable = false;
           _userInitiatedCancel = false;
           _isRebooking = false;
           _searchSeconds = 0;
-          _rapido30sIncreaseDialogShown = false;
-          _noDriverNudgeMessage = null;
-          _serverSuggestedExtra = null;
           if (newFare != null) _estimatedFare = newFare;
           _extraFare = newExtra;
         });
@@ -1722,6 +1556,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
         _startSearchTimer();
         _startNearbyDriversTimer();
         _initializeSocket();
+        _startStatusPollFallback();
         _initializeMap();
 
         if (mounted) {
@@ -1744,88 +1579,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
       }
     } catch (e) {
       print('❌ Error during rebooking: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('An error occurred during rebooking.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      setState(() => _isRebooking = false);
-    }
-  }
-
-  Future<void> _handleRebookWithExtra(int extraAmount) async {
-    if (_isRebooking) return;
-    setState(() => _isRebooking = true);
-
-    try {
-      final response = await RebookRideCall.call(
-        rideId: widget.rideId,
-        token: FFAppState().accessToken,
-        extraFare: extraAmount,
-      );
-
-      if (response.succeeded) {
-        final newRideId = RebookRideCall.newRideId(response.jsonBody);
-        final newFare =
-            RebookRideCall.estimatedFare(response.jsonBody) ?? _estimatedFare;
-        final newExtra = RebookRideCall.extraFareResponse(response.jsonBody) ??
-            extraAmount.toDouble();
-
-        if (mounted && newRideId != null && newRideId != widget.rideId) {
-          FFAppState().currentRideId = newRideId;
-          FFAppState().bookingInProgress = true;
-          context.pushReplacementNamed(
-            RideRequestScreen.routeName,
-            queryParameters: {
-              'rideId': '$newRideId',
-              if (_totalRoadDistanceKm != null)
-                'totalDistanceKm': _totalRoadDistanceKm!.toString(),
-              if (_liveEtaText != null && _liveEtaText!.trim().isNotEmpty)
-                'totalDuration': _liveEtaText!,
-            },
-          );
-          return;
-        }
-
-        if (!mounted) return;
-        setState(() {
-          _rideStatus = STATUS_SEARCHING;
-          _cancelledByDriver = false;
-          _userInitiatedCancel = false;
-          _isRebooking = false;
-          _searchSeconds = 0;
-          _rapido30sIncreaseDialogShown = false;
-          _declineCount = 0;
-          _totalDriversNotified = 0;
-          _estimatedFare = newFare;
-          _extraFare = newExtra;
-          _noDriverNudgeMessage = null;
-          _serverSuggestedExtra = null;
-        });
-
-        _startSearchTimer();
-        _startNearbyDriversTimer();
-        _initializeSocket();
-        _initializeMap();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Searching with + ₹$extraAmount extra!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Rebook failed: ${RebookRideCall.message(response.jsonBody) ?? "Unknown error"}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() => _isRebooking = false);
-      }
-    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('An error occurred during rebooking.'),
@@ -1888,6 +1641,7 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
   @override
   void dispose() {
     _searchTimer?.cancel();
+    _statusPollTimer?.cancel();
     _rideCheckTimer?.cancel();
     _stopDistanceUpdateTimer();
     _stopNearbyDriversTimer();
@@ -2400,9 +2154,6 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
               totalDriversNotified: _totalDriversNotified,
               estimatedFare: _estimatedFare,
               extraFare: _extraFare,
-              onRebookWithExtra: _handleRebookWithExtra,
-              serverNudgeMessage: _noDriverNudgeMessage,
-              serverSuggestedExtra: _serverSuggestedExtra,
             ),
           ),
           SliverToBoxAdapter(child: SizedBox(height: 12 + bottomInset)),
@@ -2426,9 +2177,14 @@ class _AutoBookWidgetState extends State<AutoBookWidget>
                   if (context.mounted) context.pop();
                 }
               : null,
-          onRebook: _cancelledByDriver ? _handleRebook : null,
+          onRebook: (_cancelledByDriver || _noDriversAvailable) ? _handleRebook : null,
           rebookingFee: 20,
           cancelledByDriver: _cancelledByDriver,
+          title: _noDriversAvailable ? 'No drivers available right now' : null,
+          subtitle: _noDriversAvailable
+              ? 'All nearby captains are busy. Please try again in a moment.'
+              : null,
+          rebookLabel: _noDriversAvailable ? 'Try Again' : null,
         ),
       );
     } else {
